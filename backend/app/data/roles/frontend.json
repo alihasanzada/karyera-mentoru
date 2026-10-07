@@ -1,0 +1,23 @@
+{
+    "id": "frontend",
+    "name": "Frontend Developer",
+    "level": "Junior",
+    "description": "Veb saytların və tətbiqlərin istifadəçi interfeysini hazırlayır.",
+    "required_skills": [
+        "HTML5 və semantik markup",
+        "CSS3 (Flexbox, Grid, responsive dizayn)",
+        "JavaScript (ES6+)",
+        "React, Vue və ya Angular (ən azı biri)",
+        "REST API ilə işləmək (fetch/axios)",
+        "Git və GitHub",
+        "İngilis dili (texniki sənədləri oxuya bilmək)"
+    ],
+    "preferred_skills": [
+        "TypeScript",
+        "Tailwind CSS və ya SASS",
+        "Test yazmaq (Jest, Vitest)",
+        "Next.js",
+        "Figma dizaynını koda çevirmək",
+        "Veb performansı və əlçatanlıq (accessibility)"
+    ]
+}

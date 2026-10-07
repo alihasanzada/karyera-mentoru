@@ -1,0 +1,22 @@
+{
+    "id": "cybersecurity",
+    "name": "Cybersecurity (Kibertəhlükəsizlik)",
+    "level": "Junior",
+    "description": "Sistemlərin, şəbəkələrin və tətbiqlərin təhlükəsizliyini təmin edir.",
+    "required_skills": [
+        "Şəbəkə əsasları (TCP/IP, DNS, HTTP, firewall)",
+        "Linux və komanda sətri",
+        "Təhlükəsizlik əsasları (CIA triadası, OWASP Top 10)",
+        "Skript yazmaq (Python və ya Bash)",
+        "Log təhlili və insident cavabının əsasları",
+        "İngilis dili (texniki sənədləri oxuya bilmək)"
+    ],
+    "preferred_skills": [
+        "Wireshark, Nmap, Burp Suite kimi alətlər",
+        "Sertifikatlar (CompTIA Security+, CEH və s.)",
+        "CTF və praktiki platformalar (TryHackMe, HackTheBox)",
+        "SIEM anlayışı",
+        "Cloud təhlükəsizliyi əsasları",
+        "Docker və konteyner təhlükəsizliyi"
+    ]
+}

@@ -1,0 +1,23 @@
+{
+    "id": "data_science",
+    "name": "Data Science (Məlumat Elmi)",
+    "level": "Junior",
+    "description": "Məlumatları təhlil edir, modellər qurur və biznes qərarlarına dəstək verir.",
+    "required_skills": [
+        "Python",
+        "pandas və NumPy",
+        "SQL",
+        "Statistika əsasları",
+        "Məlumat vizuallaşdırması (matplotlib, seaborn və ya Power BI/Tableau)",
+        "Git və GitHub",
+        "İngilis dili (texniki sənədləri oxuya bilmək)"
+    ],
+    "preferred_skills": [
+        "scikit-learn və maşın öyrənməsi əsasları",
+        "Jupyter Notebook",
+        "Kaggle və ya şəxsi data layihələri",
+        "Deep learning (PyTorch/TensorFlow)",
+        "A/B test və eksperiment dizaynı",
+        "Cloud (AWS, GCP, Azure) əsasları"
+    ]
+}
