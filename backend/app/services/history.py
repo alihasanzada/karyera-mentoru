@@ -28,7 +28,7 @@ def save_record(
     )
     db.commit()
 
-    # Hər istifadəçi üçün yalnız son 50 nəticəni saxla
+    # Keep only the last 50 results for each user
     old_ids = db.scalars(
         select(AnalysisRecord.id)
         .where(AnalysisRecord.client_id == client_id)

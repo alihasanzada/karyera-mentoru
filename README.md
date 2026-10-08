@@ -1,29 +1,29 @@
-# Karyera Mentoru
+# Career Mentor
 
-CV-ni (PDF) yükləyin, Gemini ilə analiz edin, seçdiyiniz sahəyə (Frontend, Cybersecurity, Data Science) uyğunluğunu və inkişaf planını görün.
+Download the CV (PDF), analyze it with Gemini, see its relevance to your chosen field (Frontend, Cybersecurity, Data Science) and the development plan.
 
-## Quraşdırma
+## Installation
 ```bash
 python3 -m venv venv && source venv/bin/activate
 pip install -r backend/requirements.txt
-cp .env.example .env   # GEMINI_API_KEY və GEMINI_MODEL-i doldurun
+cp .env.example .env   # Fill in GEMINI_API_KEY and GEMINI_MODEL
 ```
 
-## İşə salma
+## Startup
 ```bash
 cd backend
 uvicorn app.main:app --reload
 ```
-Brauzerdə: http://localhost:8000 (API sənədləri: /docs)
+In the browser: http://localhost:8000 (API documentation: /docs)
 
-## Testlər
+## Tests
 ```bash
 cd backend && pytest -q
 ```
 
-## Sahə əlavə etmək
-`backend/app/data/roles/` qovluğuna yeni JSON faylı əlavə edin (mövcud fayllardan kopyalayın), serveri yenidən başladın.
+## Add field
+Add a new JSON file to the `backend/app/data/roles/` folder (copy it from existing files) and restart the server.
 
-## Qeydlər
-- CV mətni saxlanmır, yalnız analiz nəticəsi və fayl adı lokal SQLite-da (`karyera.db`) saxlanır.
-- Hələ istifadəçi hesabı yoxdur, tarixçə brauzerə bağlıdır. İnternetə açmazdan əvvəl autentifikasiya əlavə edin.
+## Notes
+- The CV text is not stored; only the analysis result and the file name are saved in the local SQLite database (`karyera.db`).
+- There is no user account yet; the history is tied to the browser. Add authentication before making it accessible online.

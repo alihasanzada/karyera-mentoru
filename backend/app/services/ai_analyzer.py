@@ -14,9 +14,9 @@ PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "analyze_cv.t
 SYSTEM_PROMPT = PROMPT_PATH.read_text(encoding="utf-8")
 MAX_CV_CHARS = 15000
 
-CALL_TIMEOUT = 45    # saniyə: bir Gemini sorğusu üçün maksimum gözləmə
-TOTAL_BUDGET = 150   # saniyə: bütün cəhdlər üçün ümumi vaxt (frontend 180 san gözləyir)
-ROUNDS = 2           # model sırası ən çox neçə dəfə keçilsin
+CALL_TIMEOUT = 45
+TOTAL_BUDGET = 150
+ROUNDS = 2
 
 T = TypeVar("T", bound=BaseModel)
 _client: genai.Client | None = None
@@ -55,9 +55,9 @@ async def _call(model: str, system_prompt: str, contents: str, schema: type[T]) 
 
 
 async def generate_structured(system_prompt: str, contents: str, schema: type[T]) -> T:
-    """Modelləri sıra ilə yoxlayır. Biri 503/timeout verərsə, dərhal növbətiyə keçir."""
+    """It checks the models sequentially. If one returns a 503/timeout, it immediately moves on to the next one.."""
     chain = settings.model_chain
-    dead: set[str] = set()  # 400/403/404 verən modellər, təkrar yoxlanmır
+    dead: set[str] = set()  # Models returning 400/403/404 errors are not re-checked
     last_code: int | None = None
     deadline = time.monotonic() + TOTAL_BUDGET
 
@@ -75,19 +75,19 @@ async def generate_structured(system_prompt: str, contents: str, schema: type[T]
                 result = await asyncio.wait_for(
                     _call(model, system_prompt, contents, schema), timeout=timeout
                 )
-                print(f"Gemini OK: {model} ({time.monotonic() - started:.1f} san)")
+                print(f"Gemini OK: {model} ({time.monotonic() - started:.1f} seconds)")
                 return result
                 
             except TimeoutError:
                 last_code = 504
-                print(f"Gemini timeout ({model}): {timeout:.0f} san ərzində cavab gəlmədi")
-            except AIAnalysisError as e:  # model səhv formatda cavab qaytardı
+                print(f"Gemini timeout ({model}): {timeout:.0f} seconds - no response was received within a second")
+            except AIAnalysisError as e:  # The model returned a response in an incorrect format
                 last_code = 502
-                print(f"Gemini format xətası ({model}): {e}")
+                print(f"Gemini format error ({model}): {e}")
             except errors.APIError as e:
                 last_code = e.code
-                print(f"Gemini xətası ({model}): {e.code} {e.message}")
-                if e.code in (400, 403, 404):  # model və ya açar problemi, təkrar mənasızdır
+                print(f"Gemini error ({model}): {e.code} {e.message}")
+                if e.code in (400, 403, 404):  # Model or key problem; repeating it is pointless.
                     dead.add(model)
 
         if round_no < ROUNDS - 1 and deadline - time.monotonic() > 10:
@@ -97,9 +97,9 @@ async def generate_structured(system_prompt: str, contents: str, schema: type[T]
 
     if last_code in (429, 503, 504):
         raise AIAnalysisError(
-            "AI xidməti hazırda çox yüklüdür. 1-2 dəqiqə sonra yenidən cəhd et.", 503
+            "AI service is currently overloaded. Please try again in 1-2 minutes.", 503
         )
-    raise AIAnalysisError("AI xidməti ilə əlaqədə xəta baş verdi.", 502)
+    raise AIAnalysisError("Error occurred while communicating with the AI service.", 502)
 
 
 async def analyze_cv(cv_text: str) -> CVAnalysis:

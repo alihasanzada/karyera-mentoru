@@ -1,14 +1,28 @@
 import io
-import pdfplumber
 import logging
+import re
+
+import pdfplumber
 
 logging.getLogger("pdfminer").setLevel(logging.ERROR)
 
+PAGE_MARKER = re.compile(
+    r"^\s*(?:Səhifə|Page|Seite|Стр\.?)\s*\d+\s*(?:/|of|из)\s*\d+\s*$", re.IGNORECASE
+)
+
+
 class PDFParseError(Exception):
-    """PDF oxunarkən yaranan xətalar üçün."""
+    """For errors encountered while reading PDFs."""
+
+
+def _clean(text: str) -> str:
+    """'Deletes lines like 'Page 1 / 1'."""
+    kept = [ln for ln in text.splitlines() if not PAGE_MARKER.match(ln)]
+    return "\n".join(kept).strip()
+
 
 def extract_text_from_pdf(file_bytes: bytes) -> tuple[str, int]:
-    """PDF baytlarından mətn çıxarır. (mətn, səhifə_sayı) qaytarır."""
+    """Extract text from PDF bytes. Returns (text, page_count)."""
     pages_text = []
     try:
         with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
@@ -18,7 +32,7 @@ def extract_text_from_pdf(file_bytes: bytes) -> tuple[str, int]:
     except Exception as e:
         raise PDFParseError("PDF faylını oxumaq mümkün olmadı.") from e
 
-    full_text = "\n".join(pages_text).strip()
+    full_text = _clean("\n".join(pages_text))
     if not full_text:
         raise PDFParseError(
             "PDF-dən mətn çıxarıla bilmədi. Fayl skan edilmiş şəkil ola bilər."

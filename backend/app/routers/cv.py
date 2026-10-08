@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/cv", tags=["CV"])
 
 
 async def read_pdf(file: UploadFile) -> tuple[str, int]:
-    """PDF-i yoxlayır və (mətn, səhifə_sayı) qaytarır."""
+    """Checks the PDF and returns (text, page_count)."""
     if not (file.filename or "").lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Yalnız PDF faylı qəbul olunur.")
 

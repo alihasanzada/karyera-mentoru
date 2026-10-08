@@ -2,7 +2,7 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# karyera-mentoru/ qovluğu
+# career-mentor/ folder
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
@@ -10,9 +10,9 @@ class Settings(BaseSettings):
     # Gemini
     gemini_api_key: str = ""
     gemini_model: str = "gemini-flash-lite-latest"
-    gemini_models: str = ""  # vergüllə ayrılmış model sırası (ehtiyat zənciri)
+    gemini_models: str = ""  # comma-separated model sequence (backup chain)
 
-    # Tətbiq
+    # Application
     app_name: str = "Karyera Mentoru"
     app_url: str = "http://localhost:8000"
     max_upload_mb: int = 5

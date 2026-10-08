@@ -24,8 +24,6 @@ def _load_roles() -> dict[str, dict]:
     return roles
 
 
-# Serverin başlanğıcında bir dəfə yüklənir. İstifadəçinin göndərdiyi field_id
-# yalnız bu lüğətdə axtarılır (fayl yolu kimi istifadə olunmur, təhlükəsizlikdir).
 ROLES = _load_roles()
 
 
@@ -37,7 +35,7 @@ def list_fields() -> list[FieldInfo]:
 
 
 def _align(expected: list[str], checks: list[SkillCheck]) -> list[SkillCheck]:
-    """AI hansısa bacarığı buraxsa və ya adını dəyişsə də, nəticə rol faylı ilə eyni olsun."""
+    """If AI misses a skill or changes its name, ensure the result matches the role file."""
     by_name = {c.skill.strip().lower(): c for c in checks}
     aligned = []
     for skill in expected:
@@ -56,7 +54,7 @@ def _ratio(checks: list[SkillCheck]) -> float:
 
 
 def compute_score(required: list[SkillCheck], preferred: list[SkillCheck]) -> int:
-    """Tələb olunan bacarıqlar 75%, arzuolunanlar 25% çəki ilə."""
+    """Required skills contribute 75%, preferred skills contribute 25%."""
     return round(100 * (0.75 * _ratio(required) + 0.25 * _ratio(preferred)))
 
 

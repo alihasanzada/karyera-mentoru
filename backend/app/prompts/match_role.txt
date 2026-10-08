@@ -6,7 +6,7 @@ QAYDALAR:
 2. Bütün cavab Azərbaycan dilində olsun (texniki terminlər orijinal qalır). "skill" sahəsi istisna: onu <role>-dakı kimi, dəyişdirmədən kopyala.
 3. <role>-dakı HƏR bir required_skills və preferred_skills elementi üçün tam bir yoxlama yaz. Heç birini buraxma, əlavə bacarıq da əlavə etmə.
 4. status qaydası:
-   - has: CV-də bu bacarığın istifadəsi açıq görünür (layihə, iş, kurs, sertifikat).
+   - has: bacarıq CV-də konkret ad və ya fəaliyyətlə görünür (alət, layihə, iş təsviri). Diplom, sertifikat və ya şirkət adı bacarığın konkret istifadəsini göstərmirsə, has yox, partial ver.
    - partial: yaxın və ya məhdud təcrübə görünür (məs: React əvəzinə yalnız sadə JavaScript layihəsi).
    - missing: CV-də heç bir əsas yoxdur.
    Yalnız CV-də olana əsaslan. Təxmin etmə, uydurma. Bacarıq sadəcə "maraqlanıram" kimi yazılıbsa, partial-dan yuxarı vermə.
