@@ -119,3 +119,73 @@ class EvaluationResponse(BaseModel):
     weaknesses: list[str]
     recommendations: list[Recommendation]
     match: MatchResponse  # full result of the field comparison (will be required for the Roadmap module)
+
+
+class ResourceItem(BaseModel):
+    title: str = Field(description="Resource name, for example a playlist, documentation or certification name")
+    kind: Literal["video", "docs", "course", "certification", "practice"]
+    provider: str = Field(description="Platform or publisher, for example YouTube or Cisco Networking Academy")
+    cost: Literal["free", "freemium", "paid"]
+    search_query: str = Field(description="Short English query that finds this resource on a search engine")
+
+
+class GapInsight(BaseModel):
+    skill: str = Field(description="Skill name copied exactly from the input")
+    why_it_matters: str
+    resources: list[ResourceItem]
+
+
+class WeeklyTask(BaseModel):
+    week: int
+    title: str
+    details: str
+    deliverable: str = Field(description="Measurable output of the task")
+
+
+class PhasePlan(BaseModel):
+    goal: str
+    milestone: str
+    tasks: list[WeeklyTask]
+
+
+class RoadmapLLMOutput(BaseModel):
+    summary: str
+    gaps: list[GapInsight]
+    foundation: PhasePlan
+    practice: PhasePlan
+    interview: PhasePlan
+
+
+class GapSkill(BaseModel):
+    skill: str
+    tier: Literal["required", "preferred"]
+    status: Literal["has", "partial", "missing"]
+    evidence: str
+    priority: Literal["critical", "important", "nice_to_have"] | None = None
+    why_it_matters: str = ""
+    resources: list[ResourceItem] = []
+
+
+class CareerGap(BaseModel):
+    required_coverage: int
+    preferred_coverage: int
+    skills: list[GapSkill]
+
+
+class RoadmapPhaseResult(BaseModel):
+    key: Literal["foundation", "practice", "interview"]
+    label: str
+    days: str
+    goal: str
+    milestone: str
+    tasks: list[WeeklyTask]
+
+
+class RoadmapResponse(BaseModel):
+    evaluation_id: int
+    field_id: str
+    field_name: str
+    generated: bool
+    summary: str
+    career_gap: CareerGap
+    roadmap: list[RoadmapPhaseResult]
