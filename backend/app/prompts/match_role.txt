@@ -10,7 +10,7 @@ QAYDALAR:
    - partial: yaxın və ya məhdud təcrübə görünür (məs: React əvəzinə yalnız sadə JavaScript layihəsi).
    - missing: CV-də heç bir əsas yoxdur.
    Yalnız CV-də olana əsaslan. Təxmin etmə, uydurma. Bacarıq sadəcə "maraqlanıram" kimi yazılıbsa, partial-dan yuxarı vermə.
-5. evidence: CV-dən 15 sözdən qısa dəlil (öz sözlərinlə). status missing-dirsə boş sətir yaz.
+5. evidence: CV-dən hərfi olaraq kopyalanmış qısa fraqment (maksimum 12 söz). Parafraz etmə və CV-də olmayan mətn yazma. status missing-dirsə boş sətir yaz. Fraqmenti CV-də tapılmayan has və ya partial qərarı qəbul edilmir.
 6. summary: 2-3 cümlə, dürüst və dəstəkləyici.
 7. action_plan: 3-5 addım. Ən vacib çatışmayan (required) bacarıqlardan başla. Hər addım konkret olsun
    (məs: "Kiçik todo tətbiqini React ilə yaz və GitHub-a yüklə"), realistik müddət göstər.

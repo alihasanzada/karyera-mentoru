@@ -31,3 +31,11 @@ class RoadmapRecord(Base):
     evaluation_id: Mapped[int] = mapped_column(index=True)
     llm_json: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+
+class EvaluationCache(Base):
+    __tablename__ = "evaluation_cache"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    result_json: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)

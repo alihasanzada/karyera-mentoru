@@ -19,5 +19,33 @@
         "Next.js",
         "Figma dizaynını koda çevirmək",
         "Veb performansı və əlçatanlıq (accessibility)"
+    ],
+    "ats_keywords": [
+        "HTML",
+        "HTML5",
+        "CSS",
+        "CSS3",
+        "JavaScript",
+        "TypeScript",
+        "React",
+        "Vue",
+        "Angular",
+        "Next.js",
+        "Tailwind",
+        "SASS",
+        "Bootstrap",
+        "REST API",
+        "Git",
+        "GitHub",
+        "Responsive Design",
+        "Flexbox",
+        "Webpack",
+        "Vite",
+        "Jest",
+        "Figma",
+        "Accessibility",
+        "Redux",
+        "Node.js",
+        "npm"
     ]
 }

@@ -45,7 +45,8 @@ async def _call(model: str, system_prompt: str, contents: str, schema: type[T]) 
             system_instruction=system_prompt,
             response_mime_type="application/json",
             response_schema=schema,
-            temperature=0.3,
+            temperature=0.0,
+            seed=SEED,
         ),
     )
     result = response.parsed

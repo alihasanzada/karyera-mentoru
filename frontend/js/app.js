@@ -7,7 +7,6 @@ if (!clientId) {
 }
 
 const state = { fields: [], history: [], latest: null, current: null };
-// Bumped on every navigation so stale async renders can bail out
 let routeToken = 0;
 
 const $ = (id) => document.getElementById(id);
@@ -147,10 +146,35 @@ function comingSoon(iconName, bullets) {
 }
 
 /* Score cards */
+function criteriaList(items) {
+  if (!items || !items.length) return "";
+  const rows = items.map((c) => {
+    const st = RM_STATUS[c.status] || RM_STATUS.missing;
+    return `<li class="flex items-start gap-2 py-1.5">
+      ${rmStatusIcon(c.status)}
+      <div class="min-w-0">
+        <div class="text-sm">${esc(c.label)}</div>
+        ${c.evidence ? `<div class="text-xs text-slate-400 break-words">${esc(c.evidence)}</div>` : ""}
+      </div>
+      <span class="ml-auto text-[11px] px-2 py-0.5 rounded-full whitespace-nowrap ${st.cls}">${st.label}</span>
+    </li>`;
+  }).join("");
+  return `<details class="mt-3">
+    <summary class="text-sm text-indigo-600 cursor-pointer">Meyarlara bax (${items.length})</summary>
+    <ul class="mt-2 divide-y divide-slate-100">${rows}</ul>
+  </details>`;
+}
+
 function categoryCard(c) {
   const s = clampScore(c.score);
   const note = c.key === "ats"
     ? `<p class="text-[11px] text-slate-400 mt-2">Mətn əsaslı yoxlamadır: sütun, cədvəl və şəkil kimi vizual dizayn nəzərə alınmır.</p>`
+    : "";
+  const fixes = c.fixes && c.fixes.length
+    ? `<div class="mt-3">
+        <p class="text-xs uppercase tracking-wide text-slate-400 mb-1">Düzəliş təklifləri</p>
+        <ul class="list-disc pl-5 text-sm text-slate-600 space-y-1">${c.fixes.slice(0, 3).map((f) => `<li>${esc(f)}</li>`).join("")}</ul>
+      </div>`
     : "";
   return `<div class="${CARD} p-5">
     <div class="flex items-start justify-between gap-3">
@@ -159,6 +183,8 @@ function categoryCard(c) {
     </div>
     <div class="mt-3">${progressBar(s)}</div>
     <p class="text-sm text-slate-600 mt-3">${esc(c.reasoning)}</p>
+    ${fixes}
+    ${criteriaList(c.criteria)}
     ${note}
   </div>`;
 }

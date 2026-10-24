@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -6,6 +6,7 @@ from app.deps import get_client_id
 from app.models.schemas import EvaluationResponse
 from app.routers.cv import read_pdf
 from app.services.ai_analyzer import AIAnalysisError
+from app.services.eval_cache import cache_key, get_cached, put_cached
 from app.services.evaluator import evaluate_cv
 from app.services.history import save_record
 from app.services.matcher import ROLES
@@ -17,6 +18,7 @@ router = APIRouter(prefix="/api/evaluate", tags=["Evaluate"])
 async def evaluate_endpoint(
     file: UploadFile = File(...),
     field_id: str = Form(...),
+    refresh: bool = Query(False, description="Skip the cache and re-evaluate"),
     client_id: str = Depends(get_client_id),
     db: Session = Depends(get_db),
 ):
@@ -27,10 +29,15 @@ async def evaluate_endpoint(
         )
 
     text, pages = await read_pdf(file)
-    try:
-        result = await evaluate_cv(text, field_id, file.filename, pages)
-    except AIAnalysisError as e:
-        raise HTTPException(status_code=e.status_code, detail=str(e))
+    key = cache_key(text, field_id, pages)
+
+    result = None if refresh else get_cached(db, key, file.filename, pages)
+    if result is None:
+        try:
+            result = await evaluate_cv(text, field_id, file.filename, pages)
+        except AIAnalysisError as e:
+            raise HTTPException(status_code=e.status_code, detail=str(e))
+        put_cached(db, key, result)
 
     save_record(db, client_id, "evaluation", file.filename, result,
                 field_id=field_id, score=result.overall_score)

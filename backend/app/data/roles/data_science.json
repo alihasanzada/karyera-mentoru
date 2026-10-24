@@ -19,5 +19,33 @@
         "Deep learning (PyTorch/TensorFlow)",
         "A/B test və eksperiment dizaynı",
         "Cloud (AWS, GCP, Azure) əsasları"
+    ],
+    "ats_keywords": [
+        "Python",
+        "SQL",
+        "pandas",
+        "NumPy",
+        "scikit-learn",
+        "TensorFlow",
+        "PyTorch",
+        "Matplotlib",
+        "Seaborn",
+        "Jupyter",
+        "Power BI",
+        "Tableau",
+        "Excel",
+        "Statistics",
+        "Machine Learning",
+        "Deep Learning",
+        "Data Visualization",
+        "Data Cleaning",
+        "ETL",
+        "A/B Testing",
+        "Regression",
+        "Classification",
+        "Kaggle",
+        "Spark",
+        "Git",
+        "Feature Engineering"
     ]
 }

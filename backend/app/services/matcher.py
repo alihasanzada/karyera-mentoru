@@ -1,13 +1,9 @@
 import json
 from pathlib import Path
 
-from app.models.schemas import (
-    FieldInfo,
-    MatchLLMOutput,
-    MatchResponse,
-    SkillCheck,
-)
+from app.models.schemas import FieldInfo, MatchLLMOutput, MatchResponse, SkillCheck
 from app.services.ai_analyzer import MAX_CV_CHARS, generate_structured
+from app.services.rubric import norm, quote_supported
 
 APP_DIR = Path(__file__).resolve().parent.parent
 ROLES_DIR = APP_DIR / "data" / "roles"
@@ -34,16 +30,25 @@ def list_fields() -> list[FieldInfo]:
     ]
 
 
-def _align(expected: list[str], checks: list[SkillCheck]) -> list[SkillCheck]:
-    """If AI misses a skill or changes its name, ensure the result matches the role file."""
+def _verify(status: str, evidence: str, cv_tokens: set[str]) -> tuple[str, str]:
+    """A verdict without a quote found in the CV is downgraded by one level."""
+    if status == "missing":
+        return "missing", ""
+    if quote_supported(evidence, cv_tokens):
+        return status, evidence.strip()
+    return ("partial" if status == "has" else "missing"), ""
+
+
+def _align(expected: list[str], checks: list[SkillCheck], cv_tokens: set[str]) -> list[SkillCheck]:
     by_name = {c.skill.strip().lower(): c for c in checks}
     aligned = []
     for skill in expected:
         found = by_name.get(skill.strip().lower())
-        if found:
-            aligned.append(SkillCheck(skill=skill, status=found.status, evidence=found.evidence))
-        else:
+        if not found:
             aligned.append(SkillCheck(skill=skill, status="missing", evidence=""))
+            continue
+        status, evidence = _verify(found.status, found.evidence, cv_tokens)
+        aligned.append(SkillCheck(skill=skill, status=status, evidence=evidence))
     return aligned
 
 
@@ -54,7 +59,7 @@ def _ratio(checks: list[SkillCheck]) -> float:
 
 
 def compute_score(required: list[SkillCheck], preferred: list[SkillCheck]) -> int:
-    """Required skills contribute 75%, preferred skills contribute 25%."""
+    """Required skills weigh 75%, preferred skills 25%."""
     return round(100 * (0.75 * _ratio(required) + 0.25 * _ratio(preferred)))
 
 
@@ -87,8 +92,9 @@ async def match_cv(cv_text: str, field_id: str, filename: str, pages: int) -> Ma
 
     llm = await generate_structured(MATCH_PROMPT, contents, MatchLLMOutput)
 
-    required = _align(role["required_skills"], llm.required)
-    preferred = _align(role["preferred_skills"], llm.preferred)
+    cv_tokens = set(norm(cv_text).split())
+    required = _align(role["required_skills"], llm.required, cv_tokens)
+    preferred = _align(role["preferred_skills"], llm.preferred, cv_tokens)
     score = compute_score(required, preferred)
 
     return MatchResponse(

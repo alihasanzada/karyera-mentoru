@@ -1,5 +1,7 @@
 from typing import Literal
+
 from pydantic import BaseModel, Field
+
 
 class UploadResponse(BaseModel):
     filename: str
@@ -7,19 +9,20 @@ class UploadResponse(BaseModel):
     characters: int
     text: str
 
+
 class Recommendation(BaseModel):
-    title: str = Field(description="Short title of the recommendation (1-3 words)")
-    details: str = Field(description="What to do, 1-3 sentences, with specific steps")
+    title: str = Field(description="Short recommendation title")
+    details: str = Field(description="What to do, 1-3 sentences with concrete steps")
     priority: Literal["high", "medium", "low"]
 
 
 class CVAnalysis(BaseModel):
-    summary: str = Field(description="Short summary of the CV (2-3 sentences)")
-    cv_score: int = Field(description="CV's quality score, from 0 to 100")
+    summary: str = Field(description="Overall assessment of the CV in 2-3 sentences")
+    cv_score: int = Field(description="CV quality score as an integer from 0 to 100")
     detected_skills: list[str] = Field(description="Skills found in the CV")
     strengths: list[str]
     weaknesses: list[str]
-    missing_skills: list[str] = Field(description="Skills missing for the profile")
+    missing_skills: list[str] = Field(description="Skills missing for the candidate's profile")
     recommendations: list[Recommendation]
 
 
@@ -28,23 +31,23 @@ class AnalyzeResponse(BaseModel):
     pages: int
     analysis: CVAnalysis
 
+
 class SkillCheck(BaseModel):
-    skill: str = Field(description="Skill name (as in the job description, without modification)")
+    skill: str = Field(description="Skill name exactly as written in the role file")
     status: Literal["has", "partial", "missing"]
-    evidence: str = Field(description="Short evidence from the CV. Empty if not found.")
+    evidence: str = Field(description="Verbatim CV excerpt supporting the status, empty if missing")
 
 
 class ActionStep(BaseModel):
     title: str
-    details: str = Field(description="What to do, 1-3 sentences, with specific steps")
-    timeframe: str = Field(description="Estimated timeframe, e.g.: 2 weeks")
+    details: str = Field(description="Concrete actions, 1-3 sentences")
+    timeframe: str = Field(description="Approximate duration, for example 2 weeks")
 
 
 class MatchLLMOutput(BaseModel):
-    """The part returned by Gemini (There is no score here; the code calculates it)."""
     required: list[SkillCheck]
     preferred: list[SkillCheck]
-    summary: str = Field(description="Short summary of the candidate's preparation for this field (2-3 sentences)")
+    summary: str = Field(description="2-3 sentences on the candidate's readiness for this field")
     action_plan: list[ActionStep]
 
 
@@ -67,6 +70,7 @@ class MatchResponse(BaseModel):
     summary: str
     action_plan: list[ActionStep]
 
+
 class HistoryItem(BaseModel):
     id: int
     kind: Literal["match", "cv", "evaluation"]
@@ -79,30 +83,39 @@ class HistoryItem(BaseModel):
 class HistoryDetail(HistoryItem):
     result: dict
 
+
 class ScoreCategory(BaseModel):
-    """Category assessment returned by the AI."""
     score: int = Field(description="Integer from 0 to 100")
-    reasoning: str = Field(description="Reasoning for the score (1-3 sentences)")
-    positives: list[str] = Field(description="Positive aspects of the CV")
-    issues: list[str] = Field(description="Identified issues")
-    fixes: list[str] = Field(description="Concrete, actionable fixes")
+    reasoning: str
+    positives: list[str]
+    issues: list[str]
+    fixes: list[str]
 
 
-class EvaluationLLMOutput(BaseModel):
-    """The part returned by Gemini. The total score and Category 4 are NOT here."""
-    summary: str
-    structure: ScoreCategory
-    ats: ScoreCategory
-    impact: ScoreCategory
-    detected_skills: list[str]
-    strengths: list[str]
-    weaknesses: list[str]
-    recommendations: list[Recommendation]
+class CriterionResult(BaseModel):
+    id: str = ""
+    label: str
+    status: Literal["has", "partial", "missing"]
+    weight: int = 0
+    evidence: str = ""
 
 
 class CategoryResult(ScoreCategory):
     key: Literal["structure", "ats", "impact", "field_fit"]
     label: str
+    criteria: list[CriterionResult] = []
+
+
+class CriterionVerdict(BaseModel):
+    id: str = Field(description="Criterion id copied exactly from the input")
+    status: Literal["yes", "partial", "no"]
+    quote: str = Field(description="Verbatim CV excerpt of at most 12 words, empty when status is no")
+
+
+class EvaluationLLMOutput(BaseModel):
+    summary: str
+    detected_skills: list[str]
+    verdicts: list[CriterionVerdict]
 
 
 class EvaluationResponse(BaseModel):
@@ -118,7 +131,7 @@ class EvaluationResponse(BaseModel):
     strengths: list[str]
     weaknesses: list[str]
     recommendations: list[Recommendation]
-    match: MatchResponse  # full result of the field comparison (will be required for the Roadmap module)
+    match: MatchResponse
 
 
 class ResourceItem(BaseModel):
