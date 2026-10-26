@@ -17,6 +17,7 @@ MAX_CV_CHARS = 15000
 CALL_TIMEOUT = 45
 TOTAL_BUDGET = 150
 ROUNDS = 2
+SEED = 42
 
 T = TypeVar("T", bound=BaseModel)
 _client: genai.Client | None = None
@@ -32,7 +33,7 @@ def get_client() -> genai.Client:
     global _client
     if _client is None:
         if not settings.gemini_api_key:
-            raise AIAnalysisError("GEMINI_API_KEY .env faylında təyin olunmayıb.", 500)
+            raise AIAnalysisError("GEMINI_API_KEY təyin olunmayıb.", 500)
         _client = genai.Client(api_key=settings.gemini_api_key)
     return _client
 
