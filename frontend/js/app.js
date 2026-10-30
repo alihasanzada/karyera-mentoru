@@ -19,26 +19,39 @@ const fmtDate = (iso) => {
 const fieldName = (id) => (state.fields.find((f) => f.id === id) || {}).name || id;
 
 /* API */
+
 async function api(path, options = {}, timeoutMs = 60000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+
   try {
     const res = await fetch(path, {
       ...options,
       signal: controller.signal,
-      headers: { ...(options.headers || {}), "X-Client-Id": clientId },
+      headers: {
+        ...(options.headers || {}),
+        "X-Client-Id": clientId
+      },
     });
+
     if (!res.ok) {
       let msg = "Xəta baş verdi. Yenidən cəhd et.";
+
       try {
         const data = await res.json();
         if (typeof data.detail === "string") msg = data.detail;
       } catch { }
+
       throw new Error(msg);
     }
+
     return await res.json();
   } catch (e) {
-    if (e.name === "AbortError") throw new Error("Cavab çox gec gəldi. Bir az sonra yenidən cəhd et.");
+    if (e.name === "AbortError") {
+      throw new Error(
+        "Cavab çox gec gəldi. Bir az sonra yenidən cəhd et."
+      );
+    }
     throw e;
   } finally {
     clearTimeout(timer);
