@@ -1,10 +1,13 @@
 import asyncio
+import logging
 import time
 from pathlib import Path
 from typing import TypeVar
 
 from google import genai
 from google.genai import errors, types
+import httpx
+import httpx2
 from pydantic import BaseModel
 
 from app.config import settings
@@ -21,6 +24,7 @@ SEED = 42
 
 T = TypeVar("T", bound=BaseModel)
 _client: genai.Client | None = None
+logger = logging.getLogger(__name__)
 
 
 class AIAnalysisError(Exception):
@@ -58,6 +62,8 @@ async def _call(model: str, system_prompt: str, contents: str, schema: type[T]) 
 
 async def generate_structured(system_prompt: str, contents: str, schema: type[T]) -> T:
     """It checks the models sequentially. If one returns a 503/timeout, it immediately moves on to the next one.."""
+    # Fail immediately on local configuration errors, preserving the useful message.
+    get_client()
     chain = settings.model_chain
     dead: set[str] = set()  # Models returning 400/403/404 errors are not re-checked
     last_code: int | None = None
@@ -77,21 +83,28 @@ async def generate_structured(system_prompt: str, contents: str, schema: type[T]
                 result = await asyncio.wait_for(
                     _call(model, system_prompt, contents, schema), timeout=timeout
                 )
-                print(f"Gemini OK: {model} ({time.monotonic() - started:.1f} seconds)")
+                logger.info("Gemini OK: %s (%.1f seconds)", model, time.monotonic() - started)
                 return result
                 
             except TimeoutError:
                 last_code = 504
-                print(f"Gemini timeout ({model}): {timeout:.0f} seconds - no response was received within a second")
+                logger.warning("Gemini timeout: %s", model)
+            except (httpx.TransportError, httpx2.TransportError):
+                last_code = 503
+                logger.warning("Gemini connection failed: %s", model)
             except AIAnalysisError as e:  # The model returned a response in an incorrect format
+                if e.status_code != 502:
+                    raise
                 last_code = 502
-                print(f"Gemini format error ({model}): {e}")
+                logger.warning("Gemini response format error: %s", model)
             except errors.APIError as e:
                 last_code = e.code
-                print(f"Gemini error ({model}): {e.code} {e.message}")
+                logger.warning("Gemini API error: %s (%s)", model, e.code)
                 if e.code in (400, 403, 404):  # Model or key problem; repeating it is pointless.
                     dead.add(model)
 
+        if all(model in dead for model in chain):
+            break
         if round_no < ROUNDS - 1 and deadline - time.monotonic() > 10:
             await asyncio.sleep(3)
         else:
@@ -99,9 +112,9 @@ async def generate_structured(system_prompt: str, contents: str, schema: type[T]
 
     if last_code in (429, 503, 504):
         raise AIAnalysisError(
-            "AI service is currently overloaded. Please try again in 1-2 minutes.", 503
+            "AI xidməti hazırda əlçatan deyil. 1–2 dəqiqə sonra yenidən cəhd et.", 503
         )
-    raise AIAnalysisError("Error occurred while communicating with the AI service.", 502)
+    raise AIAnalysisError("AI xidməti ilə əlaqə zamanı xəta baş verdi. Model və API açarı sazlamalarını yoxla.", 502)
 
 
 async def analyze_cv(cv_text: str) -> CVAnalysis:

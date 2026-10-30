@@ -6,7 +6,7 @@ if (!clientId) {
   localStorage.setItem("karyera_client_id", clientId);
 }
 
-const state = { fields: [], history: [], latest: null, current: null };
+const state = { fields: [], history: [], latest: null, current: null, evaluating: false };
 let routeToken = 0;
 
 const $ = (id) => document.getElementById(id);
@@ -79,6 +79,7 @@ async function loadLatest() {
     const d = await api("/api/history/" + last.id);
     state.latest = { ...d.result, _id: last.id, _at: last.created_at };
   }
+  state.latest._at = last.created_at;
   return state.latest;
 }
 
@@ -330,8 +331,8 @@ async function renderCV() {
           ${fields.map((f) => `<option value="${esc(f.id)}">${esc(f.name)}</option>`).join("")}
         </select>
       </div>
-      <button id="cv-run" class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-medium">Analiz et</button>
-      <p id="cv-status" class="text-sm"></p>
+      <button id="cv-run" ${state.evaluating ? "disabled" : ""} class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-medium">Analiz et</button>
+      <p id="cv-status" class="text-sm" aria-live="polite">${state.evaluating ? "AI analiz edir..." : ""}</p>
     </div>
     <div id="cv-result" class="mt-6">${renderResult(shown)}</div>`;
 
@@ -346,6 +347,7 @@ function setCvStatus(msg, isError = false) {
 }
 
 async function runEvaluate() {
+  if (state.evaluating) return;
   const file = $("cv-file").files[0];
   if (!file) return setCvStatus("Əvvəlcə PDF faylı seç.", true);
   if (!file.name.toLowerCase().endsWith(".pdf")) return setCvStatus("Yalnız PDF faylı qəbul olunur.", true);
@@ -355,6 +357,7 @@ async function runEvaluate() {
   form.append("file", file);
   form.append("field_id", $("cv-field").value);
 
+  state.evaluating = true;
   $("cv-run").disabled = true;
   const started = Date.now();
   setCvStatus("AI analiz edir...");
@@ -364,9 +367,7 @@ async function runEvaluate() {
 
   try {
     const data = await api("/api/evaluate", { method: "POST", body: form }, 180000);
-    const hist = await loadHistory();
-    const newest = hist.find((h) => h.kind === "evaluation");
-    state.latest = { ...data, _id: newest?.id, _at: newest?.created_at };
+    state.latest = { ...data, _id: data.evaluation_id };
     state.current = state.latest;
     setCvStatus("");
     const box = $("cv-result");
@@ -377,6 +378,7 @@ async function runEvaluate() {
   } catch (e) {
     setCvStatus(e.message, true);
   } finally {
+    state.evaluating = false;
     clearInterval(ticker);
     const btn = $("cv-run");
     if (btn) btn.disabled = false;

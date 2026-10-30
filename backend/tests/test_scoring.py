@@ -115,7 +115,10 @@ def test_unsupported_quote_is_downgraded():
 
 def test_cache_key_depends_on_inputs():
     key = cache_key("Same text", "cybersecurity", 1)
-    assert key == cache_key("same   TEXT", "cybersecurity", 1)
+    assert key == cache_key("Same text", "cybersecurity", 1)
+    assert key != cache_key("same   TEXT", "cybersecurity", 1)
+    assert cache_key("C", "frontend", 1) != cache_key("C++", "frontend", 1)
+    assert cache_key("Skills\nPython", "frontend", 1) != cache_key("Skills Python", "frontend", 1)
     assert key != cache_key("Same text", "frontend", 1)
     assert key != cache_key("Same text", "cybersecurity", 2)
 

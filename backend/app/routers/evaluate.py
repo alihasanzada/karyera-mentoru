@@ -39,6 +39,8 @@ async def evaluate_endpoint(
             raise HTTPException(status_code=e.status_code, detail=str(e))
         put_cached(db, key, result)
 
-    save_record(db, client_id, "evaluation", file.filename, result,
-                field_id=field_id, score=result.overall_score)
+    result.evaluation_id = save_record(
+        db, client_id, "evaluation", file.filename, result,
+        field_id=field_id, score=result.overall_score,
+    )
     return result

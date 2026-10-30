@@ -1,5 +1,6 @@
 from fastapi import APIRouter, File, HTTPException, UploadFile, Depends
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 from app.db.database import get_db
 from app.deps import get_client_id
 from app.services.history import save_record
@@ -16,9 +17,10 @@ async def read_pdf(file: UploadFile) -> tuple[str, int]:
     if not (file.filename or "").lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Yalnız PDF faylı qəbul olunur.")
 
-    content = await file.read()
+    limit = settings.max_upload_mb * 1024 * 1024
+    content = await file.read(limit + 1)
 
-    if len(content) > settings.max_upload_mb * 1024 * 1024:
+    if len(content) > limit:
         raise HTTPException(
             status_code=413,
             detail=f"Fayl çox böyükdür (maksimum {settings.max_upload_mb} MB).",
@@ -27,7 +29,7 @@ async def read_pdf(file: UploadFile) -> tuple[str, int]:
         raise HTTPException(status_code=400, detail="Bu fayl həqiqi PDF deyil.")
 
     try:
-        return extract_text_from_pdf(content)
+        return await run_in_threadpool(extract_text_from_pdf, content)
     except PDFParseError as e:
         raise HTTPException(status_code=422, detail=str(e))
 

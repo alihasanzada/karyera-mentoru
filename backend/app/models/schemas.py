@@ -119,6 +119,7 @@ class EvaluationLLMOutput(BaseModel):
 
 
 class EvaluationResponse(BaseModel):
+    evaluation_id: int | None = None
     filename: str
     pages: int
     field_id: str
