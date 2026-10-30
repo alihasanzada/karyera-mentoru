@@ -31,7 +31,7 @@ Layihə erkən MVP-dir. FastAPI backend, sadə JavaScript frontend, SQLite və G
 
 ## Növbəti prioritetlər
 
-- **İctimai istifadədən əvvəl:** autentifikasiya, istifadəçi üzrə sorğu/AI xərc limitləri, CV məlumatları üçün razılıq və silinmə qaydası. `X-Client-Id` hesab sistemi deyil; bu identifikatoru bilən tərəf müvafiq tarixçəyə giriş əldə edə bilər.
+- **İctimai istifadədən əvvəl:** giriş və AI sorğu limitləri, parol bərpası, e-poçt təsdiqi, CV məlumatları üçün razılıq və silinmə qaydası. Köhnə anonim `X-Client-Id` tarixçəsi yeni hesaba avtomatik daşınmır.
 - **Məlumatların saxlanması:** SQLite üçün davamlı disk və ehtiyat nüsxə, sxem miqrasiyaları, keş üçün müddət və silinmə siyasəti. Analizlərdə şəxsi məlumatlı sitatlar qala bilər; tarixçə silinməsi keşi silmir.
 - **Məhsulun əsas dəyəri:** icazəli/uyğun mənbədən real vakansiyalar və onların konkret tələbləri ilə CV müqayisəsi. Hazırkı sahə profilləri real vaxt bazar təhlili deyil.
 - **Daha sonra:** nəticələrə əsaslanan mentor söhbəti, müraciət izləmə, cihazlararası irəliləyiş.

@@ -11,6 +11,8 @@ function setup(fetch) {
       innerHTML: "", textContent: "", disabled: false, value: "cybersecurity",
       files: [{ name: "cv.pdf", size: 100 }],
       classList: { add() {}, remove() {} }, addEventListener() {}, scrollIntoView() {},
+      elements: { email: { value: "first@example.com" }, password: { value: "long-test-password" } },
+      querySelector: () => ({ disabled: false }),
     });
     return nodes.get(id);
   };
@@ -22,7 +24,8 @@ function setup(fetch) {
     location: { hash: "#/jobs" }, alert() {},
   });
   for (const file of ["roadmap.js", "app.js"]) {
-    vm.runInContext(fs.readFileSync(path.join(__dirname, "../js", file), "utf8"), context);
+    const source = fs.readFileSync(path.join(__dirname, "../js", file), "utf8");
+    vm.runInContext(file === "app.js" ? source.replace(/boot\(\);\s*$/, "") : source, context);
   }
   return { context, node, run: () => vm.runInContext("runEvaluate()", context) };
 }
@@ -31,7 +34,7 @@ test("evaluation uses its response ID without a fallible history request", async
   const requests = [];
   const app = setup(async (url, options) => {
     requests.push(url);
-    assert.equal(options.headers["X-Client-Id"], "test-client-one");
+    assert.equal(options.method, "POST");
     return { ok: true, json: async () => ({ evaluation_id: 42, categories: [], overall_score: 50 }) };
   });
   await app.run();
@@ -71,4 +74,11 @@ test("low role match has a visible warning while strong fit does not", () => {
   assert.match(weak, /uyğun görünmür/);
   assert.match(weak, /12\/100/);
   assert.equal(strong, "");
+});
+
+test("login gate replaces the app for an anonymous visitor", async () => {
+  const app = setup(async () => ({ ok: false, status: 401, json: async () => ({ detail: "Hesabına daxil ol." }) }));
+  await vm.runInContext("boot()", app.context);
+  assert.match(app.node("view").innerHTML, /auth-form/);
+  assert.match(app.node("view").innerHTML, /Daxil ol/);
 });

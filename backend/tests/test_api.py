@@ -15,8 +15,10 @@ from app.routers import cv, evaluate
 from app.services import ai_analyzer, history
 from app.services.evaluator import assemble_evaluation
 
-HEADERS = {"X-Client-Id": "test-client-one"}
-OTHER = {"X-Client-Id": "test-client-two"}
+def signup(client, email):
+    response = client.post("/api/auth/signup", json={"email": email, "password": "long-test-password"})
+    assert response.status_code == 201
+    return {"session": response.cookies["session"]}
 
 
 @pytest.fixture
@@ -78,12 +80,26 @@ def test_health_frontend_and_fields(api):
 
 def test_pdf_upload_and_validation(api, pdf_bytes):
     client, _ = api
-    response = client.post("/api/cv/upload", files={"file": ("cv.pdf", pdf_bytes)})
+    cookies = signup(client, "first@example.com")
+    response = client.post("/api/cv/upload", cookies=cookies, files={"file": ("cv.pdf", pdf_bytes)})
     assert response.status_code == 200
     assert response.json()["text"] == "Skills: Python Linux"
     for name, data, status in [("cv.txt", pdf_bytes, 400), ("cv.pdf", b"fake", 400),
                                ("cv.pdf", b"%PDF broken", 422)]:
-        assert client.post("/api/cv/upload", files={"file": (name, data)}).status_code == status
+        assert client.post("/api/cv/upload", cookies=cookies, files={"file": (name, data)}).status_code == status
+
+
+def test_authentication_and_logout(api):
+    client, _ = api
+    assert client.get("/api/auth/me").status_code == 401
+    cookies = signup(client, "first@example.com")
+    assert client.get("/api/auth/me", cookies=cookies).json()["email"] == "first@example.com"
+    assert client.post("/api/auth/signup", json={"email": "first@example.com", "password": "long-test-password"}).status_code == 409
+    assert client.post("/api/auth/login", json={"email": "first@example.com", "password": "incorrect-pass"}).status_code == 401
+    assert client.post("/api/auth/logout", cookies=cookies).status_code == 200
+    client.cookies.clear()
+    assert client.get("/api/auth/me", cookies=cookies).status_code == 401
+    assert client.post("/api/auth/login", json={"email": "FIRST@example.com", "password": "long-test-password"}).status_code == 200
 
 
 def test_pdf_read_is_bounded(monkeypatch):
@@ -101,7 +117,8 @@ def test_missing_api_key_preserves_actionable_error(api, pdf_bytes, monkeypatch)
     monkeypatch.setattr(ai_analyzer, "_client", None)
     monkeypatch.setattr(ai_analyzer.settings, "gemini_api_key", "")
     client, _ = api
-    response = client.post("/api/evaluate", headers=HEADERS,
+    cookies = signup(client, "first@example.com")
+    response = client.post("/api/evaluate", cookies=cookies,
                            data={"field_id": "cybersecurity"}, files={"file": ("cv.pdf", pdf_bytes)})
     assert response.status_code == 500
     assert "GEMINI_API_KEY" in response.json()["detail"]
@@ -111,37 +128,42 @@ def test_evaluation_id_cache_and_client_isolation(api, pdf_bytes, evaluation, mo
     generate = AsyncMock(return_value=evaluation)
     monkeypatch.setattr(evaluate, "evaluate_cv", generate)
     client, _ = api
+    first_cookie = signup(client, "first@example.com")
+    second_cookie = signup(client, "second@example.com")
     payload = {"data": {"field_id": "cybersecurity"}, "files": {"file": ("cv.pdf", pdf_bytes)}}
-    first = client.post("/api/evaluate", headers=HEADERS, **payload)
-    second = client.post("/api/evaluate", headers=OTHER, **payload)
+    first = client.post("/api/evaluate", cookies=first_cookie, **payload)
+    second = client.post("/api/evaluate", cookies=second_cookie, **payload)
     assert first.status_code == second.status_code == 200
     first_id = first.json()["evaluation_id"]
     second_id = second.json()["evaluation_id"]
     assert isinstance(first_id, int) and first_id != second_id
     assert generate.await_count == 1
-    assert client.get(f"/api/history/{first_id}", headers=HEADERS).status_code == 200
-    assert client.get(f"/api/history/{first_id}", headers=OTHER).status_code == 404
-    assert client.get(f"/api/roadmap/{first_id}", headers=OTHER).status_code == 404
-    assert client.delete(f"/api/history/{first_id}", headers=OTHER).status_code == 404
-    assert client.get("/api/history").status_code == 400
+    assert client.get(f"/api/history/{first_id}", cookies=first_cookie).status_code == 200
+    assert client.get(f"/api/history/{first_id}", cookies=second_cookie).status_code == 404
+    assert client.get(f"/api/roadmap/{first_id}", cookies=second_cookie).status_code == 404
+    assert client.delete(f"/api/history/{first_id}", cookies=second_cookie).status_code == 404
+    client.cookies.clear()
+    assert client.get("/api/history").status_code == 401
 
 
 def test_delete_and_retention_remove_dependent_plans(api, evaluation, monkeypatch):
     client, factory = api
+    first_cookie = signup(client, "first@example.com")
+    signup(client, "second@example.com")
     with factory() as db:
-        first_id = history.save_record(db, "test-client-one", "evaluation", "cv.pdf", evaluation)
-        other_id = history.save_record(db, "test-client-two", "evaluation", "cv.pdf", evaluation)
-        db.add_all([RoadmapRecord(client_id="test-client-one", evaluation_id=first_id, llm_json="{}"),
-                    RoadmapRecord(client_id="test-client-two", evaluation_id=other_id, llm_json="{}")])
+        first_id = history.save_record(db, "user-1", "evaluation", "cv.pdf", evaluation)
+        other_id = history.save_record(db, "user-2", "evaluation", "cv.pdf", evaluation)
+        db.add_all([RoadmapRecord(client_id="user-1", evaluation_id=first_id, llm_json="{}"),
+                    RoadmapRecord(client_id="user-2", evaluation_id=other_id, llm_json="{}")])
         db.commit()
-    assert client.delete(f"/api/history/{first_id}", headers=HEADERS).status_code == 200
+    assert client.delete(f"/api/history/{first_id}", cookies=first_cookie).status_code == 200
     with factory() as db:
         assert [r.evaluation_id for r in db.scalars(select(RoadmapRecord))] == [other_id]
-        keep_id = history.save_record(db, "test-client-one", "evaluation", "cv.pdf", evaluation)
-        db.add(RoadmapRecord(client_id="test-client-one", evaluation_id=keep_id, llm_json="{}"))
+        keep_id = history.save_record(db, "user-1", "evaluation", "cv.pdf", evaluation)
+        db.add(RoadmapRecord(client_id="user-1", evaluation_id=keep_id, llm_json="{}"))
         db.commit()
         monkeypatch.setattr(history, "MAX_PER_CLIENT", 1)
-        newest_id = history.save_record(db, "test-client-one", "evaluation", "cv.pdf", evaluation)
+        newest_id = history.save_record(db, "user-1", "evaluation", "cv.pdf", evaluation)
         assert db.get(AnalysisRecord, keep_id) is None
         assert db.get(AnalysisRecord, newest_id) is not None
         assert [r.evaluation_id for r in db.scalars(select(RoadmapRecord))] == [other_id]

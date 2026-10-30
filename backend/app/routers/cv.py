@@ -35,7 +35,7 @@ async def read_pdf(file: UploadFile) -> tuple[str, int]:
 
 
 @router.post("/upload", response_model=UploadResponse)
-async def upload_cv(file: UploadFile = File(...)):
+async def upload_cv(file: UploadFile = File(...), client_id: str = Depends(get_client_id)):
     text, pages = await read_pdf(file)
     return UploadResponse(
         filename=file.filename, pages=pages, characters=len(text), text=text

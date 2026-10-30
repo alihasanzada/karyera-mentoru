@@ -4,11 +4,12 @@ from fastapi.staticfiles import StaticFiles
 from app.config import BASE_DIR, settings
 from app.db import db_models  # noga: F401  (It is required for the registration of schedules and other models in the database)
 from app.db.database import Base, engine
-from app.routers import cv, evaluate, history, match, roadmap
+from app.routers import auth, cv, evaluate, history, match, roadmap
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title=settings.app_name, version="0.4.0")
+app.include_router(auth.router)
 app.include_router(cv.router)
 app.include_router(match.router)
 app.include_router(history.router)

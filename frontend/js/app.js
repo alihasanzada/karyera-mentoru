@@ -1,12 +1,6 @@
 const MAX_MB = 5;
 
-let clientId = localStorage.getItem("karyera_client_id");
-if (!clientId) {
-  clientId = crypto.randomUUID();
-  localStorage.setItem("karyera_client_id", clientId);
-}
-
-const state = { fields: [], history: [], latest: null, current: null, evaluating: false };
+const state = { fields: [], history: [], latest: null, current: null, evaluating: false, user: null };
 let routeToken = 0;
 
 const $ = (id) => document.getElementById(id);
@@ -28,10 +22,7 @@ async function api(path, options = {}, timeoutMs = 60000) {
     const res = await fetch(path, {
       ...options,
       signal: controller.signal,
-      headers: {
-        ...(options.headers || {}),
-        "X-Client-Id": clientId
-      },
+      headers: options.headers || {},
     });
 
     if (!res.ok) {
@@ -42,6 +33,11 @@ async function api(path, options = {}, timeoutMs = 60000) {
         if (typeof data.detail === "string") msg = data.detail;
       } catch { }
 
+      if (res.status === 401 && !path.startsWith("/api/auth/")) {
+        state.user = null;
+        routeToken++;
+        renderAuth();
+      }
       throw new Error(msg);
     }
 
@@ -158,6 +154,43 @@ const loadingHtml = () => `<p class="text-sm text-slate-500">Yüklənir...</p>`;
 
 function showError(msg) {
   $("view").innerHTML = `<div class="${CARD} p-6 text-red-600 text-sm">${esc(msg)}</div>`;
+}
+
+function renderAuth(signup = false) {
+  $("sidebar").classList.add("hidden");
+  $("main").classList.remove("lg:pl-64");
+  $("view").innerHTML = `<div class="max-w-md mx-auto mt-12 ${CARD} p-8">
+    <h1 class="text-2xl font-bold mb-2">Karyera Mentoru</h1>
+    <p class="text-sm text-slate-500 mb-6">${signup ? "Yeni hesab yarat" : "Hesabına daxil ol"}</p>
+    <form id="auth-form" class="space-y-4">
+      <label class="block text-sm">E-poçt<input name="email" type="email" autocomplete="email" required maxlength="254" class="mt-1 w-full border rounded-lg p-2"></label>
+      <label class="block text-sm">Parol<input name="password" type="password" autocomplete="${signup ? "new-password" : "current-password"}" required minlength="12" maxlength="128" class="mt-1 w-full border rounded-lg p-2"></label>
+      <button class="w-full bg-indigo-600 text-white p-2.5 rounded-lg disabled:opacity-50">${signup ? "Qeydiyyatdan keç" : "Daxil ol"}</button>
+      <p id="auth-error" role="alert" class="text-sm text-red-600"></p>
+    </form>
+    <button id="auth-switch" class="mt-4 text-sm text-indigo-600">${signup ? "Hesabın var? Daxil ol" : "Hesabın yoxdur? Qeydiyyatdan keç"}</button>
+  </div>`;
+  $("auth-switch").addEventListener("click", () => renderAuth(!signup));
+  $("auth-form").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const form = ev.currentTarget;
+    const button = form.querySelector("button");
+    button.disabled = true;
+    try {
+      state.user = await api(`/api/auth/${signup ? "signup" : "login"}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.elements.email.value, password: form.elements.password.value }),
+      });
+      state.fields = []; state.history = []; state.latest = null; state.current = null;
+      $("sidebar").classList.remove("hidden");
+      $("main").classList.add("lg:pl-64");
+      $("account-email").textContent = state.user.email;
+      route();
+    } catch (e) {
+      $("auth-error").textContent = e.message;
+      button.disabled = false;
+    }
+  });
 }
 
 function comingSoon(iconName, bullets) {
@@ -449,6 +482,7 @@ function closeMenu() {
 }
 
 async function route() {
+  if (!state.user) return renderAuth();
   routeToken++;
   renderNav();
   closeMenu();
@@ -459,6 +493,14 @@ async function route() {
 /* Startup */
 $("menu-btn").addEventListener("click", openMenu);
 $("backdrop").addEventListener("click", closeMenu);
+$("logout-btn").addEventListener("click", async () => {
+  try { await api("/api/auth/logout", { method: "POST" }); }
+  finally {
+    state.user = null; state.latest = null; state.current = null; state.history = [];
+    routeToken++;
+    renderAuth();
+  }
+});
 window.addEventListener("hashchange", route);
 
 $("view").addEventListener("click", async (ev) => {
@@ -473,4 +515,11 @@ $("view").addEventListener("click", async (ev) => {
   }
 });
 
-route();
+async function boot() {
+  try {
+    state.user = await api("/api/auth/me");
+    $("account-email").textContent = state.user.email;
+    route();
+  } catch { renderAuth(); }
+}
+boot();

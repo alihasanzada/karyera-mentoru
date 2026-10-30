@@ -32,7 +32,9 @@ Add a new JSON file to the `backend/app/data/roles/` folder (copy it from existi
 ## Notes
 - The original PDF and full extracted CV text are not stored. Analysis results, including quoted CV excerpts and filenames, are saved in the local SQLite database (`karyera.db`). The evaluation cache also stores excerpts, with filenames removed.
 - CV text is sent to Gemini for analysis. Review this data flow and retention policy before accepting real users' CVs.
-- There is no user account yet; the history is tied to an `X-Client-Id` value in browser storage. This is not authentication. Add authentication and request limits before making the application publicly accessible.
+- Sign up with an email and a password of at least 12 characters, then sign in. Password hashes and seven-day login sessions are stored in SQLite. A session cookie is HttpOnly, SameSite=Strict and Secure on HTTPS. Users only see their own analysis history and roadmaps.
+- Existing history from the earlier anonymous `X-Client-Id` version is not transferred automatically. Keep the old local database as a backup, then upload the CV again in the new account.
+- Add login rate limits, password reset/email verification, CSRF defenses for cross-origin deployments, data deletion, and persistent database storage before opening the site to the public.
 - CV evaluation, three static role profiles, history, and roadmap generation are implemented. Vacancies, application tracking, and mentor chat are placeholders; there is no live job-market feed yet.
 - `/api/evaluate` returns `evaluation_id` for the exact saved result. Use that ID for `/api/roadmap/{evaluation_id}` instead of inferring it from the newest history entry.
 - The career score starts from role match and is adjusted by CV quality (structure, ATS and impact). It never exceeds the selected role's match score. A match below 35 displays a low-fit warning. Previous history scores are snapshots; upload the CV again to apply a new scoring version.
