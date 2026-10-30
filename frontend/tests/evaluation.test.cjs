@@ -63,3 +63,12 @@ test("failed evaluation displays server feedback and allows retry", async () => 
   assert.equal(vm.runInContext("state.evaluating", app.context), false);
   assert.equal(app.node("cv-run").disabled, false);
 });
+
+test("low role match has a visible warning while strong fit does not", () => {
+  const app = setup(async () => ({ ok: true, json: async () => ({}) }));
+  const weak = vm.runInContext("fieldWarning({ match: { match_score: 12 } })", app.context);
+  const strong = vm.runInContext("fieldWarning({ match: { match_score: 90 } })", app.context);
+  assert.match(weak, /uyğun görünmür/);
+  assert.match(weak, /12\/100/);
+  assert.equal(strong, "");
+});

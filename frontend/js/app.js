@@ -139,6 +139,15 @@ function scoreRing(score, size = 140) {
 
 const CARD = "bg-white rounded-xl border border-slate-200 shadow-sm";
 
+function fieldWarning(r) {
+  const score = r?.match?.match_score;
+  if (typeof score !== "number" || score >= 35) return "";
+  return `<div role="status" class="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+    <strong>Bu CV seçilən sahəyə uyğun görünmür.</strong>
+    Sahə tələblərinə uyğunluq ${clampScore(score)}/100-dür. CV-də bu sahəyə aid təcrübə və bacarıqlar görünmürsə, başqa sahə seç və ya CV-ni hədəf vəzifəyə uyğunlaşdır.
+  </div>`;
+}
+
 const pageHeader = (title, subtitle) => `
   <div class="mb-6">
     <h1 class="text-2xl font-bold">${esc(title)}</h1>
@@ -219,10 +228,11 @@ function renderResult(r) {
         <div class="flex flex-wrap items-center gap-2">
           <h2 class="text-lg font-semibold">${esc(r.field_name)}</h2>${readyBadge(r.readiness)}
         </div>
-        <p class="text-xs text-slate-400">Ümumi bal 4 kateqoriyanın ortalamasıdır · ${esc(r.filename)}</p>
+        <p class="text-xs text-slate-400">Bal sahəyə uyğunluğa əsaslanır; CV keyfiyyəti onu tənzimləyir · ${esc(r.filename)}</p>
         <p class="text-sm text-slate-700">${esc(r.summary)}</p>
       </div>
     </div>
+    ${fieldWarning(r)}
     <div class="grid gap-4 sm:grid-cols-2">${r.categories.map(categoryCard).join("")}</div>
     ${roadmapLink}
   </div>`;
@@ -284,6 +294,7 @@ async function renderDashboard() {
             <div class="flex flex-wrap items-center gap-2">
               <h2 class="font-semibold">${esc(latest.field_name)}</h2>${readyBadge(latest.readiness)}
             </div>
+            ${fieldWarning(latest)}
             <p class="text-sm text-slate-600">${esc(latest.summary)}</p>
             <p class="text-xs text-slate-400">${esc(latest.filename)} · ${fmtDate(latest._at)}</p>
             <button data-open="${latest._id}" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">Tam hesabata bax</button>

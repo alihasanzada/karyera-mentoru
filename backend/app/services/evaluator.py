@@ -63,6 +63,12 @@ def compute_overall(scores: list[int]) -> int:
     return round(sum(scores) / len(scores)) if scores else 0
 
 
+def career_score(match_score: int, quality_scores: list[int]) -> int:
+    """Role fit is the foundation; CV quality adjusts it by at most 30%."""
+    quality = compute_overall(quality_scores)
+    return _clamp(round(match_score * (0.7 + 0.3 * quality / 100)))
+
+
 @dataclass
 class Scored:
     criterion: Criterion
@@ -192,7 +198,7 @@ def assemble_evaluation(
         for key in ("structure", "ats", "impact")
     ]
     categories.append(field_fit_category(match))
-    overall = compute_overall([c.score for c in categories])
+    overall = career_score(match.match_score, [c.score for c in categories[:3]])
 
     strong = sorted((s for s in scored if s.status == "has"), key=lambda s: s.criterion.weight, reverse=True)
     weak = sorted((s for s in scored if s.ratio < 0.999), key=lambda s: s.lost, reverse=True)

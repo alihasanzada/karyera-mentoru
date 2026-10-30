@@ -27,6 +27,7 @@ Layihə erkən MVP-dir. FastAPI backend, sadə JavaScript frontend, SQLite və G
 6. Tarixçə silindikdə və 50 qeyd limiti tətbiq edildikdə əlaqəli yol xəritələri də silinir.
 7. AI promptundakı statuslar sxemdəki `yes`, `partial`, `no` dəyərlərinə uyğunlaşdırılır.
 8. API və frontend axın testləri, GitHub Actions konfiqurasiyası və məlumatların saxlanması barədə daha dəqiq README əlavə edilir.
+9. Seçilən sahəyə uyğunluq balı yekun nəticənin əsasına çevrilir; CV-nin strukturu, ATS və təsir göstəriciləri onu 30%-ə qədər tənzimləyir. Sahə uyğunluğu 35-dən aşağıdırsa istifadəçiyə ayrıca xəbərdarlıq verilir. Keş versiyası yenilənib; köhnə tarixçə qeydləri əvvəlki hesablamanın snapshot-ıdır.
 
 ## Növbəti prioritetlər
 
