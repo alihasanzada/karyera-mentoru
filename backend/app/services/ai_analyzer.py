@@ -61,11 +61,11 @@ async def _call(model: str, system_prompt: str, contents: str, schema: type[T]) 
 
 
 async def generate_structured(system_prompt: str, contents: str, schema: type[T]) -> T:
-    """It checks the models sequentially. If one returns a 503/timeout, it immediately moves on to the next one.."""
-    # Fail immediately on local configuration errors, preserving the useful message.
+    """Try each model in the fallback chain; move on at once after a timeout or provider error."""
+    # Fail fast on a missing API key.
     get_client()
     chain = settings.model_chain
-    dead: set[str] = set()  # Models returning 400/403/404 errors are not re-checked
+    dead: set[str] = set()  # models that returned 400/403/404 are skipped
     last_code: int | None = None
     deadline = time.monotonic() + TOTAL_BUDGET
 
@@ -85,14 +85,14 @@ async def generate_structured(system_prompt: str, contents: str, schema: type[T]
                 )
                 logger.info("Gemini OK: %s (%.1f seconds)", model, time.monotonic() - started)
                 return result
-                
+
             except TimeoutError:
                 last_code = 504
                 logger.warning("Gemini timeout: %s", model)
             except (httpx.TransportError, httpx2.TransportError):
                 last_code = 503
                 logger.warning("Gemini connection failed: %s", model)
-            except AIAnalysisError as e:  # The model returned a response in an incorrect format
+            except AIAnalysisError as e:  # unparseable model output
                 if e.status_code != 502:
                     raise
                 last_code = 502
@@ -100,7 +100,7 @@ async def generate_structured(system_prompt: str, contents: str, schema: type[T]
             except errors.APIError as e:
                 last_code = e.code
                 logger.warning("Gemini API error: %s (%s)", model, e.code)
-                if e.code in (400, 403, 404):  # Model or key problem; repeating it is pointless.
+                if e.code in (400, 403, 404):  # model or key problem, retrying will not help
                     dead.add(model)
 
         if all(model in dead for model in chain):
@@ -114,7 +114,9 @@ async def generate_structured(system_prompt: str, contents: str, schema: type[T]
         raise AIAnalysisError(
             "AI xidməti hazırda əlçatan deyil. 1–2 dəqiqə sonra yenidən cəhd et.", 503
         )
-    raise AIAnalysisError("AI xidməti ilə əlaqə zamanı xəta baş verdi. Model və API açarı sazlamalarını yoxla.", 502)
+    raise AIAnalysisError(
+        "AI xidməti ilə əlaqə zamanı xəta baş verdi. Model və API açarı sazlamalarını yoxla.", 502
+    )
 
 
 async def analyze_cv(cv_text: str) -> CVAnalysis:

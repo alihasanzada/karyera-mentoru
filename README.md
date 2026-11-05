@@ -1,6 +1,6 @@
-# Career Mentor
+# Karyera Mentoru
 
-Download the CV (PDF), analyze it with Gemini, see its relevance to your chosen field (Frontend, Cybersecurity, Data Science) and the development plan.
+AI career mentor for the Azerbaijani market. Upload a CV (PDF), get an explainable score from Gemini, compare it with a target field (Frontend, Cybersecurity, Data Science) and receive a 30/60/90 day roadmap.
 
 ## Installation
 ```bash
@@ -26,7 +26,7 @@ node --test frontend/tests/*.test.cjs
 ```
 Tests use a temporary database and mocked AI responses; no API key or paid calls are needed.
 
-## Add field
+## Add a field
 Add a new JSON file to the `backend/app/data/roles/` folder (copy it from existing files) and restart the server.
 
 ## Notes
