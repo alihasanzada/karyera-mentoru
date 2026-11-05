@@ -1,6 +1,6 @@
-# Career Mentor
+# Karyera Mentoru
 
-Download the CV (PDF), analyze it with Gemini, see its relevance to your chosen field (Frontend, Cybersecurity, Data Science) and the development plan.
+AI career mentor for the Azerbaijani market. Upload a CV (PDF), get an explainable score from Gemini, compare it with a target field (Frontend, Cybersecurity, Data Science) and receive a 30/60/90 day roadmap.
 
 ## Installation
 ```bash
@@ -20,10 +20,22 @@ In the browser: http://localhost:8000 (API documentation: /docs)
 ```bash
 cd backend && pytest -q
 ```
+Frontend request-flow tests (Node.js 22 or newer, from the repository root):
+```bash
+node --test frontend/tests/*.test.cjs
+```
+Tests use a temporary database and mocked AI responses; no API key or paid calls are needed.
 
-## Add field
+## Add a field
 Add a new JSON file to the `backend/app/data/roles/` folder (copy it from existing files) and restart the server.
 
 ## Notes
-- The CV text is not stored; only the analysis result and the file name are saved in the local SQLite database (`karyera.db`).
-- There is no user account yet; the history is tied to the browser. Add authentication before making it accessible online.
+- The original PDF and full extracted CV text are not stored. Analysis results, including quoted CV excerpts and filenames, are saved in the local SQLite database (`karyera.db`). The evaluation cache also stores excerpts, with filenames removed.
+- CV text is sent to Gemini for analysis. Review this data flow and retention policy before accepting real users' CVs.
+- Sign up with an email and a password of at least 12 characters, then sign in. Password hashes and seven-day login sessions are stored in SQLite. A session cookie is HttpOnly, SameSite=Strict and Secure on HTTPS. Users only see their own analysis history and roadmaps.
+- Existing history from the earlier anonymous `X-Client-Id` version is not transferred automatically. Keep the old local database as a backup, then upload the CV again in the new account.
+- Add login rate limits, password reset/email verification, CSRF defenses for cross-origin deployments, data deletion, and persistent database storage before opening the site to the public.
+- CV evaluation, three static role profiles, history, and roadmap generation are implemented. Vacancies, application tracking, and mentor chat are placeholders; there is no live job-market feed yet.
+- `/api/evaluate` returns `evaluation_id` for the exact saved result. Use that ID for `/api/roadmap/{evaluation_id}` instead of inferring it from the newest history entry.
+- The career score starts from role match and is adjusted by CV quality (structure, ATS and impact). It never exceeds the selected role's match score. A match below 35 displays a low-fit warning. Previous history scores are snapshots; upload the CV again to apply a new scoring version.
+- Deleting or pruning a history entry removes its saved roadmap. Evaluation-cache retention and deletion still need a separate policy.

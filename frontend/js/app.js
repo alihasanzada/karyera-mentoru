@@ -1,12 +1,6 @@
 const MAX_MB = 5;
 
-let clientId = localStorage.getItem("karyera_client_id");
-if (!clientId) {
-  clientId = crypto.randomUUID();
-  localStorage.setItem("karyera_client_id", clientId);
-}
-
-const state = { fields: [], history: [], latest: null, current: null };
+const state = { fields: [], history: [], latest: null, current: null, evaluating: false, user: null };
 let routeToken = 0;
 
 const $ = (id) => document.getElementById(id);
@@ -28,10 +22,7 @@ async function api(path, options = {}, timeoutMs = 60000) {
     const res = await fetch(path, {
       ...options,
       signal: controller.signal,
-      headers: {
-        ...(options.headers || {}),
-        "X-Client-Id": clientId
-      },
+      headers: options.headers || {},
     });
 
     if (!res.ok) {
@@ -42,6 +33,11 @@ async function api(path, options = {}, timeoutMs = 60000) {
         if (typeof data.detail === "string") msg = data.detail;
       } catch { }
 
+      if (res.status === 401 && !path.startsWith("/api/auth/")) {
+        state.user = null;
+        routeToken++;
+        renderAuth();
+      }
       throw new Error(msg);
     }
 
@@ -79,6 +75,7 @@ async function loadLatest() {
     const d = await api("/api/history/" + last.id);
     state.latest = { ...d.result, _id: last.id, _at: last.created_at };
   }
+  state.latest._at = last.created_at;
   return state.latest;
 }
 
@@ -138,6 +135,15 @@ function scoreRing(score, size = 140) {
 
 const CARD = "bg-white rounded-xl border border-slate-200 shadow-sm";
 
+function fieldWarning(r) {
+  const score = r?.match?.match_score;
+  if (typeof score !== "number" || score >= 35) return "";
+  return `<div role="status" class="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+    <strong>Bu CV seçilən sahəyə uyğun görünmür.</strong>
+    Sahə tələblərinə uyğunluq ${clampScore(score)}/100-dür. CV-də bu sahəyə aid təcrübə və bacarıqlar görünmürsə, başqa sahə seç və ya CV-ni hədəf vəzifəyə uyğunlaşdır.
+  </div>`;
+}
+
 const pageHeader = (title, subtitle) => `
   <div class="mb-6">
     <h1 class="text-2xl font-bold">${esc(title)}</h1>
@@ -148,6 +154,43 @@ const loadingHtml = () => `<p class="text-sm text-slate-500">Yüklənir...</p>`;
 
 function showError(msg) {
   $("view").innerHTML = `<div class="${CARD} p-6 text-red-600 text-sm">${esc(msg)}</div>`;
+}
+
+function renderAuth(signup = false) {
+  $("sidebar").classList.add("hidden");
+  $("main").classList.remove("lg:pl-64");
+  $("view").innerHTML = `<div class="max-w-md mx-auto mt-12 ${CARD} p-8">
+    <h1 class="text-2xl font-bold mb-2">Karyera Mentoru</h1>
+    <p class="text-sm text-slate-500 mb-6">${signup ? "Yeni hesab yarat" : "Hesabına daxil ol"}</p>
+    <form id="auth-form" class="space-y-4">
+      <label class="block text-sm">E-poçt<input name="email" type="email" autocomplete="email" required maxlength="254" class="mt-1 w-full border rounded-lg p-2"></label>
+      <label class="block text-sm">Parol<input name="password" type="password" autocomplete="${signup ? "new-password" : "current-password"}" required minlength="12" maxlength="128" class="mt-1 w-full border rounded-lg p-2"></label>
+      <button class="w-full bg-indigo-600 text-white p-2.5 rounded-lg disabled:opacity-50">${signup ? "Qeydiyyatdan keç" : "Daxil ol"}</button>
+      <p id="auth-error" role="alert" class="text-sm text-red-600"></p>
+    </form>
+    <button id="auth-switch" class="mt-4 text-sm text-indigo-600">${signup ? "Hesabın var? Daxil ol" : "Hesabın yoxdur? Qeydiyyatdan keç"}</button>
+  </div>`;
+  $("auth-switch").addEventListener("click", () => renderAuth(!signup));
+  $("auth-form").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const form = ev.currentTarget;
+    const button = form.querySelector("button");
+    button.disabled = true;
+    try {
+      state.user = await api(`/api/auth/${signup ? "signup" : "login"}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.elements.email.value, password: form.elements.password.value }),
+      });
+      state.fields = []; state.history = []; state.latest = null; state.current = null;
+      $("sidebar").classList.remove("hidden");
+      $("main").classList.add("lg:pl-64");
+      $("account-email").textContent = state.user.email;
+      route();
+    } catch (e) {
+      $("auth-error").textContent = e.message;
+      button.disabled = false;
+    }
+  });
 }
 
 function comingSoon(iconName, bullets) {
@@ -218,10 +261,11 @@ function renderResult(r) {
         <div class="flex flex-wrap items-center gap-2">
           <h2 class="text-lg font-semibold">${esc(r.field_name)}</h2>${readyBadge(r.readiness)}
         </div>
-        <p class="text-xs text-slate-400">Ümumi bal 4 kateqoriyanın ortalamasıdır · ${esc(r.filename)}</p>
+        <p class="text-xs text-slate-400">Bal sahəyə uyğunluğa əsaslanır; CV keyfiyyəti onu tənzimləyir · ${esc(r.filename)}</p>
         <p class="text-sm text-slate-700">${esc(r.summary)}</p>
       </div>
     </div>
+    ${fieldWarning(r)}
     <div class="grid gap-4 sm:grid-cols-2">${r.categories.map(categoryCard).join("")}</div>
     ${roadmapLink}
   </div>`;
@@ -283,6 +327,7 @@ async function renderDashboard() {
             <div class="flex flex-wrap items-center gap-2">
               <h2 class="font-semibold">${esc(latest.field_name)}</h2>${readyBadge(latest.readiness)}
             </div>
+            ${fieldWarning(latest)}
             <p class="text-sm text-slate-600">${esc(latest.summary)}</p>
             <p class="text-xs text-slate-400">${esc(latest.filename)} · ${fmtDate(latest._at)}</p>
             <button data-open="${latest._id}" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">Tam hesabata bax</button>
@@ -330,8 +375,8 @@ async function renderCV() {
           ${fields.map((f) => `<option value="${esc(f.id)}">${esc(f.name)}</option>`).join("")}
         </select>
       </div>
-      <button id="cv-run" class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-medium">Analiz et</button>
-      <p id="cv-status" class="text-sm"></p>
+      <button id="cv-run" ${state.evaluating ? "disabled" : ""} class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-medium">Analiz et</button>
+      <p id="cv-status" class="text-sm" aria-live="polite">${state.evaluating ? "AI analiz edir..." : ""}</p>
     </div>
     <div id="cv-result" class="mt-6">${renderResult(shown)}</div>`;
 
@@ -346,6 +391,7 @@ function setCvStatus(msg, isError = false) {
 }
 
 async function runEvaluate() {
+  if (state.evaluating) return;
   const file = $("cv-file").files[0];
   if (!file) return setCvStatus("Əvvəlcə PDF faylı seç.", true);
   if (!file.name.toLowerCase().endsWith(".pdf")) return setCvStatus("Yalnız PDF faylı qəbul olunur.", true);
@@ -355,6 +401,7 @@ async function runEvaluate() {
   form.append("file", file);
   form.append("field_id", $("cv-field").value);
 
+  state.evaluating = true;
   $("cv-run").disabled = true;
   const started = Date.now();
   setCvStatus("AI analiz edir...");
@@ -364,9 +411,7 @@ async function runEvaluate() {
 
   try {
     const data = await api("/api/evaluate", { method: "POST", body: form }, 180000);
-    const hist = await loadHistory();
-    const newest = hist.find((h) => h.kind === "evaluation");
-    state.latest = { ...data, _id: newest?.id, _at: newest?.created_at };
+    state.latest = { ...data, _id: data.evaluation_id };
     state.current = state.latest;
     setCvStatus("");
     const box = $("cv-result");
@@ -377,6 +422,7 @@ async function runEvaluate() {
   } catch (e) {
     setCvStatus(e.message, true);
   } finally {
+    state.evaluating = false;
     clearInterval(ticker);
     const btn = $("cv-run");
     if (btn) btn.disabled = false;
@@ -436,6 +482,7 @@ function closeMenu() {
 }
 
 async function route() {
+  if (!state.user) return renderAuth();
   routeToken++;
   renderNav();
   closeMenu();
@@ -446,6 +493,14 @@ async function route() {
 /* Startup */
 $("menu-btn").addEventListener("click", openMenu);
 $("backdrop").addEventListener("click", closeMenu);
+$("logout-btn").addEventListener("click", async () => {
+  try { await api("/api/auth/logout", { method: "POST" }); }
+  finally {
+    state.user = null; state.latest = null; state.current = null; state.history = [];
+    routeToken++;
+    renderAuth();
+  }
+});
 window.addEventListener("hashchange", route);
 
 $("view").addEventListener("click", async (ev) => {
@@ -460,4 +515,11 @@ $("view").addEventListener("click", async (ev) => {
   }
 });
 
-route();
+async function boot() {
+  try {
+    state.user = await api("/api/auth/me");
+    $("account-email").textContent = state.user.email;
+    route();
+  } catch { renderAuth(); }
+}
+boot();

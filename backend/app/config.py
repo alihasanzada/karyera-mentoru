@@ -2,7 +2,7 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# career-mentor/ folder
+# Repository root (karyera-mentoru/)
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     # Gemini
     gemini_api_key: str = ""
     gemini_model: str = "gemini-flash-lite-latest"
-    gemini_models: str = ""  # comma-separated model sequence (backup chain)
+    gemini_models: str = ""  # comma-separated fallback chain
 
     # Application
     app_name: str = "Karyera Mentoru"

@@ -1,6 +1,7 @@
-from typing import Literal
+from datetime import date
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 
 class UploadResponse(BaseModel):
@@ -119,6 +120,7 @@ class EvaluationLLMOutput(BaseModel):
 
 
 class EvaluationResponse(BaseModel):
+    evaluation_id: int | None = None
     filename: str
     pages: int
     field_id: str
@@ -202,3 +204,54 @@ class RoadmapResponse(BaseModel):
     summary: str
     career_gap: CareerGap
     roadmap: list[RoadmapPhaseResult]
+
+
+# --- Applications tracker ---
+
+ApplicationStatus = Literal["applied", "interview", "offer", "rejected"]
+ShortText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+
+# Only next_step_date may be set back to null on update.
+_NOT_NULLABLE = ("company", "position", "status", "applied_date", "notes", "next_step")
+
+
+class ApplicationCreate(BaseModel):
+    company: ShortText
+    position: ShortText
+    status: ApplicationStatus = "applied"
+    applied_date: date | None = Field(default=None, description="Defaults to today (UTC)")
+    notes: str = Field(default="", max_length=2000)
+    next_step: str = Field(default="", max_length=255)
+    next_step_date: date | None = None
+
+
+class ApplicationUpdate(BaseModel):
+    """PATCH body: only the fields that are sent are changed."""
+
+    company: ShortText | None = None
+    position: ShortText | None = None
+    status: ApplicationStatus | None = None
+    applied_date: date | None = None
+    notes: str | None = Field(default=None, max_length=2000)
+    next_step: str | None = Field(default=None, max_length=255)
+    next_step_date: date | None = None
+
+    @model_validator(mode="after")
+    def _reject_null_for_required(self):
+        for name in _NOT_NULLABLE:
+            if name in self.model_fields_set and getattr(self, name) is None:
+                raise ValueError(f"{name} cannot be null")
+        return self
+
+
+class ApplicationOut(BaseModel):
+    id: int
+    company: str
+    position: str
+    status: ApplicationStatus
+    applied_date: date
+    notes: str
+    next_step: str
+    next_step_date: date | None = None
+    created_at: str
+    updated_at: str

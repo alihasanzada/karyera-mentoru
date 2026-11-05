@@ -12,7 +12,7 @@ from app.models.schemas import (
     SkillCheck,
 )
 from app.services.eval_cache import cache_key, get_cached, put_cached
-from app.services.evaluator import assemble_evaluation
+from app.services.evaluator import assemble_evaluation, career_score
 from app.services.matcher import ROLES
 from app.services.rubric import CRITERIA, norm, quote_supported, run_code_checks
 
@@ -104,7 +104,7 @@ def test_assemble_is_deterministic_and_grounded():
     a, b = _assemble(), _assemble()
     assert a == b
     assert [c.key for c in a.categories] == ["structure", "ats", "impact", "field_fit"]
-    assert a.overall_score == round(sum(c.score for c in a.categories) / 4)
+    assert a.overall_score == career_score(a.match.match_score, [c.score for c in a.categories[:3]])
     assert "Splunk" in a.detected_skills
     assert "Kubernetes" not in a.detected_skills
 
@@ -113,9 +113,19 @@ def test_unsupported_quote_is_downgraded():
     assert _impact(_assemble("Led a team of 40 engineers at Google")) < _impact(_assemble())
 
 
+def test_field_fit_is_the_ceiling_even_for_a_polished_cv():
+    assert career_score(0, [100, 100, 100]) == 0
+    assert career_score(15, [95, 100, 85]) <= 15
+    assert career_score(90, [95, 100, 68]) == 87
+    assert career_score(90, [20, 20, 20]) < career_score(90, [95, 100, 68])
+
+
 def test_cache_key_depends_on_inputs():
     key = cache_key("Same text", "cybersecurity", 1)
-    assert key == cache_key("same   TEXT", "cybersecurity", 1)
+    assert key == cache_key("Same text", "cybersecurity", 1)
+    assert key != cache_key("same   TEXT", "cybersecurity", 1)
+    assert cache_key("C", "frontend", 1) != cache_key("C++", "frontend", 1)
+    assert cache_key("Skills\nPython", "frontend", 1) != cache_key("Skills Python", "frontend", 1)
     assert key != cache_key("Same text", "frontend", 1)
     assert key != cache_key("Same text", "cybersecurity", 2)
 
