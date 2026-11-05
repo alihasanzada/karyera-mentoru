@@ -156,7 +156,7 @@ function showError(msg) {
   $("view").innerHTML = `<div class="${CARD} p-6 text-red-600 text-sm">${esc(msg)}</div>`;
 }
 
-function renderAuth(signup = false) {
+function renderAuth(signup = false, notice = "") {
   $("sidebar").classList.add("hidden");
   $("main").classList.remove("lg:pl-64");
   $("view").innerHTML = `<div class="max-w-md mx-auto mt-12 ${CARD} p-8">
@@ -166,6 +166,7 @@ function renderAuth(signup = false) {
       <label class="block text-sm">E-poçt<input name="email" type="email" autocomplete="email" required maxlength="254" class="mt-1 w-full border rounded-lg p-2"></label>
       <label class="block text-sm">Parol<input name="password" type="password" autocomplete="${signup ? "new-password" : "current-password"}" required minlength="12" maxlength="128" class="mt-1 w-full border rounded-lg p-2"></label>
       <button class="w-full bg-indigo-600 text-white p-2.5 rounded-lg disabled:opacity-50">${signup ? "Qeydiyyatdan keç" : "Daxil ol"}</button>
+      <p id="auth-notice" role="status" class="text-sm text-emerald-600">${esc(notice)}</p>
       <p id="auth-error" role="alert" class="text-sm text-red-600"></p>
     </form>
     <button id="auth-switch" class="mt-4 text-sm text-indigo-600">${signup ? "Hesabın var? Daxil ol" : "Hesabın yoxdur? Qeydiyyatdan keç"}</button>
@@ -177,10 +178,20 @@ function renderAuth(signup = false) {
     const button = form.querySelector("button");
     button.disabled = true;
     try {
-      state.user = await api(`/api/auth/${signup ? "signup" : "login"}`, {
+      const email = form.elements.email.value;
+      const user = await api(`/api/auth/${signup ? "signup" : "login"}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.elements.email.value, password: form.elements.password.value }),
+        body: JSON.stringify({ email, password: form.elements.password.value }),
       });
+      if (signup) {
+        // The API signs the new user in; drop that session so they log in explicitly.
+        await api("/api/auth/logout", { method: "POST" });
+        renderAuth(false, "Hesab yaradıldı. İndi daxil ol.");
+        $("auth-form").elements.email.value = email;
+        $("auth-form").elements.password.focus();
+        return;
+      }
+      state.user = user;
       state.fields = []; state.history = []; state.latest = null; state.current = null;
       $("sidebar").classList.remove("hidden");
       $("main").classList.add("lg:pl-64");
