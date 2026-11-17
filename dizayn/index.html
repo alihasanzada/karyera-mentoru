@@ -20,10 +20,10 @@
   <!-- Brauzer tabındakı ikon -->
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 
-  <!-- Şrift: Manrope -->
+  <!-- Şrift: Inter (Azərbaycan hərfləri, o cümlədən "ə", tam dəstəklənir) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Stillər -->
   <link rel="stylesheet" href="css/style.css">
@@ -42,9 +42,9 @@
   <!-- ===== 1. Elan zolağı ===== -->
   <div class="announcement" id="elan">
     <p class="announcement-text">
-      🎉 <strong>Qapalı beta qeydiyyatı başladı!</strong> İlk 30 tələbə üçün tam pulsuz sınaq
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.8 5.8 1.9-5.8 1.9L12 18.4l-1.9-5.8-5.8-1.9 5.8-1.9z"/></svg> <strong>Qapalı beta qeydiyyatı başladı!</strong> İlk 30 tələbə üçün tam pulsuz sınaq
     </p>
-    <button type="button" class="announcement-close" aria-label="Elanı bağla">×</button>
+    <button type="button" class="announcement-close" aria-label="Elanı bağla"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
   </div>
 
   <!-- ===== 2. Header ===== -->
@@ -86,8 +86,8 @@
       </nav>
 
       <div class="header-tools">
-        <button type="button" class="icon-btn theme-toggle" aria-label="Qaranlıq rejimə keç">🌙</button>
-        <button type="button" class="icon-btn menu-toggle" aria-label="Menyunu aç" aria-expanded="false" aria-controls="main-nav">☰</button>
+        <button type="button" class="icon-btn theme-toggle" aria-label="Qaranlıq rejimə keç"><svg class="ico i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><svg class="ico i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
+        <button type="button" class="icon-btn menu-toggle" aria-label="Menyunu aç" aria-expanded="false" aria-controls="main-nav"><svg class="ico i-menu" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><svg class="ico i-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       </div>
     </div>
   </header>
@@ -190,7 +190,7 @@
       <div class="container hero-inner">
         <div class="hero-text">
           <span class="pill pill-accent">Azərbaycan dilində ilk AI Karyera Mentoru</span>
-          <h1 id="hero-title">CV-dən konkret karyera planına bir platforma</h1>
+          <h1 id="hero-title">CV-dən <span class="hl">konkret karyera planına</span> bir platforma</h1>
           <p class="hero-lead">
             Tələbə və gənc məzunlar üçün AI karyera mentoru: CV analizi, bacarıq boşluğu,
             7/14/21 günlük plan və vakansiya uyğunluğu.
@@ -199,6 +199,11 @@
             <a href="#cv-yoxla" class="btn btn-primary">İndi CV-ni Yüklə</a>
             <a href="#nece-isleyir" class="btn btn-ghost">Necə işləyir?</a>
           </div>
+          <ul class="hero-trust">
+            <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4 12 14l-3-3"/></svg> 120+ ixtisas üzrə</li>
+            <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4 12 14l-3-3"/></svg> 4 meyar üzrə şəffaf bal</li>
+            <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4 12 14l-3-3"/></svg> Azərbaycan dilində</li>
+          </ul>
         </div>
 
         <!-- Nümunə nəticə kartı -->
@@ -253,6 +258,7 @@
     <section class="section" id="nece-isleyir" aria-labelledby="steps-title">
       <div class="container">
         <div class="section-head">
+          <span class="eyebrow">Proses</span>
           <h2 id="steps-title">Necə işləyir?</h2>
           <p class="section-sub">CV-ni yükləməkdən uyğun vakansiyaya qədər — 5 sadə addım.</p>
         </div>
@@ -296,6 +302,7 @@
     <section class="section section-alt" id="cv-yoxla" aria-labelledby="cv-title">
       <div class="container">
         <div class="section-head">
+          <span class="eyebrow">Pulsuz yoxlama</span>
           <h2 id="cv-title">CV-ni Yoxla</h2>
           <p class="section-sub">PDF faylını yüklə, ixtisasını seç — AI bir neçə saniyəyə CV-ni qiymətləndirsin.</p>
         </div>
@@ -307,19 +314,19 @@
             <span class="field-label" id="cv-file-label">CV faylı</span>
             <label class="dropzone" id="dropzone" for="cv-file">
               <input type="file" id="cv-file" class="visually-hidden" accept="application/pdf,.pdf" aria-describedby="cv-file-hint cv-file-error">
-              <span class="dropzone-icon" aria-hidden="true">📄</span>
+              <span class="dropzone-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></span>
               <span class="dropzone-title">PDF faylını bura sürüklə və ya <u>kompüterdən seç</u></span>
               <span class="dropzone-hint" id="cv-file-hint">Yalnız PDF, maksimum 5 MB</span>
             </label>
 
             <!-- Seçilmiş fayl -->
             <div class="file-chip" id="file-chip" hidden>
-              <span class="file-chip-icon" aria-hidden="true">📄</span>
+              <span class="file-chip-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span>
               <span class="file-chip-info">
                 <strong class="file-chip-name" id="file-name"></strong>
                 <span class="file-chip-size" id="file-size"></span>
               </span>
-              <button type="button" class="file-chip-remove" id="file-remove" aria-label="Faylı sil">×</button>
+              <button type="button" class="file-chip-remove" id="file-remove" aria-label="Faylı sil"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
             </div>
             <p class="field-error" id="cv-file-error" role="alert"></p>
           </div>
@@ -335,7 +342,7 @@
           </div>
 
           <button type="submit" class="btn btn-primary btn-block" id="analyze-btn">Analiz Et</button>
-          <p class="form-note" id="cv-privacy-note">🔒 Demo rejim: fayl heç yerə göndərilmir, yalnız brauzerində qalır.</p>
+          <p class="form-note" id="cv-privacy-note">Demo rejim: fayl heç yerə göndərilmir, yalnız brauzerində qalır.</p>
 
           <!-- Yüklənmə animasiyası -->
           <div class="loader" id="loader" hidden>
@@ -390,11 +397,11 @@
 
             <div class="assess-lists">
               <div class="assess-list is-good">
-                <h4>✔ Güclü tərəflər</h4>
+                <h4><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4 12 14l-3-3"/></svg> Güclü tərəflər</h4>
                 <ul id="result-strengths"></ul>
               </div>
               <div class="assess-list is-weak">
-                <h4>⚠ Zəif tərəflər</h4>
+                <h4><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg> Zəif tərəflər</h4>
                 <ul id="result-weaknesses"></ul>
               </div>
             </div>
@@ -418,7 +425,7 @@
               </div>
             </div>
 
-            <p class="tab-tip">💡 Çatışmayan bacarıqlar avtomatik olaraq <strong>7/14/21 günlük plana</strong> əlavə olunub.</p>
+            <p class="tab-tip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg> Çatışmayan bacarıqlar avtomatik olaraq <strong>7/14/21 günlük plana</strong> əlavə olunub.</p>
           </div>
 
           <!-- Tab 3: 7/14/21 günlük plan -->
@@ -467,23 +474,24 @@
     <section class="section" id="ustunlukler" aria-labelledby="why-title">
       <div class="container">
         <div class="section-head">
+          <span class="eyebrow">Üstünlüklər</span>
           <h2 id="why-title">Niyə Karyera Mentoru?</h2>
           <p class="section-sub">Xarici CV alətlərindən fərqli olaraq, yerli tələbə üçün qurulub.</p>
         </div>
 
         <div class="why-cards">
           <article class="card why-card reveal">
-            <span class="why-icon" aria-hidden="true">📍</span>
+            <span class="why-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
             <h3>Yerli bazar konteksti</h3>
             <p>Azərbaycan əmək bazarı, yerli vakansiyalar və işəgötürən gözləntiləri nəzərə alınır. Hər şey Azərbaycan dilində.</p>
           </article>
           <article class="card why-card reveal">
-            <span class="why-icon" aria-hidden="true">🔄</span>
+            <span class="why-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></span>
             <h3>Bağlı dövrə</h3>
             <p>CV analizi → bacarıq boşluğu → plan → vakansiya. Hər addım növbətisinə bağlıdır, heç nə yarımçıq qalmır.</p>
           </article>
           <article class="card why-card reveal">
-            <span class="why-icon" aria-hidden="true">💰</span>
+            <span class="why-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v3M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg></span>
             <h3>Alıcılıq gücünə uyğun qiymət</h3>
             <p>Premium cəmi <strong>aylıq 15 AZN</strong> — xarici analoqlardan bir neçə dəfə ucuz. Pulsuz versiya da var.</p>
           </article>
@@ -556,6 +564,7 @@
     <section class="section section-alt" id="reyler" aria-labelledby="persona-title">
       <div class="container">
         <div class="section-head">
+          <span class="eyebrow">İstifadəçilər</span>
           <h2 id="persona-title">Kimin üçün qurmuşuq?</h2>
           <p class="section-sub">Tipik istifadəçimiz — ilk işini axtaran tələbə.</p>
         </div>
@@ -571,15 +580,15 @@
           </div>
           <dl class="persona-grid">
             <div class="persona-item">
-              <dt>🎯 Məqsəd</dt>
+              <dt><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Məqsəd</dt>
               <dd>Məzun olmamış ilk junior işini tapmaq.</dd>
             </div>
             <div class="persona-item">
-              <dt>😕 Problem</dt>
+              <dt><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></svg> Problem</dt>
               <dd>CV-si hazırdır, amma müraciətlərə cavab gəlmir. Nəyin çatışmadığını bilmir.</dd>
             </div>
             <div class="persona-item">
-              <dt>✨ Gözlənti</dt>
+              <dt><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg> Gözlənti</dt>
               <dd>Konkret, addım-addım plan və hansı vakansiyaya uyğun olduğunu görmək.</dd>
             </div>
           </dl>
@@ -623,9 +632,9 @@
           </div>
 
           <div class="carousel-controls">
-            <button type="button" class="icon-btn carousel-btn" id="carousel-prev" aria-label="Əvvəlki rəy">‹</button>
+            <button type="button" class="icon-btn carousel-btn" id="carousel-prev" aria-label="Əvvəlki rəy"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
             <div class="carousel-dots" id="carousel-dots"></div>
-            <button type="button" class="icon-btn carousel-btn" id="carousel-next" aria-label="Növbəti rəy">›</button>
+            <button type="button" class="icon-btn carousel-btn" id="carousel-next" aria-label="Növbəti rəy"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
           </div>
           <p class="carousel-note">Beta test iştirakçılarının rəyləri</p>
         </div>
@@ -636,6 +645,7 @@
     <section class="section" id="qiymetler" aria-labelledby="pricing-title">
       <div class="container">
         <div class="section-head">
+          <span class="eyebrow">Qiymətlər</span>
           <h2 id="pricing-title">Qiymətlər</h2>
           <p class="section-sub">Pulsuz başla, hazır olanda Premium-a keç.</p>
         </div>
@@ -677,7 +687,7 @@
             <h3 class="price-name">Universitet Lisenziyası</h3>
             <p class="price-desc">Universitet və karyera mərkəzləri üçün illik B2B lisenziya.</p>
             <p class="price-amount price-amount-text">Fərdi təklif</p>
-            <p class="price-pilot">🎁 İlk pilot pulsuz</p>
+            <p class="price-pilot"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg> İlk pilot pulsuz</p>
             <ul class="price-features">
               <li>Bütün tələbələr üçün Premium</li>
               <li>Karyera mərkəzi üçün idarə paneli</li>
@@ -694,6 +704,7 @@
     <section class="section section-alt" id="faq" aria-labelledby="faq-title">
       <div class="container">
         <div class="section-head">
+          <span class="eyebrow">Dəstək</span>
           <h2 id="faq-title">Tez-tez verilən suallar</h2>
           <p class="section-sub">Cavabını tapmadın? Aşağıdakı formla bizə yaz.</p>
         </div>
@@ -873,12 +884,12 @@
       <div class="footer-col">
         <p class="footer-title">Sosial şəbəkələr</p>
         <ul class="footer-social">
-          <li><button type="button" class="icon-btn" data-soon aria-label="Instagram">IG</button></li>
-          <li><button type="button" class="icon-btn" data-soon aria-label="LinkedIn">in</button></li>
-          <li><button type="button" class="icon-btn" data-soon aria-label="Telegram">TG</button></li>
-          <li><button type="button" class="icon-btn" data-soon aria-label="YouTube">YT</button></li>
+          <li><button type="button" class="icon-btn" data-soon aria-label="Instagram"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/></svg></button></li>
+          <li><button type="button" class="icon-btn" data-soon aria-label="LinkedIn"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 11v5M8 8h.01M12 16v-5M16 16v-3a2 2 0 0 0-4 0"/></svg></button></li>
+          <li><button type="button" class="icon-btn" data-soon aria-label="Telegram"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4 3 11l6 2 2 6 3-4 5 4z"/><path d="M9 13l12-9"/></svg></button></li>
+          <li><button type="button" class="icon-btn" data-soon aria-label="YouTube"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="4"/><path d="m10 9 5 3-5 3z"/></svg></button></li>
         </ul>
-        <button type="button" class="btn btn-ghost to-top" id="to-top">↑ Yuxarı qalx</button>
+        <button type="button" class="btn btn-ghost to-top" id="to-top"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg> Yuxarı qalx</button>
       </div>
     </div>
 
@@ -894,7 +905,7 @@
         <img src="assets/favicon.svg" alt="" width="28" height="28">
         Karyera Mentoru
       </h2>
-      <button type="button" class="modal-close" id="auth-close" aria-label="Pəncərəni bağla">×</button>
+      <button type="button" class="modal-close" id="auth-close" aria-label="Pəncərəni bağla"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
 
     <div class="tabs auth-tabs" role="tablist" aria-label="Giriş və ya qeydiyyat">
@@ -914,7 +925,7 @@
           <label class="field-label" for="login-pass">Şifrə</label>
           <div class="pass-wrap">
             <input type="password" id="login-pass" class="input" autocomplete="current-password" aria-describedby="login-pass-error">
-            <button type="button" class="pass-toggle" aria-label="Şifrəni göstər" data-target="login-pass">👁</button>
+            <button type="button" class="pass-toggle" aria-label="Şifrəni göstər" data-target="login-pass"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
           </div>
           <p class="field-error" id="login-pass-error" role="alert"></p>
         </div>
@@ -948,7 +959,7 @@
           <label class="field-label" for="reg-pass">Şifrə <span class="field-hint" id="reg-pass-hint">(min. 6 simvol)</span></label>
           <div class="pass-wrap">
             <input type="password" id="reg-pass" class="input" autocomplete="new-password" aria-describedby="reg-pass-error">
-            <button type="button" class="pass-toggle" aria-label="Şifrəni göstər" data-target="reg-pass">👁</button>
+            <button type="button" class="pass-toggle" aria-label="Şifrəni göstər" data-target="reg-pass"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
           </div>
           <p class="field-error" id="reg-pass-error" role="alert"></p>
         </div>
@@ -981,18 +992,18 @@
     </button>
     <p class="form-note auth-note" id="google-note" role="status"></p>
 
-    <p class="auth-demo">🔒 DEMO: hesab yalnız bu brauzerdə saxlanılır. Real şifrəni istifadə etmə.</p>
+    <p class="auth-demo"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> DEMO: hesab yalnız bu brauzerdə saxlanılır. Real şifrəni istifadə etmə.</p>
   </dialog>
 
   <!-- ===== Ödəniş pəncərəsi (DEMO) ===== -->
   <dialog class="modal pay-modal" id="pay-modal" aria-labelledby="pay-title">
     <div class="modal-head">
       <h2 class="modal-title" id="pay-title">Premium Tələbə</h2>
-      <button type="button" class="modal-close" id="pay-close" aria-label="Pəncərəni bağla">×</button>
+      <button type="button" class="modal-close" id="pay-close" aria-label="Pəncərəni bağla"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
 
     <p class="demo-warning" role="note">
-      <strong>⚠ DEMO — real kart məlumatı daxil etməyin.</strong>
+      <strong><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg> DEMO — real kart məlumatı daxil etməyin.</strong>
       Bu, prototipdir: heç bir ödəniş alınmır və yazdıqların heç yerə göndərilmir, saxlanmır.
     </p>
 
@@ -1006,7 +1017,7 @@
         <p class="pay-price"><strong>15</strong> AZN<small>/ay</small></p>
       </div>
 
-      <button type="button" class="btn btn-ghost btn-block pay-test-btn" id="pay-test">🧪 Test kartı ilə doldur</button>
+      <button type="button" class="btn btn-ghost btn-block pay-test-btn" id="pay-test"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2h12.4a1.5 1.5 0 0 0 1.3-2L14 9V3"/></svg> Test kartı ilə doldur</button>
 
       <form class="auth-form" id="pay-form" novalidate autocomplete="off">
         <div class="field">
@@ -1044,7 +1055,7 @@
 
     <!-- Uğurlu -->
     <div class="pay-step pay-success" id="pay-step-success" hidden>
-      <span class="pay-success-icon" aria-hidden="true">🎉</span>
+      <span class="pay-success-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4 12 14l-3-3"/></svg></span>
       <h3>Premium aktivləşdi!</h3>
       <p>Bu demo ödənişdir — heç bir pul çıxılmayıb. İndi bütün Premium imkanlarından istifadə edə bilərsən.</p>
       <button type="button" class="btn btn-primary btn-block" id="pay-done">Davam et</button>
@@ -1053,17 +1064,17 @@
 
   <!-- ===== AI Mentor çatı ===== -->
   <button type="button" class="chat-fab" id="chat-fab" aria-label="AI Mentor çatını aç" aria-expanded="false" aria-controls="chat-panel">
-    <span class="chat-fab-icon" aria-hidden="true">💬</span>
+    <span class="chat-fab-icon" aria-hidden="true"><svg class="ico i-chat" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0 1 12 3a8.5 8.5 0 0 1 9 8.5z"/></svg><svg class="ico i-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
   </button>
 
   <section class="chat-panel" id="chat-panel" aria-labelledby="chat-title" hidden>
     <div class="chat-head">
-      <span class="chat-avatar" aria-hidden="true">🤖</span>
+      <span class="chat-avatar" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="12" rx="3"/><path d="M12 4v4M9 14h.01M15 14h.01"/></svg></span>
       <div class="chat-head-text">
         <h2 class="chat-title" id="chat-title">AI Mentor</h2>
         <p class="chat-sub">Demo · açar sözlərə görə hazır cavablar</p>
       </div>
-      <button type="button" class="modal-close chat-close" id="chat-close" aria-label="Çatı bağla">×</button>
+      <button type="button" class="modal-close chat-close" id="chat-close" aria-label="Çatı bağla"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
 
     <div class="chat-log" id="chat-log" role="log" aria-live="polite" aria-label="Mesajlar"></div>
@@ -1079,7 +1090,7 @@
     <form class="chat-form" id="chat-form" autocomplete="off">
       <label class="visually-hidden" for="chat-input">Sualını yaz</label>
       <input type="text" id="chat-input" class="input" placeholder="Sualını yaz…" maxlength="300">
-      <button type="submit" class="btn btn-primary chat-send" aria-label="Göndər">➤</button>
+      <button type="submit" class="btn btn-primary chat-send" aria-label="Göndər"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg></button>
     </form>
   </section>
 

@@ -38,7 +38,7 @@ function setMenu(open) {
   mainNav.classList.toggle("is-open", open);
   menuToggle.setAttribute("aria-expanded", String(open));
   menuToggle.setAttribute("aria-label", open ? "Menyunu bağla" : "Menyunu aç");
-  menuToggle.textContent = open ? "✕" : "☰";
+  // İkon (menyu / bağla) CSS ilə aria-expanded-ə görə dəyişir
 }
 
 menuToggle.addEventListener("click", () => {
@@ -126,7 +126,7 @@ function setTheme(theme) {
   const isDark = theme === "dark";
   document.documentElement.toggleAttribute("data-theme", isDark);
   if (isDark) document.documentElement.setAttribute("data-theme", "dark");
-  themeToggle.textContent = isDark ? "☀️" : "🌙";
+  // İkon (ay / günəş) CSS ilə data-theme-ə görə dəyişir
   themeToggle.setAttribute("aria-label", isDark ? "İşıqlı rejimə keç" : "Qaranlıq rejimə keç");
 }
 
@@ -2541,7 +2541,7 @@ function toggleChat(open) {
   chatPanel.hidden = !open;
   chatFab.setAttribute("aria-expanded", String(open));
   chatFab.setAttribute("aria-label", open ? "AI Mentor çatını bağla" : "AI Mentor çatını aç");
-  chatFab.querySelector(".chat-fab-icon").textContent = open ? "✕" : "💬";
+  // İkon (çat / bağla) CSS ilə aria-expanded-ə görə dəyişir
 
   if (open) {
     if (!chatStarted) {
@@ -2607,7 +2607,7 @@ apiReady.then(async (enabled) => {
 
   // Mətnlər real rejimə uyğun
   document.querySelector("#cv-privacy-note").textContent =
-    "🔒 CV mətni AI analizi üçün serverə göndərilir; PDF faylın özü saxlanmır. Analiz üçün hesaba daxil ol.";
+    "CV mətni AI analizi üçün serverə göndərilir; PDF faylın özü saxlanmır. Analiz üçün hesaba daxil ol.";
   document.querySelector("#reg-pass-hint").textContent = `(min. ${minPasswordLength()} simvol)`;
 
   // Artıq daxil olubsa (sessiya cookie-si), istifadəçini və tarixçəni yüklə

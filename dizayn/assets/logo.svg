@@ -1,15 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 48" width="260" height="48" role="img" aria-label="Karyera Mentoru">
   <!-- Hədəf ikonu -->
-  <g fill="none" stroke="#4F46E5" stroke-width="3.5">
+  <g fill="none" stroke="#0369A1" stroke-width="3.5">
     <circle cx="22" cy="26" r="18"/>
     <circle cx="22" cy="26" r="10"/>
   </g>
-  <circle cx="22" cy="26" r="3.5" fill="#4F46E5"/>
+  <circle cx="22" cy="26" r="3.5" fill="#0369A1"/>
   <!-- Ox -->
-  <g stroke="#4F46E5" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+  <g stroke="#0369A1" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
     <line x1="22" y1="26" x2="40" y2="8"/>
     <polyline points="31,6 40,8 42,17"/>
   </g>
   <!-- Yazı -->
-  <text x="54" y="33" fill="#4F46E5" font-family="Manrope, 'Segoe UI', Arial, sans-serif" font-size="22" font-weight="800">Karyera Mentoru</text>
+  <text x="54" y="33" fill="#0369A1" font-family="Manrope, 'Segoe UI', Arial, sans-serif" font-size="22" font-weight="800">Karyera Mentoru</text>
 </svg>
