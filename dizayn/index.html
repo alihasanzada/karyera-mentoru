@@ -335,7 +335,7 @@
           </div>
 
           <button type="submit" class="btn btn-primary btn-block" id="analyze-btn">Analiz Et</button>
-          <p class="form-note">🔒 Demo rejim: fayl heç yerə göndərilmir, yalnız brauzerində qalır.</p>
+          <p class="form-note" id="cv-privacy-note">🔒 Demo rejim: fayl heç yerə göndərilmir, yalnız brauzerində qalır.</p>
 
           <!-- Yüklənmə animasiyası -->
           <div class="loader" id="loader" hidden>
@@ -365,6 +365,12 @@
 
           <!-- Tab 1: Qiymətləndirmə -->
           <div class="tab-panel" role="tabpanel" id="panel-score" aria-labelledby="tab-score">
+            <!-- Yalnız real API nəticəsində: sahəyə uyğunluq çox aşağıdırsa -->
+            <p class="result-warning" id="result-warning" role="status" hidden>
+              <strong>Bu CV seçilən sahəyə uyğun görünmür.</strong>
+              Sahə tələblərinə uyğunluq çox aşağıdır — başqa sahə seç və ya CV-ni hədəf vəzifəyə uyğunlaşdır.
+            </p>
+            <p class="result-summary" id="result-summary" hidden></p>
             <div class="assess">
               <div class="assess-total">
                 <div class="score-ring" id="result-ring" style="--score: 0">
@@ -939,7 +945,7 @@
           <p class="field-error" id="reg-email-error" role="alert"></p>
         </div>
         <div class="field">
-          <label class="field-label" for="reg-pass">Şifrə <span class="field-hint">(min. 6 simvol)</span></label>
+          <label class="field-label" for="reg-pass">Şifrə <span class="field-hint" id="reg-pass-hint">(min. 6 simvol)</span></label>
           <div class="pass-wrap">
             <input type="password" id="reg-pass" class="input" autocomplete="new-password" aria-describedby="reg-pass-error">
             <button type="button" class="pass-toggle" aria-label="Şifrəni göstər" data-target="reg-pass">👁</button>
@@ -963,6 +969,7 @@
           </label>
           <p class="field-error" id="reg-consent-error" role="alert"></p>
         </div>
+        <p class="form-error" id="register-error" role="alert"></p>
         <button type="submit" class="btn btn-primary btn-block">Qeydiyyatdan keç</button>
         <p class="auth-switch">Artıq hesabın var? <button type="button" class="link-btn auth-switch-btn" data-tab="tab-login">Daxil ol</button></p>
       </form>

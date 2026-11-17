@@ -23,5 +23,9 @@ def health():
     return {"status": "ok"}
 
 
+# Serves the `dizayn/` site (landing page + API-connected CV check) at `/dizayn/`.
+# Must be mounted before `/`, which would otherwise catch these paths.
+app.mount("/dizayn", StaticFiles(directory=BASE_DIR / "dizayn", html=True), name="dizayn")
+
 # Serves the `frontend/` directory at `/`
 app.mount("/", StaticFiles(directory=BASE_DIR / "frontend", html=True), name="frontend")

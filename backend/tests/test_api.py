@@ -78,6 +78,15 @@ def test_health_frontend_and_fields(api):
     assert len(client.get("/api/match/fields").json()) == 3
 
 
+def test_dizayn_site_is_served(api):
+    client, _ = api
+    page = client.get("/dizayn/")
+    assert page.status_code == 200
+    assert "Karyera Mentoru" in page.text
+    assert client.get("/dizayn/js/script.js").status_code == 200
+    assert client.get("/dizayn/css/style.css").status_code == 200
+
+
 def test_pdf_upload_and_validation(api, pdf_bytes):
     client, _ = api
     cookies = signup(client, "first@example.com")

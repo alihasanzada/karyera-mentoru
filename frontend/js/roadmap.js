@@ -1,4 +1,4 @@
-/* Roadmap tab: career gap comparison and 30/60/90 day plan */
+/* Roadmap tab: career gap comparison and 7/14/21 day plan */
 let rmData = null;
 let rmBound = false;
 
@@ -143,14 +143,14 @@ function rmPhase(p, d, stats) {
     const ps = stats.phases.find((x) => x.key === p.key);
     const done = rmLoadProgress(d.evaluation_id);
 
-    const byWeek = {};
-    p.tasks.forEach((t, i) => { (byWeek[t.week] = byWeek[t.week] || []).push({ t, i }); });
+    const byDay = {};
+    p.tasks.forEach((t, i) => { (byDay[t.day] = byDay[t.day] || []).push({ t, i }); });
 
-    const weeks = Object.keys(byWeek).map(Number).sort((a, b) => a - b).map((w) => `
+    const days = Object.keys(byDay).map(Number).sort((a, b) => a - b).map((w) => `
     <div>
-      <h4 class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Həftə ${w}</h4>
+      <h4 class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Gün ${w}</h4>
       <ul class="space-y-2">
-        ${byWeek[w].map(({ t, i }) => `
+        ${byDay[w].map(({ t, i }) => `
           <li class="border border-slate-200 rounded-lg p-3">
             <label class="flex items-start gap-3 cursor-pointer">
               <input type="checkbox" data-task="${p.key}-${i}" class="mt-1 h-4 w-4 accent-indigo-600" ${done[`${p.key}-${i}`] ? "checked" : ""}>
@@ -175,14 +175,14 @@ function rmPhase(p, d, stats) {
     <div id="rm-${p.key}-bar">${progressBar(ps.pct)}</div>
     <p class="text-sm text-slate-700"><strong>Məqsəd:</strong> ${esc(p.goal)}</p>
     <p class="text-sm text-slate-700"><strong>Mərhələnin nəticəsi:</strong> ${esc(p.milestone)}</p>
-    ${weeks}
+    ${days}
   </section>`;
 }
 
 function rmPlan(d) {
     if (!d.generated) {
         return `<section class="${CARD} p-8 text-center">
-      <h2 class="text-lg font-semibold">30/60/90 günlük plan</h2>
+      <h2 class="text-lg font-semibold">7/14/21 günlük plan</h2>
       <p class="text-sm text-slate-500 mt-1 mb-5">AI Career Gap nəticəsinə əsasən fərdi plan və resurs tövsiyələri hazırlayacaq.</p>
       <button data-rm-generate class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-medium">Yol xəritəsi yarat</button>
       <p id="rm-status" class="text-sm mt-3"></p>
@@ -193,7 +193,7 @@ function rmPlan(d) {
     return `<section class="${CARD} p-6 space-y-4">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="min-w-0">
-          <h2 class="text-lg font-semibold">30/60/90 günlük plan</h2>
+          <h2 class="text-lg font-semibold">7/14/21 günlük plan</h2>
           <p class="text-sm text-slate-600 mt-1">${esc(d.summary)}</p>
         </div>
         <button data-rm-generate class="text-sm text-indigo-600 hover:text-indigo-800 disabled:opacity-50 font-medium whitespace-nowrap">Yenidən yarat</button>
@@ -212,7 +212,7 @@ function rmPlan(d) {
 
 function rmPaint() {
     $("view").innerHTML =
-        pageHeader("Yol Xəritəsi", "Career Gap təhlili və 30/60/90 günlük fərdi inkişaf planı") +
+        pageHeader("Yol Xəritəsi", "Career Gap təhlili və 7/14/21 günlük fərdi inkişaf planı") +
         `<div class="space-y-6">${rmCareerGap(rmData)}${rmPlan(rmData)}</div>`;
 }
 
@@ -286,7 +286,7 @@ function rmBind() {
 
 async function renderRoadmap() {
     const t = routeToken;
-    const header = pageHeader("Yol Xəritəsi", "Career Gap təhlili və 30/60/90 günlük fərdi inkişaf planı");
+    const header = pageHeader("Yol Xəritəsi", "Career Gap təhlili və 7/14/21 günlük fərdi inkişaf planı");
     rmBind();
     $("view").innerHTML = header + loadingHtml();
 

@@ -941,6 +941,66 @@ section[id] {
   to { transform: rotate(360deg); }
 }
 
+/* Real API analizi nə qədər çəkəcəyi bilinmir — zolaq "gedib-gəlir" */
+.loader.is-indeterminate .loader-bar-fill {
+  width: 40%;
+  animation: indeterminate 1.4s ease-in-out infinite;
+}
+
+@keyframes indeterminate {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+
+/* API nəticəsi: ümumi rəy və aşağı uyğunluq xəbərdarlığı */
+.result-summary {
+  margin: 0 0 20px;
+  color: var(--text);
+}
+
+.result-warning {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--warning);
+  border-radius: 12px;
+  background: #FFF7ED;
+  color: #7C2D12;
+  font-size: 14px;
+}
+
+[data-theme="dark"] .result-warning {
+  background: #2A1A0A;
+  color: #FED7AA;
+}
+
+.plan-summary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.plan-cta {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 24px 16px;
+  border: 2px dashed var(--border);
+  border-radius: 14px;
+  text-align: center;
+}
+
+.plan-cta p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.plan-task-meta {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 @keyframes load {
   to { width: 100%; }
 }

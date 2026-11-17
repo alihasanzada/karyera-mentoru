@@ -1,6 +1,6 @@
 # Karyera Mentoru
 
-AI career mentor for the Azerbaijani market. Upload a CV (PDF), get an explainable score from Gemini, compare it with a target field (Frontend, Cybersecurity, Data Science) and receive a 30/60/90 day roadmap.
+AI career mentor for the Azerbaijani market. Upload a CV (PDF), get an explainable score from Gemini, compare it with a target field (Frontend, Cybersecurity, Data Science) and receive a 7/14/21 day roadmap.
 
 ## Installation
 ```bash
@@ -15,6 +15,8 @@ cd backend
 uvicorn app.main:app --reload
 ```
 In the browser: http://localhost:8000 (API documentation: /docs)
+
+The landing-page site from `dizayn/` is served at http://localhost:8000/dizayn/. Served this way it uses the real API (sign-up/login, CV evaluation, history, 7/14/21 day roadmap). Opened directly as a file it runs in demo mode with sample data.
 
 ## Tests
 ```bash
