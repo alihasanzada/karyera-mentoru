@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Karyera Mentoru</title>
+
+  <!-- Tema səhifə çəkilməmişdən əvvəl tətbiq olunsun (ağ "parıltı" olmasın) -->
+  <script>
+    (function () {
+      try {
+        var tema = localStorage.getItem("tema");
+        if (tema === "dark" || (!tema && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      } catch (error) {}
+    })();
+  </script>
+
+  <!-- Brauzer tabındakı ikon -->
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+
+  <!-- Şrift: Manrope -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <!-- Stillər -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- JavaScript söndürülübsə, animasiyalı elementlər dərhal görünsün -->
+  <noscript>
+    <style>
+      .reveal { opacity: 1; transform: none; }
+      .ring-fill { stroke-dashoffset: calc(326.73 * (1 - var(--score) / 100)); }
+      .bar-fill { width: calc(var(--value) * 1%); }
+    </style>
+  </noscript>
+</head>
+<body>
+
+  <!-- ===== 1. Elan zolağı ===== -->
+  <div class="announcement" id="elan">
+    <p class="announcement-text">
+      🎉 <strong>Qapalı beta qeydiyyatı başladı!</strong> İlk 30 tələbə üçün tam pulsuz sınaq
+    </p>
+    <button type="button" class="announcement-close" aria-label="Elanı bağla">×</button>
+  </div>
+
+  <!-- ===== 2. Header ===== -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="#" class="logo" aria-label="Karyera Mentoru — ana səhifə">
+        <img src="assets/favicon.svg" alt="" width="32" height="32">
+        <span>Karyera Mentoru</span>
+      </a>
+
+      <nav class="main-nav" id="main-nav" aria-label="Əsas menyu">
+        <ul class="nav-links">
+          <li><a href="#nece-isleyir">Necə işləyir?</a></li>
+          <li><a href="#cv-yoxla">CV Yoxla</a></li>
+          <li><a href="#ustunlukler">Üstünlüklər</a></li>
+          <li><a href="#qiymetler">Qiymətlər</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="#terefdasliq">Tərəfdaşlıq</a></li>
+        </ul>
+        <div class="nav-actions">
+          <button type="button" class="btn btn-ghost login-btn" id="login-btn">Daxil ol</button>
+
+          <!-- Daxil olmuş istifadəçinin menyusu -->
+          <div class="user-menu" id="user-menu" hidden>
+            <button type="button" class="btn btn-ghost user-btn" id="user-btn" aria-expanded="false" aria-controls="user-dropdown">
+              <span class="user-avatar" id="user-avatar" aria-hidden="true"></span>
+              <span id="user-name"></span>
+            </button>
+            <div class="user-dropdown" id="user-dropdown" hidden>
+              <p class="user-dropdown-name" id="user-full-name"></p>
+              <p class="user-dropdown-email" id="user-email"></p>
+              <p class="user-plan" id="user-plan"></p>
+              <a href="#kabinet" class="btn btn-primary btn-block user-cabinet-link">Şəxsi kabinet</a>
+              <button type="button" class="btn btn-ghost btn-block" id="logout-btn">Çıxış</button>
+            </div>
+          </div>
+          <a href="#cv-yoxla" class="btn btn-primary">CV-ni Yoxla (Pulsuz)</a>
+        </div>
+      </nav>
+
+      <div class="header-tools">
+        <button type="button" class="icon-btn theme-toggle" aria-label="Qaranlıq rejimə keç">🌙</button>
+        <button type="button" class="icon-btn menu-toggle" aria-label="Menyunu aç" aria-expanded="false" aria-controls="main-nav">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ===== Şəxsi kabinet (yalnız daxil olmuş istifadəçi üçün, #kabinet ünvanında) ===== -->
+    <section class="section cabinet" id="kabinet" aria-labelledby="cabinet-title" hidden>
+      <div class="container">
+        <a href="#" class="cabinet-back">← Ana səhifəyə qayıt</a>
+
+        <div class="cabinet-head">
+          <div>
+            <h2 id="cabinet-title" tabindex="-1">Şəxsi kabinet</h2>
+            <p class="cabinet-hello" id="cabinet-hello"></p>
+          </div>
+          <div class="cabinet-head-actions">
+            <a href="#cv-yoxla" class="btn btn-primary">+ Yeni CV yoxla</a>
+            <button type="button" class="btn btn-ghost" id="cabinet-logout">Çıxış</button>
+          </div>
+        </div>
+
+        <!-- Statistika -->
+        <div class="stats">
+          <article class="card stat">
+            <p class="stat-label">Son CV skoru</p>
+            <p class="stat-value"><span id="stat-score">—</span><small>/100</small></p>
+            <p class="stat-note" id="stat-score-note">Hələ analiz yoxdur</p>
+          </article>
+          <article class="card stat">
+            <p class="stat-label">Analiz sayı</p>
+            <p class="stat-value" id="stat-count">0</p>
+            <p class="stat-note" id="stat-count-note">Bütün vaxt üzrə</p>
+          </article>
+          <article class="card stat">
+            <p class="stat-label">Plan tamamlanması</p>
+            <p class="stat-value"><span id="stat-plan">0</span><small>%</small></p>
+            <div class="bar" aria-hidden="true"><span class="bar-fill is-good stat-plan-fill" id="stat-plan-bar"></span></div>
+            <p class="stat-note" id="stat-plan-note">Son analizin planı</p>
+          </article>
+        </div>
+
+        <div class="cabinet-grid">
+          <!-- Analiz tarixçəsi -->
+          <article class="card cabinet-card">
+            <h3>Analiz tarixçəsi</h3>
+            <div class="table-wrap" id="cabinet-table-wrap">
+              <table class="history-table cabinet-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Tarix</th>
+                    <th scope="col">Fayl</th>
+                    <th scope="col">İxtisas</th>
+                    <th scope="col">Bal</th>
+                    <th scope="col">Plan</th>
+                    <th scope="col"><span class="visually-hidden">Əməliyyat</span></th>
+                  </tr>
+                </thead>
+                <tbody id="cabinet-history"></tbody>
+              </table>
+            </div>
+            <div class="cabinet-empty" id="cabinet-empty" hidden>
+              <p>Hələ heç bir CV analizi etməmisən.</p>
+              <a href="#cv-yoxla" class="btn btn-primary">İlk CV-ni yoxla</a>
+            </div>
+          </article>
+
+          <!-- Profil -->
+          <article class="card cabinet-card">
+            <h3>Profil</h3>
+            <form class="auth-form" id="profile-form" novalidate>
+              <div class="field">
+                <label class="field-label" for="profile-name">Ad</label>
+                <input type="text" id="profile-name" class="input" autocomplete="given-name" aria-describedby="profile-name-error">
+                <p class="field-error" id="profile-name-error" role="alert"></p>
+              </div>
+              <div class="field">
+                <label class="field-label" for="profile-surname">Soyad</label>
+                <input type="text" id="profile-surname" class="input" autocomplete="family-name" aria-describedby="profile-surname-error">
+                <p class="field-error" id="profile-surname-error" role="alert"></p>
+              </div>
+              <div class="field">
+                <label class="field-label" for="profile-email">E-poçt</label>
+                <input type="email" id="profile-email" class="input" readonly aria-describedby="profile-email-hint">
+                <p class="field-hint" id="profile-email-hint">E-poçt hesabın açarıdır, dəyişdirilə bilməz.</p>
+              </div>
+              <div class="field">
+                <label class="field-label" for="profile-major">İxtisas</label>
+                <select id="profile-major" class="select" aria-describedby="profile-major-error"></select>
+                <p class="field-error" id="profile-major-error" role="alert"></p>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block">Yadda saxla</button>
+            </form>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 3. Hero ===== -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="container hero-inner">
+        <div class="hero-text">
+          <span class="pill pill-accent">Azərbaycan dilində ilk AI Karyera Mentoru</span>
+          <h1 id="hero-title">CV-dən konkret karyera planına bir platforma</h1>
+          <p class="hero-lead">
+            Tələbə və gənc məzunlar üçün AI karyera mentoru: CV analizi, bacarıq boşluğu,
+            7/14/21 günlük plan və vakansiya uyğunluğu.
+          </p>
+          <div class="hero-actions">
+            <a href="#cv-yoxla" class="btn btn-primary">İndi CV-ni Yüklə</a>
+            <a href="#nece-isleyir" class="btn btn-ghost">Necə işləyir?</a>
+          </div>
+        </div>
+
+        <!-- Nümunə nəticə kartı -->
+        <article class="card score-card reveal" aria-label="Nümunə CV skoru: 72 / 100">
+          <div class="score-head">
+            <h2 class="score-title">CV Skoru</h2>
+            <span class="score-note">Nümunə nəticə</span>
+          </div>
+
+          <div class="score-ring" style="--score: 72">
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="ring-track" cx="60" cy="60" r="52"/>
+              <circle class="ring-fill" cx="60" cy="60" r="52"/>
+            </svg>
+            <div class="ring-value">
+              <span class="ring-number" data-count="72">72</span><span class="ring-max">/100</span>
+            </div>
+          </div>
+
+          <ul class="score-bars">
+            <li style="--value: 80">
+              <div class="bar-label"><span>Struktur</span><strong>80</strong></div>
+              <div class="bar" aria-hidden="true"><span class="bar-fill is-good"></span></div>
+            </li>
+            <li style="--value: 65">
+              <div class="bar-label"><span>ATS uyğunluğu</span><strong>65</strong></div>
+              <div class="bar" aria-hidden="true"><span class="bar-fill is-weak"></span></div>
+            </li>
+            <li style="--value: 58">
+              <div class="bar-label"><span>Nəticə və göstəricilər</span><strong>58</strong></div>
+              <div class="bar" aria-hidden="true"><span class="bar-fill is-weak"></span></div>
+            </li>
+            <li style="--value: 85">
+              <div class="bar-label"><span>Sahəyə uyğunluq</span><strong>85</strong></div>
+              <div class="bar" aria-hidden="true"><span class="bar-fill is-good"></span></div>
+            </li>
+          </ul>
+
+          <div class="score-skills">
+            <p class="score-skills-title">Çatışmayan bacarıqlar</p>
+            <ul class="pill-list">
+              <li class="pill pill-missing">TypeScript</li>
+              <li class="pill pill-missing">Security</li>
+              <li class="pill pill-missing">Git</li>
+            </ul>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ===== 4. Necə işləyir? ===== -->
+    <section class="section" id="nece-isleyir" aria-labelledby="steps-title">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="steps-title">Necə işləyir?</h2>
+          <p class="section-sub">CV-ni yükləməkdən uyğun vakansiyaya qədər — 5 sadə addım.</p>
+        </div>
+
+        <ol class="steps">
+          <li class="card step reveal">
+            <span class="step-num" aria-hidden="true">1</span>
+            <h3>CV-ni əlavə et</h3>
+            <p>PDF formatında CV-ni yüklə və ixtisasını seç. Cəmi bir dəqiqə çəkir.</p>
+            <span class="step-tag">PDF · maks. 5 MB</span>
+          </li>
+          <li class="card step reveal">
+            <span class="step-num" aria-hidden="true">2</span>
+            <h3>AI analizi</h3>
+            <p>AI CV-ni struktur, məzmun və açar sözlər baxımından oxuyur, sahənin tələbləri ilə müqayisə edir.</p>
+            <span class="step-tag">Bir neçə saniyə</span>
+          </li>
+          <li class="card step reveal">
+            <span class="step-num" aria-hidden="true">3</span>
+            <h3>Şəffaf qiymətləndirmə</h3>
+            <p>4 kateqoriya üzrə 100 ballıq skor. Hər balın səbəbi aydın göstərilir.</p>
+            <span class="step-tag">4 kateqoriya · 100 bal</span>
+          </li>
+          <li class="card step reveal">
+            <span class="step-num" aria-hidden="true">4</span>
+            <h3>Yol xəritəsi</h3>
+            <p>Çatışmayan bacarıqlar üçün gündəlik tapşırıqlarla addım-addım inkişaf planı.</p>
+            <span class="step-tag">7 / 14 / 21 gün</span>
+          </li>
+          <li class="card step reveal">
+            <span class="step-num" aria-hidden="true">5</span>
+            <h3>Vakansiya uyğunluğu</h3>
+            <p>Vakansiyalarla uyğunluq faizini gör və hansı elana müraciət edəcəyini bil.</p>
+            <span class="step-tag">Uyğunluq %</span>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ===== 5. CV Yoxla ===== -->
+    <section class="section section-alt" id="cv-yoxla" aria-labelledby="cv-title">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="cv-title">CV-ni Yoxla</h2>
+          <p class="section-sub">PDF faylını yüklə, ixtisasını seç — AI bir neçə saniyəyə CV-ni qiymətləndirsin.</p>
+        </div>
+
+        <!-- Yükləmə forması -->
+        <form class="card cv-form" id="cv-form" novalidate>
+          <!-- PDF zonası -->
+          <div class="field">
+            <span class="field-label" id="cv-file-label">CV faylı</span>
+            <label class="dropzone" id="dropzone" for="cv-file">
+              <input type="file" id="cv-file" class="visually-hidden" accept="application/pdf,.pdf" aria-describedby="cv-file-hint cv-file-error">
+              <span class="dropzone-icon" aria-hidden="true">📄</span>
+              <span class="dropzone-title">PDF faylını bura sürüklə və ya <u>kompüterdən seç</u></span>
+              <span class="dropzone-hint" id="cv-file-hint">Yalnız PDF, maksimum 5 MB</span>
+            </label>
+
+            <!-- Seçilmiş fayl -->
+            <div class="file-chip" id="file-chip" hidden>
+              <span class="file-chip-icon" aria-hidden="true">📄</span>
+              <span class="file-chip-info">
+                <strong class="file-chip-name" id="file-name"></strong>
+                <span class="file-chip-size" id="file-size"></span>
+              </span>
+              <button type="button" class="file-chip-remove" id="file-remove" aria-label="Faylı sil">×</button>
+            </div>
+            <p class="field-error" id="cv-file-error" role="alert"></p>
+          </div>
+
+          <!-- İxtisas seçimi -->
+          <div class="field">
+            <label class="field-label" for="cv-major">İxtisas</label>
+            <select id="cv-major" class="select" aria-describedby="cv-major-error">
+              <option value="">İxtisasını seç</option>
+              <!-- Qalan ixtisaslar js/script.js-dəki SPECIALTY_GROUPS siyahısından avtomatik əlavə olunur -->
+            </select>
+            <p class="field-error" id="cv-major-error" role="alert"></p>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" id="analyze-btn">Analiz Et</button>
+          <p class="form-note">🔒 Demo rejim: fayl heç yerə göndərilmir, yalnız brauzerində qalır.</p>
+
+          <!-- Yüklənmə animasiyası -->
+          <div class="loader" id="loader" hidden>
+            <span class="loader-spinner" aria-hidden="true"></span>
+            <p class="loader-text" id="loader-text" role="status" aria-live="polite">CV oxunur…</p>
+            <div class="loader-bar" aria-hidden="true"><span class="loader-bar-fill"></span></div>
+          </div>
+        </form>
+
+        <!-- Nəticə -->
+        <div class="card result" id="result" hidden tabindex="-1" aria-labelledby="result-title">
+          <div class="result-head">
+            <div>
+              <h3 class="result-title" id="result-title">Analiz nəticəsi</h3>
+              <p class="result-meta" id="result-meta"></p>
+            </div>
+            <button type="button" class="btn btn-ghost" id="result-reset">Yeni CV yoxla</button>
+          </div>
+
+          <!-- Tablar -->
+          <div class="tabs" role="tablist" aria-label="Nəticə bölmələri">
+            <button type="button" class="tab" role="tab" id="tab-score" aria-selected="true" aria-controls="panel-score">Qiymətləndirmə</button>
+            <button type="button" class="tab" role="tab" id="tab-skills" aria-selected="false" aria-controls="panel-skills">Bacarıq boşluğu</button>
+            <button type="button" class="tab" role="tab" id="tab-plan" aria-selected="false" aria-controls="panel-plan">7/14/21 günlük plan</button>
+            <button type="button" class="tab" role="tab" id="tab-jobs" aria-selected="false" aria-controls="panel-jobs">Vakansiya və tarixçə</button>
+          </div>
+
+          <!-- Tab 1: Qiymətləndirmə -->
+          <div class="tab-panel" role="tabpanel" id="panel-score" aria-labelledby="tab-score">
+            <div class="assess">
+              <div class="assess-total">
+                <div class="score-ring" id="result-ring" style="--score: 0">
+                  <svg viewBox="0 0 120 120" aria-hidden="true">
+                    <circle class="ring-track" cx="60" cy="60" r="52"/>
+                    <circle class="ring-fill" cx="60" cy="60" r="52"/>
+                  </svg>
+                  <div class="ring-value">
+                    <span class="ring-number" id="result-number" data-count="0">0</span><span class="ring-max">/100</span>
+                  </div>
+                </div>
+                <p class="assess-verdict" id="result-verdict"></p>
+              </div>
+
+              <ul class="score-bars assess-bars" id="result-bars"></ul>
+            </div>
+
+            <div class="assess-lists">
+              <div class="assess-list is-good">
+                <h4>✔ Güclü tərəflər</h4>
+                <ul id="result-strengths"></ul>
+              </div>
+              <div class="assess-list is-weak">
+                <h4>⚠ Zəif tərəflər</h4>
+                <ul id="result-weaknesses"></ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 2: Bacarıq boşluğu -->
+          <div class="tab-panel" role="tabpanel" id="panel-skills" aria-labelledby="tab-skills" hidden>
+            <div class="gap-summary">
+              <p class="gap-summary-text" id="gap-summary"></p>
+              <div class="bar" aria-hidden="true"><span class="bar-fill is-good" id="gap-bar"></span></div>
+            </div>
+
+            <div class="gap-groups">
+              <div class="gap-group">
+                <h4><span class="dot is-good" aria-hidden="true"></span> CV-də olan bacarıqlar</h4>
+                <ul class="pill-list" id="skills-have"></ul>
+              </div>
+              <div class="gap-group">
+                <h4><span class="dot is-weak" aria-hidden="true"></span> Çatışmayan bacarıqlar</h4>
+                <ul class="pill-list" id="skills-missing"></ul>
+              </div>
+            </div>
+
+            <p class="tab-tip">💡 Çatışmayan bacarıqlar avtomatik olaraq <strong>7/14/21 günlük plana</strong> əlavə olunub.</p>
+          </div>
+
+          <!-- Tab 3: 7/14/21 günlük plan -->
+          <div class="tab-panel" role="tabpanel" id="panel-plan" aria-labelledby="tab-plan" hidden>
+            <div class="plan-top">
+              <div class="segmented" role="group" aria-label="Planın müddəti">
+                <button type="button" class="segment" data-days="7" aria-pressed="true">7 gün</button>
+                <button type="button" class="segment" data-days="14" aria-pressed="false">14 gün</button>
+                <button type="button" class="segment" data-days="21" aria-pressed="false">21 gün</button>
+              </div>
+              <div class="plan-progress">
+                <span id="plan-progress-text">0 / 0 tapşırıq · 0%</span>
+                <div class="bar" aria-hidden="true"><span class="bar-fill is-good plan-progress-fill" id="plan-progress-bar"></span></div>
+              </div>
+            </div>
+
+            <div class="plan-days" id="plan-days"></div>
+          </div>
+
+          <!-- Tab 4: Vakansiya və tarixçə -->
+          <div class="tab-panel" role="tabpanel" id="panel-jobs" aria-labelledby="tab-jobs" hidden>
+            <h4 class="panel-subtitle">Uyğun vakansiyalar</h4>
+            <p class="panel-note">Demo vakansiyalar — uyğunluq CV skoruna və bacarıqlarına görə hesablanır.</p>
+            <ul class="jobs" id="jobs-list"></ul>
+
+            <h4 class="panel-subtitle">Analiz tarixçəsi</h4>
+            <div class="table-wrap">
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Tarix</th>
+                    <th scope="col">Fayl</th>
+                    <th scope="col">İxtisas</th>
+                    <th scope="col">Bal</th>
+                  </tr>
+                </thead>
+                <tbody id="history-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 6. Niyə Karyera Mentoru? ===== -->
+    <section class="section" id="ustunlukler" aria-labelledby="why-title">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="why-title">Niyə Karyera Mentoru?</h2>
+          <p class="section-sub">Xarici CV alətlərindən fərqli olaraq, yerli tələbə üçün qurulub.</p>
+        </div>
+
+        <div class="why-cards">
+          <article class="card why-card reveal">
+            <span class="why-icon" aria-hidden="true">📍</span>
+            <h3>Yerli bazar konteksti</h3>
+            <p>Azərbaycan əmək bazarı, yerli vakansiyalar və işəgötürən gözləntiləri nəzərə alınır. Hər şey Azərbaycan dilində.</p>
+          </article>
+          <article class="card why-card reveal">
+            <span class="why-icon" aria-hidden="true">🔄</span>
+            <h3>Bağlı dövrə</h3>
+            <p>CV analizi → bacarıq boşluğu → plan → vakansiya. Hər addım növbətisinə bağlıdır, heç nə yarımçıq qalmır.</p>
+          </article>
+          <article class="card why-card reveal">
+            <span class="why-icon" aria-hidden="true">💰</span>
+            <h3>Alıcılıq gücünə uyğun qiymət</h3>
+            <p>Premium cəmi <strong>aylıq 15 AZN</strong> — xarici analoqlardan bir neçə dəfə ucuz. Pulsuz versiya da var.</p>
+          </article>
+        </div>
+
+        <!-- Müqayisə cədvəli -->
+        <p class="scroll-hint" aria-hidden="true">← Cədvəli yana sürüşdür →</p>
+        <div class="table-wrap compare-wrap" tabindex="0" role="region" aria-labelledby="compare-caption">
+          <table class="compare-table">
+            <caption id="compare-caption" class="visually-hidden">Karyera Mentoru və digər CV alətlərinin müqayisəsi</caption>
+            <thead>
+              <tr>
+                <th scope="col">Platforma</th>
+                <th scope="col">Qiymət</th>
+                <th scope="col">AZ dili</th>
+                <th scope="col">CV skoru</th>
+                <th scope="col">Günlük plan</th>
+                <th scope="col">Vakansiya uyğ.</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Rezi</th>
+                <td>≈ $29/ay</td>
+                <td><span class="no">✗</span><span class="visually-hidden">Yoxdur</span></td>
+                <td><span class="yes">✓</span><span class="visually-hidden">Var</span></td>
+                <td><span class="no">✗</span><span class="visually-hidden">Yoxdur</span></td>
+                <td><span class="part">Qismən</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Teal</th>
+                <td>≈ $29/ay</td>
+                <td><span class="no">✗</span><span class="visually-hidden">Yoxdur</span></td>
+                <td><span class="yes">✓</span><span class="visually-hidden">Var</span></td>
+                <td><span class="no">✗</span><span class="visually-hidden">Yoxdur</span></td>
+                <td><span class="yes">✓</span><span class="visually-hidden">Var</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Kickresume</th>
+                <td>≈ $19/ay</td>
+                <td><span class="no">✗</span><span class="visually-hidden">Yoxdur</span></td>
+                <td><span class="yes">✓</span><span class="visually-hidden">Var</span></td>
+                <td><span class="no">✗</span><span class="visually-hidden">Yoxdur</span></td>
+                <td><span class="no">✗</span><span class="visually-hidden">Yoxdur</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Jobscan</th>
+                <td>≈ $50/ay</td>
+                <td><span class="no">✗</span><span class="visually-hidden">Yoxdur</span></td>
+                <td><span class="yes">✓</span><span class="visually-hidden">Var</span></td>
+                <td><span class="no">✗</span><span class="visually-hidden">Yoxdur</span></td>
+                <td><span class="yes">✓</span><span class="visually-hidden">Var</span></td>
+              </tr>
+              <tr class="is-highlight">
+                <th scope="row">Karyera Mentoru</th>
+                <td><strong>15 AZN/ay</strong></td>
+                <td><span class="yes">✓</span><span class="visually-hidden">Var</span></td>
+                <td><span class="yes">✓</span><span class="visually-hidden">Var</span></td>
+                <td><span class="yes">✓</span><span class="visually-hidden">Var</span></td>
+                <td><span class="yes">✓</span><span class="visually-hidden">Var</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="table-note">Xarici platformaların qiymətləri təxminidir, aylıq ödənişli plana görə göstərilib.</p>
+      </div>
+    </section>
+
+    <!-- ===== 7. Persona və rəylər ===== -->
+    <section class="section section-alt" id="reyler" aria-labelledby="persona-title">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="persona-title">Kimin üçün qurmuşuq?</h2>
+          <p class="section-sub">Tipik istifadəçimiz — ilk işini axtaran tələbə.</p>
+        </div>
+
+        <!-- Persona -->
+        <article class="card persona reveal">
+          <div class="persona-head">
+            <span class="persona-avatar" aria-hidden="true">T</span>
+            <div>
+              <h3 class="persona-name">Tahir, 21 yaş</h3>
+              <p class="persona-role">Bakıda 4-cü kurs tələbəsi · Kompüter elmləri</p>
+            </div>
+          </div>
+          <dl class="persona-grid">
+            <div class="persona-item">
+              <dt>🎯 Məqsəd</dt>
+              <dd>Məzun olmamış ilk junior işini tapmaq.</dd>
+            </div>
+            <div class="persona-item">
+              <dt>😕 Problem</dt>
+              <dd>CV-si hazırdır, amma müraciətlərə cavab gəlmir. Nəyin çatışmadığını bilmir.</dd>
+            </div>
+            <div class="persona-item">
+              <dt>✨ Gözlənti</dt>
+              <dd>Konkret, addım-addım plan və hansı vakansiyaya uyğun olduğunu görmək.</dd>
+            </div>
+          </dl>
+        </article>
+
+        <!-- Rəylər karuseli -->
+        <div class="carousel" id="reviews" role="region" aria-roledescription="karusel" aria-label="İstifadəçi rəyləri">
+          <div class="carousel-viewport">
+            <ul class="carousel-track" id="carousel-track" aria-live="off">
+              <li class="carousel-slide" role="group" aria-roledescription="slayd" aria-label="1 / 5">
+                <blockquote class="review">
+                  <p>“Bacarıq boşluğu tabı mənə SQL və Power BI-ın çatışmadığını göstərdi. 14 günlük planı bitirdim və ilk müsahibəyə çağırıldım.”</p>
+                  <footer><strong>Aysel</strong> · Data analitika, 4-cü kurs</footer>
+                </blockquote>
+              </li>
+              <li class="carousel-slide" role="group" aria-roledescription="slayd" aria-label="2 / 5">
+                <blockquote class="review">
+                  <p>“Hər balın niyə verildiyini görmək çox faydalı oldu. CV-mi bir axşamda yenidən yazdım.”</p>
+                  <footer><strong>Murad</strong> · Kompüter elmləri, məzun</footer>
+                </blockquote>
+              </li>
+              <li class="carousel-slide" role="group" aria-roledescription="slayd" aria-label="3 / 5">
+                <blockquote class="review">
+                  <p>“Xarici saytlar bizim bazarı tanımır. Burada tövsiyələr və vakansiyalar yerli idi.”</p>
+                  <footer><strong>Nərmin</strong> · Marketinq, 3-cü kurs</footer>
+                </blockquote>
+              </li>
+              <li class="carousel-slide" role="group" aria-roledescription="slayd" aria-label="4 / 5">
+                <blockquote class="review">
+                  <p>“7 günlük plan qısa və konkretdir — hər gün nə edəcəyimi bilirdim.”</p>
+                  <footer><strong>Elvin</strong> · İnşaat mühəndisliyi, məzun</footer>
+                </blockquote>
+              </li>
+              <li class="carousel-slide" role="group" aria-roledescription="slayd" aria-label="5 / 5">
+                <blockquote class="review">
+                  <p>“Aylıq 15 AZN tələbə büdcəsinə uyğundur. Əvvəlcə pulsuz versiya ilə başladım.”</p>
+                  <footer><strong>Leyla</strong> · Maliyyə, 4-cü kurs</footer>
+                </blockquote>
+              </li>
+            </ul>
+          </div>
+
+          <div class="carousel-controls">
+            <button type="button" class="icon-btn carousel-btn" id="carousel-prev" aria-label="Əvvəlki rəy">‹</button>
+            <div class="carousel-dots" id="carousel-dots"></div>
+            <button type="button" class="icon-btn carousel-btn" id="carousel-next" aria-label="Növbəti rəy">›</button>
+          </div>
+          <p class="carousel-note">Beta test iştirakçılarının rəyləri</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 8. Qiymətlər ===== -->
+    <section class="section" id="qiymetler" aria-labelledby="pricing-title">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="pricing-title">Qiymətlər</h2>
+          <p class="section-sub">Pulsuz başla, hazır olanda Premium-a keç.</p>
+        </div>
+
+        <div class="pricing">
+          <!-- Pulsuz -->
+          <article class="card price-card reveal">
+            <h3 class="price-name">Pulsuz</h3>
+            <p class="price-desc">Başlamaq və platformanı tanımaq üçün.</p>
+            <p class="price-amount"><span>0</span> AZN</p>
+            <ul class="price-features">
+              <li>Ayda 1 CV analizi</li>
+              <li>Ümumi bal və 4 kateqoriya</li>
+              <li>Bacarıq boşluğu (qısa)</li>
+              <li>7 günlük plan</li>
+            </ul>
+            <a href="#cv-yoxla" class="btn btn-ghost btn-block">Pulsuz başla</a>
+          </article>
+
+          <!-- Premium Tələbə (vurğulanmış) -->
+          <article class="card price-card is-featured reveal" aria-label="Premium Tələbə — ən populyar plan">
+            <span class="price-badge">Ən Populyar</span>
+            <h3 class="price-name">Premium Tələbə</h3>
+            <p class="price-desc">İşə hazırlaşan tələbə üçün tam paket.</p>
+            <p class="price-amount"><span>15</span> AZN<small>/ay</small></p>
+            <ul class="price-features">
+              <li>Limitsiz CV analizi</li>
+              <li>Tam bacarıq boşluğu</li>
+              <li>7/14/21 günlük planlar</li>
+              <li>Vakansiya uyğunluğu (%)</li>
+              <li>AI Mentor çatı</li>
+              <li>Analiz tarixçəsi</li>
+            </ul>
+            <button type="button" class="btn btn-primary btn-block" data-plan="premium">Premium-a keç</button>
+          </article>
+
+          <!-- Universitet Lisenziyası -->
+          <article class="card price-card reveal">
+            <h3 class="price-name">Universitet Lisenziyası</h3>
+            <p class="price-desc">Universitet və karyera mərkəzləri üçün illik B2B lisenziya.</p>
+            <p class="price-amount price-amount-text">Fərdi təklif</p>
+            <p class="price-pilot">🎁 İlk pilot pulsuz</p>
+            <ul class="price-features">
+              <li>Bütün tələbələr üçün Premium</li>
+              <li>Karyera mərkəzi üçün idarə paneli</li>
+              <li>Toplu hesabatlar və statistika</li>
+              <li>Təlim və dəstək</li>
+            </ul>
+            <a href="#terefdasliq" class="btn btn-ghost btn-block">Əlaqə saxla</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 9. FAQ ===== -->
+    <section class="section section-alt" id="faq" aria-labelledby="faq-title">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="faq-title">Tez-tez verilən suallar</h2>
+          <p class="section-sub">Cavabını tapmadın? Aşağıdakı formla bizə yaz.</p>
+        </div>
+
+        <div class="faq" id="faq-list">
+          <div class="faq-item">
+            <h3 class="faq-q">
+              <button type="button" class="faq-btn" aria-expanded="false" aria-controls="faq-a1" id="faq-q1">
+                CV necə qiymətləndirilir?
+                <span class="faq-icon" aria-hidden="true"></span>
+              </button>
+            </h3>
+            <div class="faq-a" id="faq-a1" role="region" aria-labelledby="faq-q1">
+              <div class="faq-a-inner">
+                <p>AI CV-ni 4 kateqoriya üzrə yoxlayır: Struktur, ATS uyğunluğu, Nəticə və göstəricilər, Sahəyə uyğunluq. Hər biri 100 ballıq şkalada qiymətləndirilir, ümumi bal isə onların ortalamasıdır. Hər balın səbəbi güclü və zəif tərəflərdə izah olunur.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <h3 class="faq-q">
+              <button type="button" class="faq-btn" aria-expanded="false" aria-controls="faq-a2" id="faq-q2">
+                Hansı formatda CV yükləyə bilərəm?
+                <span class="faq-icon" aria-hidden="true"></span>
+              </button>
+            </h3>
+            <div class="faq-a" id="faq-a2" role="region" aria-labelledby="faq-q2">
+              <div class="faq-a-inner">
+                <p>Hazırda yalnız PDF, maksimum 5 MB. CV-n Word-dədirsə, "Fayl → Saxla → PDF" ilə PDF kimi saxlayıb yüklə.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <h3 class="faq-q">
+              <button type="button" class="faq-btn" aria-expanded="false" aria-controls="faq-a3" id="faq-q3">
+                7/14/21 günlük plan nədir?
+                <span class="faq-icon" aria-hidden="true"></span>
+              </button>
+            </h3>
+            <div class="faq-a" id="faq-a3" role="region" aria-labelledby="faq-q3">
+              <div class="faq-a-inner">
+                <p>Çatışmayan bacarıqlara və CV-nin zəif tərəflərinə görə qurulan gündəlik tapşırıqlar siyahısıdır. Müddəti özün seçirsən: 7 gün — sürətli düzəliş, 21 gün — dərin hazırlıq. Tapşırıqları işarələdikcə irəliləyişini görürsən.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <h3 class="faq-q">
+              <button type="button" class="faq-btn" aria-expanded="false" aria-controls="faq-a4" id="faq-q4">
+                Pulsuz və Premium arasında fərq nədir?
+                <span class="faq-icon" aria-hidden="true"></span>
+              </button>
+            </h3>
+            <div class="faq-a" id="faq-a4" role="region" aria-labelledby="faq-q4">
+              <div class="faq-a-inner">
+                <p>Pulsuz versiyada ayda 1 analiz, ümumi bal və 7 günlük plan var. Premium (aylıq 15 AZN) limitsiz analiz, tam bacarıq boşluğu, 14 və 21 günlük planlar, vakansiya uyğunluğu və AI Mentor çatını açır.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <h3 class="faq-q">
+              <button type="button" class="faq-btn" aria-expanded="false" aria-controls="faq-a5" id="faq-q5">
+                Universitetlər necə qoşulur?
+                <span class="faq-icon" aria-hidden="true"></span>
+              </button>
+            </h3>
+            <div class="faq-a" id="faq-a5" role="region" aria-labelledby="faq-q5">
+              <div class="faq-a-inner">
+                <p>Universitetlər və karyera mərkəzləri illik lisenziya ilə bütün tələbələrinə Premium verə bilər. İlk pilot pulsuzdur — aşağıdakı Tərəfdaşlıq formunu doldurun, sizinlə əlaqə saxlayaq.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <h3 class="faq-q">
+              <button type="button" class="faq-btn" aria-expanded="false" aria-controls="faq-a6" id="faq-q6">
+                Hansı ixtisaslar dəstəklənir?
+                <span class="faq-icon" aria-hidden="true"></span>
+              </button>
+            </h3>
+            <div class="faq-a" id="faq-a6" role="region" aria-labelledby="faq-q6">
+              <div class="faq-a-inner">
+                <p>Azərbaycan universitetlərinin bakalavr ixtisaslarından 120-dən çoxu, 7 qrupda: informasiya texnologiyaları, biznes və maliyyə, mühəndislik və sənaye, hüquq, media və sosial, səhiyyə və kənd təsərrüfatı, xidmət və yaradıcı sahələr (müəllimlik daxil), təbiət elmləri. Siyahıda olmayan ixtisas üçün "Digər"i seç.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <h3 class="faq-q">
+              <button type="button" class="faq-btn" aria-expanded="false" aria-controls="faq-a7" id="faq-q7">
+                Şəxsi məlumatlarım necə qorunur?
+                <span class="faq-icon" aria-hidden="true"></span>
+              </button>
+            </h3>
+            <div class="faq-a" id="faq-a7" role="region" aria-labelledby="faq-q7">
+              <div class="faq-a-inner">
+                <p>Bu demo versiyada CV faylın heç yerə göndərilmir, yalnız sənin brauzerində qalır. Real versiyada məlumatlar şifrələnmiş şəkildə saxlanacaq, üçüncü tərəflərə verilməyəcək və istədiyin vaxt silinə biləcək.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 10. Tərəfdaşlıq ===== -->
+    <section class="section" id="terefdasliq" aria-labelledby="partner-title">
+      <div class="container">
+        <div class="partner reveal">
+          <div class="partner-text">
+            <span class="partner-label">Tərəfdaşlıq</span>
+            <h2 id="partner-title">Universitet, akademiya və ya kampus səfiri olun</h2>
+            <p>Tələbələrinizə AI karyera mentoru verin. Universitetlər üçün ilk pilot pulsuzdur, kampus səfirləri isə Premium-u hədiyyə alır.</p>
+          </div>
+
+          <form class="partner-form" id="partner-form" novalidate>
+            <div class="field">
+              <label class="field-label" for="partner-name">Ad / Təşkilat</label>
+              <input type="text" id="partner-name" class="input" autocomplete="organization" aria-describedby="partner-name-error">
+              <p class="field-error" id="partner-name-error" role="alert"></p>
+            </div>
+            <div class="field">
+              <label class="field-label" for="partner-email">E-poçt</label>
+              <input type="email" id="partner-email" class="input" autocomplete="email" aria-describedby="partner-email-error">
+              <p class="field-error" id="partner-email-error" role="alert"></p>
+            </div>
+            <button type="submit" class="btn btn-light btn-block">Müraciət göndər</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== 11. Footer ===== -->
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <!-- Loqo və bülleten -->
+      <div class="footer-col footer-brand">
+        <a href="#" class="logo">
+          <img src="assets/favicon.svg" alt="" width="32" height="32">
+          <span>Karyera Mentoru</span>
+        </a>
+        <p class="footer-desc">Tələbə və gənc məzunlar üçün Azərbaycan dilində AI karyera mentoru.</p>
+        <form class="newsletter" id="newsletter-form" novalidate>
+          <label class="footer-title" for="newsletter-email">Bülletenə abunə ol</label>
+          <div class="newsletter-row">
+            <input type="email" id="newsletter-email" class="input" placeholder="E-poçt ünvanın" autocomplete="email">
+            <button type="submit" class="btn btn-primary">Abunə ol</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Sürətli keçidlər -->
+      <nav class="footer-col" aria-label="Sürətli keçidlər">
+        <p class="footer-title">Sürətli keçidlər</p>
+        <ul class="footer-links">
+          <li><a href="#nece-isleyir">Necə işləyir?</a></li>
+          <li><a href="#cv-yoxla">CV Yoxla</a></li>
+          <li><a href="#ustunlukler">Üstünlüklər</a></li>
+          <li><a href="#qiymetler">Qiymətlər</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="#terefdasliq">Tərəfdaşlıq</a></li>
+        </ul>
+      </nav>
+
+      <!-- Hüquqi -->
+      <nav class="footer-col" aria-label="Hüquqi məlumat">
+        <p class="footer-title">Hüquqi</p>
+        <ul class="footer-links">
+          <li><button type="button" class="link-btn" data-soon>Məxfilik Siyasəti</button></li>
+          <li><button type="button" class="link-btn" data-soon>İstifadə Şərtləri</button></li>
+        </ul>
+      </nav>
+
+      <!-- Sosial şəbəkələr -->
+      <div class="footer-col">
+        <p class="footer-title">Sosial şəbəkələr</p>
+        <ul class="footer-social">
+          <li><button type="button" class="icon-btn" data-soon aria-label="Instagram">IG</button></li>
+          <li><button type="button" class="icon-btn" data-soon aria-label="LinkedIn">in</button></li>
+          <li><button type="button" class="icon-btn" data-soon aria-label="Telegram">TG</button></li>
+          <li><button type="button" class="icon-btn" data-soon aria-label="YouTube">YT</button></li>
+        </ul>
+        <button type="button" class="btn btn-ghost to-top" id="to-top">↑ Yuxarı qalx</button>
+      </div>
+    </div>
+
+    <div class="container footer-bottom">
+      <p>© 2026 Karyera Mentoru. Bütün hüquqlar qorunur.</p>
+    </div>
+  </footer>
+
+  <!-- ===== Giriş / Qeydiyyat pəncərəsi ===== -->
+  <dialog class="modal" id="auth-modal" aria-labelledby="auth-title">
+    <div class="modal-head">
+      <h2 class="modal-title" id="auth-title">
+        <img src="assets/favicon.svg" alt="" width="28" height="28">
+        Karyera Mentoru
+      </h2>
+      <button type="button" class="modal-close" id="auth-close" aria-label="Pəncərəni bağla">×</button>
+    </div>
+
+    <div class="tabs auth-tabs" role="tablist" aria-label="Giriş və ya qeydiyyat">
+      <button type="button" class="tab" role="tab" id="tab-login" aria-selected="true" aria-controls="panel-login">Giriş</button>
+      <button type="button" class="tab" role="tab" id="tab-register" aria-selected="false" aria-controls="panel-register">Qeydiyyat</button>
+    </div>
+
+    <!-- Giriş -->
+    <div class="tab-panel" role="tabpanel" id="panel-login" aria-labelledby="tab-login">
+      <form class="auth-form" id="login-form" novalidate>
+        <div class="field">
+          <label class="field-label" for="login-email">E-poçt</label>
+          <input type="email" id="login-email" class="input" autocomplete="email" aria-describedby="login-email-error">
+          <p class="field-error" id="login-email-error" role="alert"></p>
+        </div>
+        <div class="field">
+          <label class="field-label" for="login-pass">Şifrə</label>
+          <div class="pass-wrap">
+            <input type="password" id="login-pass" class="input" autocomplete="current-password" aria-describedby="login-pass-error">
+            <button type="button" class="pass-toggle" aria-label="Şifrəni göstər" data-target="login-pass">👁</button>
+          </div>
+          <p class="field-error" id="login-pass-error" role="alert"></p>
+        </div>
+        <p class="form-error" id="login-error" role="alert"></p>
+        <button type="submit" class="btn btn-primary btn-block">Daxil ol</button>
+        <p class="auth-switch">Hesabın yoxdur? <button type="button" class="link-btn auth-switch-btn" data-tab="tab-register">Qeydiyyatdan keç</button></p>
+      </form>
+    </div>
+
+    <!-- Qeydiyyat -->
+    <div class="tab-panel" role="tabpanel" id="panel-register" aria-labelledby="tab-register" hidden>
+      <form class="auth-form" id="register-form" novalidate>
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label" for="reg-name">Ad</label>
+            <input type="text" id="reg-name" class="input" autocomplete="given-name" aria-describedby="reg-name-error">
+            <p class="field-error" id="reg-name-error" role="alert"></p>
+          </div>
+          <div class="field">
+            <label class="field-label" for="reg-surname">Soyad</label>
+            <input type="text" id="reg-surname" class="input" autocomplete="family-name" aria-describedby="reg-surname-error">
+            <p class="field-error" id="reg-surname-error" role="alert"></p>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="reg-email">E-poçt</label>
+          <input type="email" id="reg-email" class="input" autocomplete="email" aria-describedby="reg-email-error">
+          <p class="field-error" id="reg-email-error" role="alert"></p>
+        </div>
+        <div class="field">
+          <label class="field-label" for="reg-pass">Şifrə <span class="field-hint">(min. 6 simvol)</span></label>
+          <div class="pass-wrap">
+            <input type="password" id="reg-pass" class="input" autocomplete="new-password" aria-describedby="reg-pass-error">
+            <button type="button" class="pass-toggle" aria-label="Şifrəni göstər" data-target="reg-pass">👁</button>
+          </div>
+          <p class="field-error" id="reg-pass-error" role="alert"></p>
+        </div>
+        <div class="field">
+          <label class="field-label" for="reg-pass2">Şifrə təkrarı</label>
+          <input type="password" id="reg-pass2" class="input" autocomplete="new-password" aria-describedby="reg-pass2-error">
+          <p class="field-error" id="reg-pass2-error" role="alert"></p>
+        </div>
+        <div class="field">
+          <label class="field-label" for="reg-major">İxtisas</label>
+          <select id="reg-major" class="select" aria-describedby="reg-major-error"></select>
+          <p class="field-error" id="reg-major-error" role="alert"></p>
+        </div>
+        <div class="field">
+          <label class="check">
+            <input type="checkbox" id="reg-consent" aria-describedby="reg-consent-error">
+            <span>Məxfilik Siyasəti və İstifadə Şərtləri ilə razıyam</span>
+          </label>
+          <p class="field-error" id="reg-consent-error" role="alert"></p>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Qeydiyyatdan keç</button>
+        <p class="auth-switch">Artıq hesabın var? <button type="button" class="link-btn auth-switch-btn" data-tab="tab-login">Daxil ol</button></p>
+      </form>
+    </div>
+
+    <div class="auth-divider"><span>və ya</span></div>
+    <button type="button" class="btn btn-ghost btn-block google-btn" id="google-btn">
+      <span class="google-g" aria-hidden="true">G</span> Google ilə davam et
+    </button>
+    <p class="form-note auth-note" id="google-note" role="status"></p>
+
+    <p class="auth-demo">🔒 DEMO: hesab yalnız bu brauzerdə saxlanılır. Real şifrəni istifadə etmə.</p>
+  </dialog>
+
+  <!-- ===== Ödəniş pəncərəsi (DEMO) ===== -->
+  <dialog class="modal pay-modal" id="pay-modal" aria-labelledby="pay-title">
+    <div class="modal-head">
+      <h2 class="modal-title" id="pay-title">Premium Tələbə</h2>
+      <button type="button" class="modal-close" id="pay-close" aria-label="Pəncərəni bağla">×</button>
+    </div>
+
+    <p class="demo-warning" role="note">
+      <strong>⚠ DEMO — real kart məlumatı daxil etməyin.</strong>
+      Bu, prototipdir: heç bir ödəniş alınmır və yazdıqların heç yerə göndərilmir, saxlanmır.
+    </p>
+
+    <!-- Ödəniş forması -->
+    <div id="pay-step-form">
+      <div class="pay-summary">
+        <div>
+          <p class="pay-plan">Premium Tələbə</p>
+          <p class="pay-plan-note">Limitsiz analiz · 7/14/21 günlük planlar · AI Mentor</p>
+        </div>
+        <p class="pay-price"><strong>15</strong> AZN<small>/ay</small></p>
+      </div>
+
+      <button type="button" class="btn btn-ghost btn-block pay-test-btn" id="pay-test">🧪 Test kartı ilə doldur</button>
+
+      <form class="auth-form" id="pay-form" novalidate autocomplete="off">
+        <div class="field">
+          <label class="field-label" for="pay-name">Kart sahibinin adı</label>
+          <input type="text" id="pay-name" class="input" autocomplete="off" placeholder="AD SOYAD" aria-describedby="pay-name-error">
+          <p class="field-error" id="pay-name-error" role="alert"></p>
+        </div>
+        <div class="field">
+          <label class="field-label" for="pay-number">Kart nömrəsi</label>
+          <input type="text" id="pay-number" class="input" inputmode="numeric" autocomplete="off" maxlength="19" placeholder="0000 0000 0000 0000" aria-describedby="pay-number-error">
+          <p class="field-error" id="pay-number-error" role="alert"></p>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label" for="pay-exp">Son istifadə tarixi</label>
+            <input type="text" id="pay-exp" class="input" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="AA/İİ" aria-describedby="pay-exp-error">
+            <p class="field-error" id="pay-exp-error" role="alert"></p>
+          </div>
+          <div class="field">
+            <label class="field-label" for="pay-cvv">CVV</label>
+            <input type="password" id="pay-cvv" class="input" inputmode="numeric" autocomplete="off" maxlength="3" placeholder="•••" aria-describedby="pay-cvv-error">
+            <p class="field-error" id="pay-cvv-error" role="alert"></p>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="pay-submit">15 AZN ödə (DEMO)</button>
+        <p class="form-note">Demo rejim: real abunəlik yaranmır, kartdan pul çıxılmır.</p>
+      </form>
+    </div>
+
+    <!-- Emal olunur -->
+    <div class="pay-step pay-processing" id="pay-step-processing" hidden>
+      <span class="loader-spinner" aria-hidden="true"></span>
+      <p role="status">Ödəniş emal olunur… (DEMO)</p>
+    </div>
+
+    <!-- Uğurlu -->
+    <div class="pay-step pay-success" id="pay-step-success" hidden>
+      <span class="pay-success-icon" aria-hidden="true">🎉</span>
+      <h3>Premium aktivləşdi!</h3>
+      <p>Bu demo ödənişdir — heç bir pul çıxılmayıb. İndi bütün Premium imkanlarından istifadə edə bilərsən.</p>
+      <button type="button" class="btn btn-primary btn-block" id="pay-done">Davam et</button>
+    </div>
+  </dialog>
+
+  <!-- ===== AI Mentor çatı ===== -->
+  <button type="button" class="chat-fab" id="chat-fab" aria-label="AI Mentor çatını aç" aria-expanded="false" aria-controls="chat-panel">
+    <span class="chat-fab-icon" aria-hidden="true">💬</span>
+  </button>
+
+  <section class="chat-panel" id="chat-panel" aria-labelledby="chat-title" hidden>
+    <div class="chat-head">
+      <span class="chat-avatar" aria-hidden="true">🤖</span>
+      <div class="chat-head-text">
+        <h2 class="chat-title" id="chat-title">AI Mentor</h2>
+        <p class="chat-sub">Demo · açar sözlərə görə hazır cavablar</p>
+      </div>
+      <button type="button" class="modal-close chat-close" id="chat-close" aria-label="Çatı bağla">×</button>
+    </div>
+
+    <div class="chat-log" id="chat-log" role="log" aria-live="polite" aria-label="Mesajlar"></div>
+
+    <div class="chat-chips" id="chat-chips" aria-label="Tez suallar">
+      <button type="button" class="chat-chip">CV necə yazım?</button>
+      <button type="button" class="chat-chip">Müsahibəyə hazırlıq</button>
+      <button type="button" class="chat-chip">LinkedIn profili</button>
+      <button type="button" class="chat-chip">Staj tapmaq</button>
+      <button type="button" class="chat-chip">Maaş danışığı</button>
+    </div>
+
+    <form class="chat-form" id="chat-form" autocomplete="off">
+      <label class="visually-hidden" for="chat-input">Sualını yaz</label>
+      <input type="text" id="chat-input" class="input" placeholder="Sualını yaz…" maxlength="300">
+      <button type="submit" class="btn btn-primary chat-send" aria-label="Göndər">➤</button>
+    </form>
+  </section>
+
+  <!-- Toast bildirişləri -->
+  <div class="toast-area" id="toast-area" aria-live="polite"></div>
+
+  <!-- İnteraktivlik -->
+  <script src="js/script.js"></script>
+</body>
+</html>
