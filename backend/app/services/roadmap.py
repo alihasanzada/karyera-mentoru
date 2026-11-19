@@ -6,6 +6,8 @@ from app.models.schemas import (
     EvaluationResponse,
     GapInsight,
     GapSkill,
+    LegacyPhasePlan,
+    LegacyRoadmapOutput,
     PhasePlan,
     RoadmapLLMOutput,
     RoadmapPhaseResult,
@@ -25,6 +27,21 @@ PHASES = {
     "practice": ("Təcrübə", "8-14", 8, 14),
     "interview": ("Müsahibəyə hazırlıq", "15-21", 15, 21),
 }
+
+LEGACY_PHASES = {
+    "foundation": ("1-30", 1, 4),
+    "practice": ("31-60", 5, 8),
+    "interview": ("61-90", 9, 13),
+}
+
+
+def read_plan(raw: str) -> RoadmapLLMOutput | LegacyRoadmapOutput | None:
+    for schema in (RoadmapLLMOutput, LegacyRoadmapOutput):
+        try:
+            return schema.model_validate_json(raw)
+        except ValueError:
+            continue
+    return None
 
 
 def _coverage(checks: list[SkillCheck]) -> int:
@@ -80,9 +97,24 @@ def _phase(key: str, plan: PhasePlan) -> RoadmapPhaseResult:
     )
 
 
+def _legacy_phase(key: str, plan: LegacyPhasePlan) -> RoadmapPhaseResult:
+    days, first, last = LEGACY_PHASES[key]
+    tasks = sorted(
+        (t.model_copy(update={"week": max(first, min(last, t.week))}) for t in plan.tasks),
+        key=lambda task: task.week,
+    )
+    return RoadmapPhaseResult(
+        key=key, label=PHASES[key][0], days=days, goal=plan.goal, milestone=plan.milestone, tasks=tasks,
+    )
+
+
 def build_response(
-    evaluation_id: int, evaluation: EvaluationResponse, llm: RoadmapLLMOutput | None
+    evaluation_id: int, evaluation: EvaluationResponse,
+    llm: RoadmapLLMOutput | LegacyRoadmapOutput | None,
+    completed: list[str] | None = None,
 ) -> RoadmapResponse:
+    legacy = isinstance(llm, LegacyRoadmapOutput)
+    renderer = _legacy_phase if legacy else _phase
     return RoadmapResponse(
         evaluation_id=evaluation_id,
         field_id=evaluation.field_id,
@@ -91,10 +123,12 @@ def build_response(
         summary=llm.summary if llm else "",
         career_gap=build_career_gap(evaluation, llm.gaps if llm else []),
         roadmap=(
-            [_phase("foundation", llm.foundation), _phase("practice", llm.practice), _phase("interview", llm.interview)]
+            [renderer(key, getattr(llm, key)) for key in PHASES]
             if llm
             else []
         ),
+        format="legacy_weekly" if legacy else "daily",
+        completed_task_ids=completed or [],
     )
 
 

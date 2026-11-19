@@ -29,7 +29,7 @@ async def evaluate_endpoint(
         )
 
     text, pages = await read_pdf(file)
-    key = cache_key(text, field_id, pages)
+    key = cache_key(text, field_id, pages, client_id)
 
     result = None if refresh else get_cached(db, key, file.filename, pages)
     if result is None:

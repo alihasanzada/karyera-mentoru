@@ -2,21 +2,20 @@
 
 AI career mentor for the Azerbaijani market. Upload a CV (PDF), get an explainable score from Gemini, compare it with a target field (Frontend, Cybersecurity, Data Science) and receive a 7/14/21 day roadmap.
 
-## Installation
-```bash
-python3 -m venv venv && source venv/bin/activate
-pip install -r backend/requirements.txt
-cp .env.example .env   # Fill in GEMINI_API_KEY and GEMINI_MODEL
+## Local beta on Windows
+
+From the repository root in PowerShell with Python 3.12:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
 ```
 
-## Startup
-```bash
-cd backend
-uvicorn app.main:app --reload
-```
-In the browser: http://localhost:8000 (API documentation: /docs)
+Open [the beta](http://127.0.0.1:8000/dizayn/). The API docs are at `/docs`, and `/` serves the original interface. On other platforms create the virtual environment with `python3.12 -m venv .venv` and use `.venv/bin/python` for the same commands.
 
-The landing-page site from `dizayn/` is served at http://localhost:8000/dizayn/. Served this way it uses the real API (sign-up/login, CV evaluation, history, 7/14/21 day roadmap). Opened directly as a file it runs in demo mode with sample data.
+For live AI features, set the existing approved `GEMINI_API_KEY` and `GEMINI_MODEL` in the ignored `.env` file. If setting `GEMINI_MODELS`, its list takes precedence over `GEMINI_MODEL`. Use a fictional text PDF for the demonstration. Accounts, profiles and saved history are available without a provider key. An optional `DATABASE_PATH` points to a separate SQLite file for a clean demo.
 
 ## Tests
 ```bash
@@ -26,18 +25,19 @@ Frontend request-flow tests (Node.js 22 or newer, from the repository root):
 ```bash
 node --test frontend/tests/*.test.cjs
 ```
-Tests use a temporary database and mocked AI responses; no API key or paid calls are needed.
+Tests mock Gemini. To avoid opening your normal SQLite file during app setup, set `DATABASE_PATH=:memory:` before running pytest (`$env:DATABASE_PATH=':memory:'` in PowerShell).
 
 ## Add a field
 Add a new JSON file to the `backend/app/data/roles/` folder (copy it from existing files) and restart the server.
 
 ## Notes
 - The original PDF and full extracted CV text are not stored. Analysis results, including quoted CV excerpts and filenames, are saved in the local SQLite database (`karyera.db`). The evaluation cache also stores excerpts, with filenames removed.
-- CV text is sent to Gemini for analysis. Review this data flow and retention policy before accepting real users' CVs.
+- CV text is sent to Gemini for analysis. The mentor receives selected profile fields, skills and scores, roadmap task titles, the current question and up to three recent conversation turns. It does not receive the original CV, CV excerpts, filename or email as context. The application keeps chat turns in browser memory for the current visit.
 - Sign up with an email and a password of at least 12 characters, then sign in. Password hashes and seven-day login sessions are stored in SQLite. A session cookie is HttpOnly, SameSite=Strict and Secure on HTTPS. Users only see their own analysis history and roadmaps.
 - Existing history from the earlier anonymous `X-Client-Id` version is not transferred automatically. Keep the old local database as a backup, then upload the CV again in the new account.
-- Add login rate limits, password reset/email verification, CSRF defenses for cross-origin deployments, data deletion, and persistent database storage before opening the site to the public.
-- CV evaluation, three static role profiles, history, and roadmap generation are implemented. Vacancies, application tracking, and mentor chat are placeholders; there is no live job-market feed yet.
+- The local beta uses per-IP rate limits for login, signup and AI endpoints in one process. Public hosting needs a shared limiter, password reset/email verification, complete data deletion, and persistent database storage.
+- CV evaluation uses three static role profiles. Live vacancies, payments and university administration are deferred. The application tracker API is present, but its interface is deferred.
 - `/api/evaluate` returns `evaluation_id` for the exact saved result. Use that ID for `/api/roadmap/{evaluation_id}` instead of inferring it from the newest history entry.
 - The career score starts from role match and is adjusted by CV quality (structure, ATS and impact). It never exceeds the selected role's match score. A match below 35 displays a low-fit warning. Previous history scores are snapshots; upload the CV again to apply a new scoring version.
-- Deleting or pruning a history entry removes its saved roadmap. Evaluation-cache retention and deletion still need a separate policy.
+- New evaluations reuse results only within the same account. Deleting or pruning a history entry removes its saved roadmap and checkmarks. Cached CV excerpts need a separate retention and deletion policy before use with real CVs.
+- Existing weekly plans keep their 30/60/90-day labels. The 7, 14 and 21 day views show successive phases of one plan and share saved checkmarks.

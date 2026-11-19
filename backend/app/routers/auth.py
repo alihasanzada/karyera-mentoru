@@ -10,8 +10,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.db_models import LoginSession, User
+from app.db.db_models import LoginSession, User, UserProfile
 from app.deps import current_user
+from app.models.schemas import ProfileInput
+from app.routers.profile import validate_field
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 SESSION_DAYS = 7
@@ -35,6 +37,10 @@ def _hash_password(password: str, salt: bytes) -> str:
     return salt.hex() + ":" + digest.hex()
 
 
+class SignupCredentials(Credentials):
+    profile: ProfileInput | None = None
+
+
 def _login(response: Response, request: Request, db: Session, user: User):
     token = secrets.token_urlsafe(32)
     db.add(LoginSession(token_hash=sha256(token.encode()).hexdigest(), user_id=user.id,
@@ -46,10 +52,15 @@ def _login(response: Response, request: Request, db: Session, user: User):
 
 
 @router.post("/signup", status_code=201)
-def signup(data: Credentials, response: Response, request: Request, db: Session = Depends(get_db)):
+def signup(data: SignupCredentials, response: Response, request: Request, db: Session = Depends(get_db)):
+    if data.profile:
+        validate_field(data.profile)
     user = User(email=data.email, password_hash=_hash_password(data.password, secrets.token_bytes(16)))
     db.add(user)
     try:
+        db.flush()
+        if data.profile:
+            db.add(UserProfile(user_id=user.id, profile_json=data.profile.model_dump_json()))
         db.commit()
     except IntegrityError:
         db.rollback()

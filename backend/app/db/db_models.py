@@ -56,6 +56,20 @@ class LoginSession(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime)
 
 
+class UserProfile(Base):
+    __tablename__ = "user_profiles"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    profile_json: Mapped[str] = mapped_column(Text)
+
+
+class RoadmapCompletion(Base):
+    __tablename__ = "roadmap_completions"
+
+    roadmap_id: Mapped[int] = mapped_column(ForeignKey("roadmaps.id"), primary_key=True)
+    task_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+
+
 class ApplicationRecord(Base):
     __tablename__ = "applications"
 

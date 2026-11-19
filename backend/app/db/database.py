@@ -1,10 +1,10 @@
-from sqlalchemy import create_engine
+from sqlalchemy import URL, create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-from app.config import BASE_DIR
+from app.config import settings
 
 engine = create_engine(
-    f"sqlite:///{BASE_DIR / 'karyera.db'}",
+    URL.create("sqlite", database=str(settings.database_path)),
     connect_args={"check_same_thread": False},
 )
 SessionLocal = sessionmaker(bind=engine, autoflush=False)

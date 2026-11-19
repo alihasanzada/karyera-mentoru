@@ -1,4 +1,5 @@
 import asyncio
+import json
 from unittest.mock import AsyncMock
 
 import pytest
@@ -8,10 +9,10 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.db.database import Base, get_db
-from app.db.db_models import AnalysisRecord, RoadmapRecord
+from app.db.db_models import AnalysisRecord, RoadmapCompletion, RoadmapRecord
 from app.main import app
-from app.models.schemas import EvaluationLLMOutput, MatchResponse
-from app.routers import cv, evaluate
+from app.models.schemas import EvaluationLLMOutput, MatchResponse, MentorReply, RoadmapLLMOutput
+from app.routers import cv, evaluate, mentor, roadmap
 from app.services import ai_analyzer, history
 from app.services.evaluator import assemble_evaluation
 
@@ -76,6 +77,114 @@ def test_health_frontend_and_fields(api):
     assert client.get("/health").json() == {"status": "ok"}
     assert "Karyera Mentoru" in client.get("/").text
     assert len(client.get("/api/match/fields").json()) == 3
+
+
+def test_profile_signup_update_and_isolation(api):
+    client, _ = api
+    assert client.get("/api/profile").status_code == 401
+    result = client.post("/api/auth/signup", json={
+        "email": "first@example.com", "password": "long-test-password",
+        "profile": {"name": "Samir", "field_id": "frontend", "skills": [" JavaScript "]},
+    })
+    assert result.status_code == 201
+    first = {"session": result.cookies["session"]}
+    profile = client.get("/api/profile", cookies=first).json()
+    assert profile["skills"] == ["JavaScript"]
+    profile["interests"] = "Accessibility"
+    assert client.put("/api/profile", cookies=first, json=profile).status_code == 200
+    second = signup(client, "second@example.com")
+    assert client.get("/api/profile", cookies=second).json()["interests"] == ""
+    assert client.get("/api/profile", cookies=first).json()["interests"] == "Accessibility"
+    assert client.put("/api/profile", cookies=first, json={"field_id": "unknown"}).status_code == 422
+
+
+def plan_payload(period, ranges):
+    return {
+        "summary": "Fərdi plan", "gaps": [],
+        **{key: {"goal": "Hazırlıq", "milestone": "Nümunə", "tasks": [
+            {period: value, "title": f"Tapşırıq {value}", "details": "Məşq et", "deliverable": "Qeyd"},
+        ]} for key, value in zip(("foundation", "practice", "interview"), ranges)},
+    }
+
+
+def test_plan_progress_isolation_and_legacy_preservation(api, evaluation, monkeypatch):
+    client, factory = api
+    first = signup(client, "first@example.com")
+    second = signup(client, "second@example.com")
+    with factory() as db:
+        daily_id = history.save_record(db, "user-1", "evaluation", "cv.pdf", evaluation)
+        legacy_id = history.save_record(db, "user-1", "evaluation", "old.pdf", evaluation)
+        db.add(RoadmapRecord(client_id="user-1", evaluation_id=legacy_id,
+                             llm_json=json.dumps(plan_payload("week", (1, 5, 9)))))
+        db.commit()
+    generate = AsyncMock(return_value=RoadmapLLMOutput.model_validate(plan_payload("day", (1, 8, 15))))
+    monkeypatch.setattr(roadmap, "generate_roadmap_plan", generate)
+    base = f"/api/roadmap/{daily_id}"
+    generated = client.post(base, cookies=first).json()
+    assert [phase["tasks"][0]["day"] for phase in generated["roadmap"]] == [1, 8, 15]
+    assert [phase["days"] for phase in generated["roadmap"]] == ["1-7", "8-14", "15-21"]
+    task = f"{base}/tasks/foundation-0"
+    assert client.put(task, cookies=second, json={"completed": True}).status_code == 404
+    assert client.put(f"{base}/tasks/foundation-9", cookies=first, json={"completed": True}).status_code == 404
+    for _ in range(2):
+        assert client.put(task, cookies=first, json={"completed": True}).json()["completed_task_ids"] == ["foundation-0"]
+    client.post("/api/auth/logout", cookies=first)
+    login = client.post("/api/auth/login", json={"email": "first@example.com", "password": "long-test-password"})
+    first = {"session": login.cookies["session"]}
+    assert client.get(base, cookies=first).json()["completed_task_ids"] == ["foundation-0"]
+    assert client.post(base, cookies=first).json()["completed_task_ids"] == ["foundation-0"]
+    legacy = client.post(f"/api/roadmap/{legacy_id}", cookies=first).json()
+    assert legacy["format"] == "legacy_weekly"
+    assert [phase["days"] for phase in legacy["roadmap"]] == ["1-30", "31-60", "61-90"]
+    assert legacy["roadmap"][2]["tasks"][0]["week"] == 9
+    generate.assert_awaited_once()
+    assert client.delete(f"/api/history/{daily_id}", cookies=first).status_code == 200
+    with factory() as db:
+        assert db.scalars(select(RoadmapCompletion)).all() == []
+
+
+def test_mentor_minimizes_context_and_handles_provider_errors(api, evaluation, monkeypatch):
+    client, factory = api
+    first = signup(client, "first@example.com")
+    second = signup(client, "second@example.com")
+    client.put("/api/profile", cookies=first, json={"field_id": "cybersecurity", "interests": "Python"})
+    with factory() as db:
+        evaluation.summary = "private quotation from CV"
+        record = history.save_record(db, "user-1", "evaluation", "private.pdf", evaluation,
+                                     field_id="cybersecurity")
+        db.add(RoadmapRecord(client_id="user-1", evaluation_id=record,
+                             llm_json=json.dumps(plan_payload("day", (1, 8, 15)))))
+        db.commit()
+    generate = AsyncMock(return_value=MentorReply(answer="Python ilə başla."))
+    monkeypatch.setattr(mentor, "generate_structured", generate)
+    query = {"question": "Nəyi öyrənim?", "history": [{"question": "Salam", "answer": "Salam!"}]}
+    assert client.post("/api/mentor", cookies=second, json={**query, "evaluation_id": record}).status_code == 404
+    assert client.post("/api/mentor", cookies=first, json=query).json()["answer"] == "Python ilə başla."
+    generate.assert_awaited_once()
+    _, raw, schema = generate.call_args.args
+    context = json.loads(raw)
+    assert schema is MentorReply
+    assert context["context"]["profile"]["interests"] == "Python"
+    assert context["context"]["evaluation"]["field"] == evaluation.field_name
+    assert context["context"]["plan"]["phases"][0]["tasks"] == ["Tapşırıq 1"]
+    assert context["history"] == query["history"]
+    assert all(value not in raw for value in ("private quotation", "private.pdf", "first@example.com"))
+    generate.side_effect = ai_analyzer.AIAnalysisError("AI əlçatan deyil.", 503)
+    assert client.post("/api/mentor", cookies=first, json=query).status_code == 503
+    assert client.post("/api/mentor", cookies=first, json={"question": " "}).status_code == 422
+
+
+def test_request_limits_and_origin(api):
+    client, _ = api
+    assert client.post("/api/auth/login", headers={"Origin": "https://other.example"}, json={}).status_code == 403
+    for _ in range(12):
+        assert client.post("/api/auth/login", json={}).status_code == 422
+    response = client.post("/api/auth/login", json={})
+    assert response.status_code == 429
+    assert int(response.headers["Retry-After"]) > 0
+    for _ in range(10):
+        assert client.post("/api/mentor", json={"question": "Salam"}).status_code == 401
+    assert client.post("/api/mentor", json={"question": "Salam"}).status_code == 429
 
 
 def test_dizayn_site_is_served(api):
@@ -146,7 +255,9 @@ def test_evaluation_id_cache_and_client_isolation(api, pdf_bytes, evaluation, mo
     first_id = first.json()["evaluation_id"]
     second_id = second.json()["evaluation_id"]
     assert isinstance(first_id, int) and first_id != second_id
-    assert generate.await_count == 1
+    assert generate.await_count == 2
+    assert client.post("/api/evaluate", cookies=first_cookie, **payload).status_code == 200
+    assert generate.await_count == 2
     assert client.get(f"/api/history/{first_id}", cookies=first_cookie).status_code == 200
     assert client.get(f"/api/history/{first_id}", cookies=second_cookie).status_code == 404
     assert client.get(f"/api/roadmap/{first_id}", cookies=second_cookie).status_code == 404

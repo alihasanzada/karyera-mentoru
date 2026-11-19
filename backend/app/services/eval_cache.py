@@ -1,6 +1,7 @@
 import hashlib
 import json
 
+from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import Session
 
 from app.db.db_models import EvaluationCache
@@ -8,9 +9,9 @@ from app.models.schemas import EvaluationResponse
 from app.services.rubric import SCORING_VERSION
 
 
-def cache_key(cv_text: str, field_id: str, pages: int) -> str:
+def cache_key(cv_text: str, field_id: str, pages: int, client_id: str = "") -> str:
     # Preserve punctuation, case and line breaks: they can change CV scoring.
-    payload = json.dumps([SCORING_VERSION, field_id, pages, cv_text], ensure_ascii=False)
+    payload = json.dumps([SCORING_VERSION, client_id, field_id, pages, cv_text], ensure_ascii=False)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
@@ -31,9 +32,8 @@ def put_cached(db: Session, key: str, result: EvaluationResponse) -> None:
         update={"evaluation_id": None, "filename": "", "match": result.match.model_copy(update={"filename": ""})}
     )
     data = anonymous.model_dump_json()
-    row = db.get(EvaluationCache, key)
-    if row:
-        row.result_json = data
-    else:
-        db.add(EvaluationCache(key=key, result_json=data))
+    statement = insert(EvaluationCache).values(key=key, result_json=data)
+    db.execute(statement.on_conflict_do_update(
+        index_elements=[EvaluationCache.key], set_={"result_json": statement.excluded.result_json},
+    ))
     db.commit()

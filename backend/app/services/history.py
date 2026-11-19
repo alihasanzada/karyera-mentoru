@@ -2,9 +2,17 @@ from pydantic import BaseModel
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.db.db_models import AnalysisRecord, RoadmapRecord
+from app.db.db_models import AnalysisRecord, RoadmapCompletion, RoadmapRecord
 
 MAX_PER_CLIENT = 50
+
+
+def delete_roadmaps(db: Session, client_id: str, evaluation_ids: list[int]) -> None:
+    plans = select(RoadmapRecord.id).where(
+        RoadmapRecord.client_id == client_id, RoadmapRecord.evaluation_id.in_(evaluation_ids),
+    )
+    db.execute(delete(RoadmapCompletion).where(RoadmapCompletion.roadmap_id.in_(plans)))
+    db.execute(delete(RoadmapRecord).where(RoadmapRecord.id.in_(plans)))
 
 
 def save_record(
@@ -36,10 +44,7 @@ def save_record(
         .offset(MAX_PER_CLIENT)
     ).all()
     if old_ids:
-        db.execute(delete(RoadmapRecord).where(
-            RoadmapRecord.client_id == client_id,
-            RoadmapRecord.evaluation_id.in_(old_ids),
-        ))
+        delete_roadmaps(db, client_id, old_ids)
         db.execute(delete(AnalysisRecord).where(AnalysisRecord.id.in_(old_ids)))
     db.commit()
     return record_id

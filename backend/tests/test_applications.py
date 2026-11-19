@@ -32,7 +32,8 @@ def clients():
 
     app.dependency_overrides[get_db] = override_get_db
     try:
-        yield _signed_in("a@example.com"), _signed_in("b@example.com"), TestClient(app)
+        with TestClient(app) as anonymous:
+            yield _signed_in("a@example.com"), _signed_in("b@example.com"), anonymous
     finally:
         app.dependency_overrides.clear()
         engine.dispose()
