@@ -1,0 +1,28 @@
+{
+    "id": "chemical",
+    "role": "Kimya mühəndisi",
+    "level": "Junior",
+    "description": "Kimya mühəndisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Texnoloji proseslər",
+        "Aspen HYSYS",
+        "AutoCAD",
+        "HSE",
+        "Laborator analiz"
+    ],
+    "preferred_skills": [
+        "MATLAB",
+        "Keyfiyyətə nəzarət",
+        "Texniki ingilis dili"
+    ],
+    "ats_keywords": [
+        "Texnoloji proseslər",
+        "Aspen HYSYS",
+        "AutoCAD",
+        "HSE",
+        "Laborator analiz",
+        "MATLAB",
+        "Keyfiyyətə nəzarət",
+        "Texniki ingilis dili"
+    ]
+}

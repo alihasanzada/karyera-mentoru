@@ -1,0 +1,28 @@
+{
+    "id": "socialWork",
+    "role": "Sosial işçi",
+    "level": "Junior",
+    "description": "Sosial işçi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Sosial təminat qanunvericiliyi",
+        "Müsahibə aparma",
+        "Fərdi iş (case management)",
+        "Empatik ünsiyyət",
+        "Sənədləşmə"
+    ],
+    "preferred_skills": [
+        "Komanda işi",
+        "Böhran müdaxiləsi",
+        "Excel"
+    ],
+    "ats_keywords": [
+        "Sosial təminat qanunvericiliyi",
+        "Müsahibə aparma",
+        "Fərdi iş (case management)",
+        "Empatik ünsiyyət",
+        "Sənədləşmə",
+        "Komanda işi",
+        "Böhran müdaxiləsi",
+        "Excel"
+    ]
+}

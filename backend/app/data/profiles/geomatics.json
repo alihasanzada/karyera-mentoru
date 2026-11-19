@@ -1,0 +1,28 @@
+{
+    "id": "geomatics",
+    "role": "Geodeziya mühəndisi",
+    "level": "Junior",
+    "description": "Geodeziya mühəndisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "GIS",
+        "AutoCAD Civil 3D",
+        "Total Station",
+        "GPS/GNSS",
+        "Kartoqrafiya"
+    ],
+    "preferred_skills": [
+        "Uzaqdan zondlama",
+        "Excel",
+        "Çöl işləri"
+    ],
+    "ats_keywords": [
+        "GIS",
+        "AutoCAD Civil 3D",
+        "Total Station",
+        "GPS/GNSS",
+        "Kartoqrafiya",
+        "Uzaqdan zondlama",
+        "Excel",
+        "Çöl işləri"
+    ]
+}

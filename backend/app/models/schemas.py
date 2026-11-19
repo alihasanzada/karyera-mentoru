@@ -55,6 +55,8 @@ class MatchLLMOutput(BaseModel):
 class FieldInfo(BaseModel):
     id: str
     name: str
+    group: str
+    role: str
     level: str
     description: str
 
@@ -150,8 +152,8 @@ class GapInsight(BaseModel):
     resources: list[ResourceItem]
 
 
-class WeeklyTask(BaseModel):
-    week: int
+class DailyTask(BaseModel):
+    day: int = Field(description="Day number inside the phase range, for example 3")
     title: str
     details: str
     deliverable: str = Field(description="Measurable output of the task")
@@ -160,7 +162,7 @@ class WeeklyTask(BaseModel):
 class PhasePlan(BaseModel):
     goal: str
     milestone: str
-    tasks: list[WeeklyTask]
+    tasks: list[DailyTask]
 
 
 class RoadmapLLMOutput(BaseModel):
@@ -193,7 +195,7 @@ class RoadmapPhaseResult(BaseModel):
     days: str
     goal: str
     milestone: str
-    tasks: list[WeeklyTask]
+    tasks: list[DailyTask]
 
 
 class RoadmapResponse(BaseModel):

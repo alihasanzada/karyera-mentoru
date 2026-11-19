@@ -1,0 +1,28 @@
+{
+    "id": "architecture",
+    "role": "Memar",
+    "level": "Junior",
+    "description": "Memar vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "AutoCAD",
+        "Revit",
+        "ArchiCAD",
+        "SketchUp",
+        "Layihələndirmə"
+    ],
+    "preferred_skills": [
+        "Tikinti normaları",
+        "3D vizuallaşdırma",
+        "Portfolio"
+    ],
+    "ats_keywords": [
+        "AutoCAD",
+        "Revit",
+        "ArchiCAD",
+        "SketchUp",
+        "Layihələndirmə",
+        "Tikinti normaları",
+        "3D vizuallaşdırma",
+        "Portfolio"
+    ]
+}

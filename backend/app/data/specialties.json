@@ -1,0 +1,647 @@
+[
+  {
+    "group": "İnformasiya texnologiyaları",
+    "items": [
+      {
+        "id": "komputer_elmleri",
+        "name": "Kompüter elmləri",
+        "profile": "software"
+      },
+      {
+        "id": "komputer_muhendisliyi",
+        "name": "Kompüter mühəndisliyi",
+        "profile": "software"
+      },
+      {
+        "id": "informasiya_texnologiyalari",
+        "name": "İnformasiya texnologiyaları",
+        "profile": "itInfra"
+      },
+      {
+        "id": "cybersecurity",
+        "name": "İnformasiya təhlükəsizliyi",
+        "profile": "security"
+      },
+      {
+        "id": "sistem_muhendisliyi",
+        "name": "Sistem mühəndisliyi",
+        "profile": "itInfra"
+      },
+      {
+        "id": "frontend",
+        "name": "Frontend proqramlaşdırma",
+        "profile": "frontend"
+      },
+      {
+        "id": "backend_proqramlasdirma",
+        "name": "Backend proqramlaşdırma",
+        "profile": "backend"
+      },
+      {
+        "id": "data_science",
+        "name": "Data analitika",
+        "profile": "data"
+      },
+      {
+        "id": "ui_ux_dizayn",
+        "name": "UI/UX dizayn",
+        "profile": "uiux"
+      }
+    ]
+  },
+  {
+    "group": "Biznes və maliyyə",
+    "items": [
+      {
+        "id": "iqtisadiyyat",
+        "name": "İqtisadiyyat",
+        "profile": "economics"
+      },
+      {
+        "id": "dunya_iqtisadiyyati",
+        "name": "Dünya iqtisadiyyatı",
+        "profile": "economics"
+      },
+      {
+        "id": "statistika",
+        "name": "Statistika",
+        "profile": "data"
+      },
+      {
+        "id": "maliyye",
+        "name": "Maliyyə",
+        "profile": "finance"
+      },
+      {
+        "id": "muhasibat_ucotu_ve_audit",
+        "name": "Mühasibat uçotu və audit",
+        "profile": "accounting"
+      },
+      {
+        "id": "menecment",
+        "name": "Menecment",
+        "profile": "management"
+      },
+      {
+        "id": "biznesin_idare_edilmesi",
+        "name": "Biznesin idarə edilməsi",
+        "profile": "management"
+      },
+      {
+        "id": "marketinq",
+        "name": "Marketinq",
+        "profile": "marketing"
+      },
+      {
+        "id": "insan_resurslarinin_idare_edilmesi",
+        "name": "İnsan resurslarının idarə edilməsi",
+        "profile": "hr"
+      },
+      {
+        "id": "dovlet_ve_belediyye_idareetmesi",
+        "name": "Dövlət və bələdiyyə idarəetməsi",
+        "profile": "publicAdmin"
+      },
+      {
+        "id": "dasinmaz_emlakin_idare_olunmasi",
+        "name": "Daşınmaz əmlakın idarə olunması",
+        "profile": "realEstate"
+      },
+      {
+        "id": "satis",
+        "name": "Satış",
+        "profile": "sales"
+      },
+      {
+        "id": "layihe_idareciliyi",
+        "name": "Layihə idarəçiliyi",
+        "profile": "project"
+      }
+    ]
+  },
+  {
+    "group": "Mühəndislik və sənaye",
+    "items": [
+      {
+        "id": "neft_qaz_muhendisliyi",
+        "name": "Neft-qaz mühəndisliyi",
+        "profile": "oilGas"
+      },
+      {
+        "id": "kimya_muhendisliyi",
+        "name": "Kimya mühəndisliyi",
+        "profile": "chemical"
+      },
+      {
+        "id": "geologiya_muhendisliyi",
+        "name": "Geologiya mühəndisliyi",
+        "profile": "earth"
+      },
+      {
+        "id": "meden_muhendisliyi",
+        "name": "Mədən mühəndisliyi",
+        "profile": "mechanical"
+      },
+      {
+        "id": "insaat_muhendisliyi",
+        "name": "İnşaat mühəndisliyi",
+        "profile": "civil"
+      },
+      {
+        "id": "memarliq",
+        "name": "Memarlıq",
+        "profile": "architecture"
+      },
+      {
+        "id": "geomatika_ve_geodeziya_muhendisliyi",
+        "name": "Geomatika və geodeziya mühəndisliyi",
+        "profile": "geomatics"
+      },
+      {
+        "id": "elektrik_muhendisliyi",
+        "name": "Elektrik mühəndisliyi",
+        "profile": "electrical"
+      },
+      {
+        "id": "energetika_muhendisliyi",
+        "name": "Energetika mühəndisliyi",
+        "profile": "electrical"
+      },
+      {
+        "id": "elektronika_telekommunikasiya_ve_radiotexnika_muhendisliyi",
+        "name": "Elektronika, telekommunikasiya və radiotexnika mühəndisliyi",
+        "profile": "automation"
+      },
+      {
+        "id": "proseslerin_avtomatlasdirilmasi_muhendisliyi",
+        "name": "Proseslərin avtomatlaşdırılması mühəndisliyi",
+        "profile": "automation"
+      },
+      {
+        "id": "mexatronika_ve_robototexnika_muhendisliyi",
+        "name": "Mexatronika və robototexnika mühəndisliyi",
+        "profile": "automation"
+      },
+      {
+        "id": "biotibbi_muhendislik",
+        "name": "Biotibbi mühəndislik",
+        "profile": "automation"
+      },
+      {
+        "id": "mexanika_muhendisliyi",
+        "name": "Mexanika mühəndisliyi",
+        "profile": "mechanical"
+      },
+      {
+        "id": "masin_muhendisliyi",
+        "name": "Maşın mühəndisliyi",
+        "profile": "mechanical"
+      },
+      {
+        "id": "materiallar_muhendisliyi",
+        "name": "Materiallar mühəndisliyi",
+        "profile": "mechanical"
+      },
+      {
+        "id": "metallurgiya_muhendisliyi",
+        "name": "Metallurgiya mühəndisliyi",
+        "profile": "mechanical"
+      },
+      {
+        "id": "cihazqayirma_muhendisliyi",
+        "name": "Cihazqayırma mühəndisliyi",
+        "profile": "mechanical"
+      },
+      {
+        "id": "metrologiya_standartlasdirma_ve_sertifikatlasdirma_muhendisliyi",
+        "name": "Metrologiya, standartlaşdırma və sertifikatlaşdırma mühəndisliyi",
+        "profile": "mechanical"
+      },
+      {
+        "id": "yungul_senaye_muhendisliyi",
+        "name": "Yüngül sənaye mühəndisliyi",
+        "profile": "mechanical"
+      },
+      {
+        "id": "qida_muhendisliyi",
+        "name": "Qida mühəndisliyi",
+        "profile": "food"
+      },
+      {
+        "id": "etraf_muhit_muhendisliyi",
+        "name": "Ətraf mühit mühəndisliyi",
+        "profile": "earth"
+      },
+      {
+        "id": "logistika_ve_neqliyyat_texnologiyalari_muhendisliyi",
+        "name": "Logistika və nəqliyyat texnologiyaları mühəndisliyi",
+        "profile": "logistics"
+      }
+    ]
+  },
+  {
+    "group": "Hüquq, media və sosial",
+    "items": [
+      {
+        "id": "huquqsunasliq",
+        "name": "Hüquqşünaslıq",
+        "profile": "law"
+      },
+      {
+        "id": "beynelxalq_munasibetler",
+        "name": "Beynəlxalq münasibətlər",
+        "profile": "intRelations"
+      },
+      {
+        "id": "politologiya",
+        "name": "Politologiya",
+        "profile": "research"
+      },
+      {
+        "id": "regionsunasliq",
+        "name": "Regionşünaslıq",
+        "profile": "intRelations"
+      },
+      {
+        "id": "serqsunasliq",
+        "name": "Şərqşünaslıq",
+        "profile": "research"
+      },
+      {
+        "id": "sosiologiya",
+        "name": "Sosiologiya",
+        "profile": "research"
+      },
+      {
+        "id": "psixologiya",
+        "name": "Psixologiya",
+        "profile": "psychology"
+      },
+      {
+        "id": "sosial_is",
+        "name": "Sosial iş",
+        "profile": "socialWork"
+      },
+      {
+        "id": "tarix",
+        "name": "Tarix",
+        "profile": "research"
+      },
+      {
+        "id": "felsefe",
+        "name": "Fəlsəfə",
+        "profile": "research"
+      },
+      {
+        "id": "ilahiyyat",
+        "name": "İlahiyyat",
+        "profile": "research"
+      },
+      {
+        "id": "filologiya",
+        "name": "Filologiya",
+        "profile": "philology"
+      },
+      {
+        "id": "dilcilik",
+        "name": "Dilçilik",
+        "profile": "philology"
+      },
+      {
+        "id": "tercume",
+        "name": "Tərcümə",
+        "profile": "translation"
+      },
+      {
+        "id": "jurnalistika",
+        "name": "Jurnalistika",
+        "profile": "media"
+      },
+      {
+        "id": "kommunikasiya_ve_reqemsal_media",
+        "name": "Kommunikasiya və rəqəmsal media",
+        "profile": "media"
+      },
+      {
+        "id": "kitabxanaciliq_ve_informasiya",
+        "name": "Kitabxanaçılıq və informasiya",
+        "profile": "archive"
+      },
+      {
+        "id": "muzeysunasliq_arxivsunasliq_ve_abidelerin_muhafizesi",
+        "name": "Muzeyşünaslıq, arxivşünaslıq və abidələrin mühafizəsi",
+        "profile": "archive"
+      }
+    ]
+  },
+  {
+    "group": "Səhiyyə və kənd təsərrüfatı",
+    "items": [
+      {
+        "id": "mualice_isi",
+        "name": "Müalicə işi",
+        "profile": "medicine"
+      },
+      {
+        "id": "pediatriya",
+        "name": "Pediatriya",
+        "profile": "medicine"
+      },
+      {
+        "id": "stomatologiya",
+        "name": "Stomatologiya",
+        "profile": "dentistry"
+      },
+      {
+        "id": "eczaciliq",
+        "name": "Əczaçılıq",
+        "profile": "pharmacy"
+      },
+      {
+        "id": "tibb_bacisi_isi",
+        "name": "Tibb bacısı işi",
+        "profile": "nursing"
+      },
+      {
+        "id": "ictimai_sehiyye",
+        "name": "İctimai səhiyyə",
+        "profile": "publicHealth"
+      },
+      {
+        "id": "tibbi_profilaktika_isi",
+        "name": "Tibbi-profilaktika işi",
+        "profile": "publicHealth"
+      },
+      {
+        "id": "aqronomluq",
+        "name": "Aqronomluq",
+        "profile": "agriculture"
+      },
+      {
+        "id": "aqromuhendislik",
+        "name": "Aqromühəndislik",
+        "profile": "agriculture"
+      },
+      {
+        "id": "bitki_muhafizesi",
+        "name": "Bitki mühafizəsi",
+        "profile": "agriculture"
+      },
+      {
+        "id": "torpaqsunasliq_ve_aqrokimya",
+        "name": "Torpaqşünaslıq və aqrokimya",
+        "profile": "agriculture"
+      },
+      {
+        "id": "mesecilik",
+        "name": "Meşəçilik",
+        "profile": "agriculture"
+      },
+      {
+        "id": "zoomuhendislik",
+        "name": "Zoomühəndislik",
+        "profile": "veterinary"
+      },
+      {
+        "id": "baytarliq",
+        "name": "Baytarlıq",
+        "profile": "veterinary"
+      }
+    ]
+  },
+  {
+    "group": "Xidmət və yaradıcı sahələr",
+    "items": [
+      {
+        "id": "azerbaycan_dili_ve_edebiyyati_muellimliyi",
+        "name": "Azərbaycan dili və ədəbiyyatı müəllimliyi",
+        "profile": "teacher"
+      },
+      {
+        "id": "xarici_dil_muellimliyi",
+        "name": "Xarici dil müəllimliyi",
+        "profile": "teacher"
+      },
+      {
+        "id": "riyaziyyat_muellimliyi",
+        "name": "Riyaziyyat müəllimliyi",
+        "profile": "teacher"
+      },
+      {
+        "id": "riyaziyyat_ve_informatika_muellimliyi",
+        "name": "Riyaziyyat və informatika müəllimliyi",
+        "profile": "teacher"
+      },
+      {
+        "id": "informatika_muellimliyi",
+        "name": "İnformatika müəllimliyi",
+        "profile": "teacher"
+      },
+      {
+        "id": "fizika_muellimliyi",
+        "name": "Fizika müəllimliyi",
+        "profile": "teacher"
+      },
+      {
+        "id": "kimya_muellimliyi",
+        "name": "Kimya müəllimliyi",
+        "profile": "teacher"
+      },
+      {
+        "id": "biologiya_muellimliyi",
+        "name": "Biologiya müəllimliyi",
+        "profile": "teacher"
+      },
+      {
+        "id": "kimya_ve_biologiya_muellimliyi",
+        "name": "Kimya və biologiya müəllimliyi",
+        "profile": "teacher"
+      },
+      {
+        "id": "tarix_muellimliyi",
+        "name": "Tarix müəllimliyi",
+        "profile": "teacher"
+      },
+      {
+        "id": "tarix_ve_cografiya_muellimliyi",
+        "name": "Tarix və coğrafiya müəllimliyi",
+        "profile": "teacher"
+      },
+      {
+        "id": "cografiya_muellimliyi",
+        "name": "Coğrafiya müəllimliyi",
+        "profile": "teacher"
+      },
+      {
+        "id": "ibtidai_sinif_muellimliyi",
+        "name": "İbtidai sinif müəllimliyi",
+        "profile": "teacher"
+      },
+      {
+        "id": "mektebeqeder_tehsil",
+        "name": "Məktəbəqədər təhsil",
+        "profile": "teacher"
+      },
+      {
+        "id": "musiqi_muellimliyi",
+        "name": "Musiqi müəllimliyi",
+        "profile": "teacher"
+      },
+      {
+        "id": "tesviri_incesenet_muellimliyi",
+        "name": "Təsviri incəsənət müəllimliyi",
+        "profile": "teacher"
+      },
+      {
+        "id": "texnologiya_muellimliyi",
+        "name": "Texnologiya müəllimliyi",
+        "profile": "teacher"
+      },
+      {
+        "id": "fiziki_terbiye_ve_cagirisaqeder_hazirliq_muellimliyi",
+        "name": "Fiziki tərbiyə və çağırışaqədər hazırlıq müəllimliyi",
+        "profile": "teacher"
+      },
+      {
+        "id": "turizm_ve_otelcilik",
+        "name": "Turizm və otelçilik",
+        "profile": "tourism"
+      },
+      {
+        "id": "fiziki_terbiye_ve_idman",
+        "name": "Fiziki tərbiyə və idman",
+        "profile": "sport"
+      },
+      {
+        "id": "umumi_fiziki_hazirliq",
+        "name": "Ümumi fiziki hazırlıq",
+        "profile": "sport"
+      },
+      {
+        "id": "dizayn",
+        "name": "Dizayn",
+        "profile": "design"
+      },
+      {
+        "id": "ressamliq",
+        "name": "Rəssamlıq",
+        "profile": "fineArt"
+      },
+      {
+        "id": "heykelterasliq",
+        "name": "Heykəltəraşlıq",
+        "profile": "fineArt"
+      },
+      {
+        "id": "dekorativ_tetbiqi_senet",
+        "name": "Dekorativ-tətbiqi sənət",
+        "profile": "fineArt"
+      },
+      {
+        "id": "senetsunasliq",
+        "name": "Sənətşünaslıq",
+        "profile": "research"
+      },
+      {
+        "id": "medeniyyetsunasliq",
+        "name": "Mədəniyyətşünaslıq",
+        "profile": "research"
+      },
+      {
+        "id": "musiqisunasliq",
+        "name": "Musiqişünaslıq",
+        "profile": "music"
+      },
+      {
+        "id": "bestekarliq",
+        "name": "Bəstəkarlıq",
+        "profile": "music"
+      },
+      {
+        "id": "instrumental_ifaciliq",
+        "name": "İnstrumental ifaçılıq",
+        "profile": "music"
+      },
+      {
+        "id": "vokal_seneti",
+        "name": "Vokal sənəti",
+        "profile": "music"
+      },
+      {
+        "id": "dirijorluq",
+        "name": "Dirijorluq",
+        "profile": "music"
+      },
+      {
+        "id": "aktyor_seneti",
+        "name": "Aktyor sənəti",
+        "profile": "stage"
+      },
+      {
+        "id": "rejissorluq",
+        "name": "Rejissorluq",
+        "profile": "stage"
+      },
+      {
+        "id": "xoreoqrafiya_seneti",
+        "name": "Xoreoqrafiya sənəti",
+        "profile": "stage"
+      }
+    ]
+  },
+  {
+    "group": "Təbiət elmləri və digər",
+    "items": [
+      {
+        "id": "riyaziyyat",
+        "name": "Riyaziyyat",
+        "profile": "math"
+      },
+      {
+        "id": "mexanika",
+        "name": "Mexanika",
+        "profile": "math"
+      },
+      {
+        "id": "fizika",
+        "name": "Fizika",
+        "profile": "science"
+      },
+      {
+        "id": "kimya",
+        "name": "Kimya",
+        "profile": "science"
+      },
+      {
+        "id": "biologiya",
+        "name": "Biologiya",
+        "profile": "science"
+      },
+      {
+        "id": "cografiya",
+        "name": "Coğrafiya",
+        "profile": "earth"
+      },
+      {
+        "id": "geologiya",
+        "name": "Geologiya",
+        "profile": "earth"
+      },
+      {
+        "id": "ekologiya",
+        "name": "Ekologiya",
+        "profile": "earth"
+      },
+      {
+        "id": "hidrometeorologiya",
+        "name": "Hidrometeorologiya",
+        "profile": "earth"
+      },
+      {
+        "id": "diger",
+        "name": "Digər",
+        "profile": "general"
+      }
+    ]
+  }
+]

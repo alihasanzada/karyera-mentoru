@@ -1,0 +1,28 @@
+{
+    "id": "agriculture",
+    "role": "Aqronom",
+    "level": "Junior",
+    "description": "Aqronom vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Torpaqşünaslıq",
+        "Bitki mühafizəsi",
+        "Suvarma sistemləri",
+        "GIS",
+        "Aqrotexnika"
+    ],
+    "preferred_skills": [
+        "Excel",
+        "Aqrar iqtisadiyyat",
+        "Dronla monitorinq"
+    ],
+    "ats_keywords": [
+        "Torpaqşünaslıq",
+        "Bitki mühafizəsi",
+        "Suvarma sistemləri",
+        "GIS",
+        "Aqrotexnika",
+        "Excel",
+        "Aqrar iqtisadiyyat",
+        "Dronla monitorinq"
+    ]
+}

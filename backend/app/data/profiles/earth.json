@@ -1,0 +1,28 @@
+{
+    "id": "earth",
+    "role": "Ekoloq-geoloq",
+    "level": "Junior",
+    "description": "Ekoloq-geoloq vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "GIS",
+        "Çöl tədqiqatları",
+        "Uzaqdan zondlama",
+        "Ekoloji monitorinq",
+        "Excel"
+    ],
+    "preferred_skills": [
+        "AutoCAD",
+        "Hesabat yazma",
+        "Xəritəçəkmə"
+    ],
+    "ats_keywords": [
+        "GIS",
+        "Çöl tədqiqatları",
+        "Uzaqdan zondlama",
+        "Ekoloji monitorinq",
+        "Excel",
+        "AutoCAD",
+        "Hesabat yazma",
+        "Xəritəçəkmə"
+    ]
+}

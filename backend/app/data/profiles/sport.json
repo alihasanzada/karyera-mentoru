@@ -1,0 +1,28 @@
+{
+    "id": "sport",
+    "role": "İdman mütəxəssisi",
+    "level": "Junior",
+    "description": "İdman mütəxəssisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Məşq planlaması",
+        "İdman fiziologiyası",
+        "İlk yardım",
+        "Qidalanma əsasları",
+        "Pedaqoji bacarıqlar"
+    ],
+    "preferred_skills": [
+        "Motivasiya",
+        "Fitnes testləri",
+        "Komanda idarəçiliyi"
+    ],
+    "ats_keywords": [
+        "Məşq planlaması",
+        "İdman fiziologiyası",
+        "İlk yardım",
+        "Qidalanma əsasları",
+        "Pedaqoji bacarıqlar",
+        "Motivasiya",
+        "Fitnes testləri",
+        "Komanda idarəçiliyi"
+    ]
+}

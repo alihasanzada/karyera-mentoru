@@ -18,11 +18,12 @@ from app.services.matcher import ROLES, STATUS_SCORE
 PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "roadmap.txt"
 ROADMAP_PROMPT = PROMPT_PATH.read_text(encoding="utf-8")
 
-# key -> (label, day range, first week, last week)
+# 21-day plan in three 7-day phases, so the plan can be shown as 7, 14 or 21 days.
+# key -> (label, day range, first day, last day)
 PHASES = {
-    "foundation": ("Əsaslar", "1-30", 1, 4),
-    "practice": ("Təcrübə", "31-60", 5, 8),
-    "interview": ("Müsahibəyə hazırlıq", "61-90", 9, 13),
+    "foundation": ("Əsaslar", "1-7", 1, 7),
+    "practice": ("Təcrübə", "8-14", 8, 14),
+    "interview": ("Müsahibəyə hazırlıq", "15-21", 15, 21),
 }
 
 
@@ -69,10 +70,10 @@ def build_career_gap(evaluation: EvaluationResponse, insights: list[GapInsight])
 
 def _phase(key: str, plan: PhasePlan) -> RoadmapPhaseResult:
     label, days, first, last = PHASES[key]
-    # keep the model's weeks inside the phase range
+    # keep the model's days inside the phase range
     tasks = sorted(
-        (t.model_copy(update={"week": max(first, min(last, t.week))}) for t in plan.tasks),
-        key=lambda t: t.week,
+        (t.model_copy(update={"day": max(first, min(last, t.day))}) for t in plan.tasks),
+        key=lambda t: t.day,
     )
     return RoadmapPhaseResult(
         key=key, label=label, days=days, goal=plan.goal, milestone=plan.milestone, tasks=tasks

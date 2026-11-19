@@ -1,0 +1,28 @@
+{
+    "id": "fineArt",
+    "role": "Rəssam",
+    "level": "Junior",
+    "description": "Rəssam vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Rəsm texnikaları",
+        "Kompozisiya",
+        "Rəng nəzəriyyəsi",
+        "Portfolio",
+        "Photoshop"
+    ],
+    "preferred_skills": [
+        "Sərgi təşkili",
+        "Sənət tarixi",
+        "Rəqəmsal illüstrasiya"
+    ],
+    "ats_keywords": [
+        "Rəsm texnikaları",
+        "Kompozisiya",
+        "Rəng nəzəriyyəsi",
+        "Portfolio",
+        "Photoshop",
+        "Sərgi təşkili",
+        "Sənət tarixi",
+        "Rəqəmsal illüstrasiya"
+    ]
+}

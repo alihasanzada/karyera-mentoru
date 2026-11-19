@@ -11,7 +11,7 @@ Layihə erkən MVP-dir. FastAPI backend, sadə JavaScript frontend, SQLite və G
 | CV Mərkəzi | PDF emalı və dörd kateqoriya üzrə qiymətləndirmə |
 | Sahə uyğunluğu | Frontend, Cybersecurity, Data Science üçün statik JSON profilləri |
 | Dashboard və tarixçə | SQLite nəticələri, brauzer identifikatoru ilə filtr |
-| Yol xəritəsi | Bacarıq boşluqları və AI ilə 30/60/90 günlük plan |
+| Yol xəritəsi | Bacarıq boşluqları və AI ilə 7/14/21 günlük plan |
 | İrəliləyiş | Yalnız brauzerin localStorage yaddaşında |
 | Vakansiyalar | Hazırlıq ekranı, canlı vakansiya mənbəyi yoxdur |
 | Müraciətlər | Hazırlıq ekranı |
