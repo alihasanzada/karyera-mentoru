@@ -2,7 +2,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
-SCORING_VERSION = "3.0"
+SCORING_VERSION = "4.0"  # 4.0: specialty profiles from the site
 
 _FOLD = str.maketrans({"ı": "i", "ə": "e"})
 

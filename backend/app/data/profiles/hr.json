@@ -1,0 +1,28 @@
+{
+    "id": "hr",
+    "role": "HR mütəxəssisi",
+    "level": "Junior",
+    "description": "HR mütəxəssisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "İşə qəbul",
+        "Əmək Məcəlləsi",
+        "HRIS",
+        "Müsahibə texnikaları",
+        "Onboarding"
+    ],
+    "preferred_skills": [
+        "Excel",
+        "Performans idarəetməsi",
+        "Korporativ mədəniyyət"
+    ],
+    "ats_keywords": [
+        "İşə qəbul",
+        "Əmək Məcəlləsi",
+        "HRIS",
+        "Müsahibə texnikaları",
+        "Onboarding",
+        "Excel",
+        "Performans idarəetməsi",
+        "Korporativ mədəniyyət"
+    ]
+}

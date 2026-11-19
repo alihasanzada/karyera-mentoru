@@ -6,17 +6,38 @@ from app.services.ai_analyzer import MAX_CV_CHARS, generate_structured
 from app.services.rubric import norm, quote_supported
 
 APP_DIR = Path(__file__).resolve().parent.parent
-ROLES_DIR = APP_DIR / "data" / "roles"
+DATA_DIR = APP_DIR / "data"
 MATCH_PROMPT = (APP_DIR / "prompts" / "match_role.txt").read_text(encoding="utf-8")
 
 STATUS_SCORE = {"has": 1.0, "partial": 0.5, "missing": 0.0}
 
 
+def _role_title(specialty: str, profile: dict) -> str:
+    # "Fizika müəllimliyi" -> "Fizika müəllimi" (same rule as the site)
+    if specialty.endswith("müəllimliyi"):
+        return specialty.removesuffix("müəllimliyi") + "müəllimi"
+    return profile["role"]
+
+
 def _load_roles() -> dict[str, dict]:
+    """One entry per specialty: specialties.json links each to a skill profile."""
+    profiles = {
+        p.stem: json.loads(p.read_text(encoding="utf-8"))
+        for p in sorted((DATA_DIR / "profiles").glob("*.json"))
+    }
+    groups = json.loads((DATA_DIR / "specialties.json").read_text(encoding="utf-8"))
     roles = {}
-    for path in sorted(ROLES_DIR.glob("*.json")):
-        role = json.loads(path.read_text(encoding="utf-8"))
-        roles[role["id"]] = role
+    for g in groups:
+        for item in g["items"]:
+            profile = profiles[item["profile"]]
+            roles[item["id"]] = {
+                **profile,
+                "id": item["id"],
+                "name": item["name"],
+                "group": g["group"],
+                "profile": item["profile"],
+                "role": _role_title(item["name"], profile),
+            }
     return roles
 
 
@@ -25,7 +46,8 @@ ROLES = _load_roles()
 
 def list_fields() -> list[FieldInfo]:
     return [
-        FieldInfo(id=r["id"], name=r["name"], level=r["level"], description=r["description"])
+        FieldInfo(id=r["id"], name=r["name"], group=r["group"], role=r["role"],
+                  level=r["level"], description=r["description"])
         for r in ROLES.values()
     ]
 
@@ -76,7 +98,8 @@ async def match_cv(cv_text: str, field_id: str, filename: str, pages: int) -> Ma
 
     role_block = json.dumps(
         {
-            "name": role["name"],
+            "specialty": role["name"],
+            "position": role["role"],
             "level": role["level"],
             "required_skills": role["required_skills"],
             "preferred_skills": role["preferred_skills"],

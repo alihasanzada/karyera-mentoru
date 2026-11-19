@@ -1,0 +1,28 @@
+{
+    "id": "electrical",
+    "role": "Elektrik mühəndisi",
+    "level": "Junior",
+    "description": "Elektrik mühəndisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "AutoCAD Electrical",
+        "PLC",
+        "Elektrik sxemləri",
+        "MATLAB",
+        "SCADA"
+    ],
+    "preferred_skills": [
+        "Enerji sistemləri",
+        "Təhlükəsizlik qaydaları",
+        "Excel"
+    ],
+    "ats_keywords": [
+        "AutoCAD Electrical",
+        "PLC",
+        "Elektrik sxemləri",
+        "MATLAB",
+        "SCADA",
+        "Enerji sistemləri",
+        "Təhlükəsizlik qaydaları",
+        "Excel"
+    ]
+}

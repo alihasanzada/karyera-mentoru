@@ -1,0 +1,28 @@
+{
+    "id": "uiux",
+    "role": "UI/UX dizayner",
+    "level": "Junior",
+    "description": "UI/UX dizayner vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Figma",
+        "İstifadəçi araşdırması",
+        "Wireframe",
+        "Prototip",
+        "Dizayn sistemi"
+    ],
+    "preferred_skills": [
+        "Usability testi",
+        "Tipoqrafiya",
+        "HTML/CSS əsasları"
+    ],
+    "ats_keywords": [
+        "Figma",
+        "İstifadəçi araşdırması",
+        "Wireframe",
+        "Prototip",
+        "Dizayn sistemi",
+        "Usability testi",
+        "Tipoqrafiya",
+        "HTML/CSS əsasları"
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "id": "realEstate",
+    "role": "Daşınmaz əmlak mütəxəssisi",
+    "level": "Junior",
+    "description": "Daşınmaz əmlak mütəxəssisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Qiymətləndirmə",
+        "Daşınmaz əmlak hüququ",
+        "Danışıqlar",
+        "Excel",
+        "Bazar təhlili"
+    ],
+    "preferred_skills": [
+        "CRM",
+        "Layihə oxuma",
+        "Müştəri xidməti"
+    ],
+    "ats_keywords": [
+        "Qiymətləndirmə",
+        "Daşınmaz əmlak hüququ",
+        "Danışıqlar",
+        "Excel",
+        "Bazar təhlili",
+        "CRM",
+        "Layihə oxuma",
+        "Müştəri xidməti"
+    ]
+}

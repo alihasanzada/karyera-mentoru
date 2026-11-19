@@ -7,8 +7,8 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g,
   (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmtDate = (iso) => {
-  try { return new Date(iso).toLocaleString("az-AZ", { dateStyle: "medium", timeStyle: "short" }); }
-  catch { return ""; }
+  const d = new Date(iso);
+  return isNaN(d) ? "" : d.toLocaleString("az-AZ", { dateStyle: "medium", timeStyle: "short" });
 };
 const fieldName = (id) => (state.fields.find((f) => f.id === id) || {}).name || id;
 
@@ -31,6 +31,7 @@ async function api(path, options = {}, timeoutMs = 60000) {
       try {
         const data = await res.json();
         if (typeof data.detail === "string") msg = data.detail;
+        else if (Array.isArray(data.detail) && data.detail.length) msg = validationMessage(data.detail[0]);
       } catch { }
 
       if (res.status === 401 && !path.startsWith("/api/auth/")) {
@@ -52,6 +53,19 @@ async function api(path, options = {}, timeoutMs = 60000) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+// FastAPI 422 returns a list of field errors; show the first one in Azerbaijani.
+function validationMessage(err) {
+  const field = Array.isArray(err.loc) ? err.loc[err.loc.length - 1] : "";
+  const names = { email: "E-poçt", password: "Şifrə", first_name: "Ad", last_name: "Soyad", specialty_id: "İxtisas", company: "Şirkət", position: "Vəzifə", notes: "Qeyd", next_step: "Növbəti addım" };
+  const name = names[field] || "Sahə";
+  if (err.type === "string_too_short") return `${name} çox qısadır (minimum ${err.ctx?.min_length ?? ""} simvol).`;
+  if (err.type === "string_too_long") return `${name} çox uzundur (maksimum ${err.ctx?.max_length ?? ""} simvol).`;
+  if (field === "email") return "E-poçt ünvanı düzgün deyil.";
+  if (field === "consent") return "Davam etmək üçün razılığını təsdiqlə.";
+  if (field === "specialty_id") return "İxtisasını siyahıdan seç.";
+  return `${name} düzgün doldurulmayıb.`;
 }
 
 async function loadFields() {
@@ -86,6 +100,7 @@ const ICON_PATHS = {
   roadmap: '<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>',
   jobs: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
   applications: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="M9 12h6M9 16h6"/>',
+  profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
   mentor: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
 };
 
@@ -139,8 +154,8 @@ function fieldWarning(r) {
   const score = r?.match?.match_score;
   if (typeof score !== "number" || score >= 35) return "";
   return `<div role="status" class="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
-    <strong>Bu CV seçilən sahəyə uyğun görünmür.</strong>
-    Sahə tələblərinə uyğunluq ${clampScore(score)}/100-dür. CV-də bu sahəyə aid təcrübə və bacarıqlar görünmürsə, başqa sahə seç və ya CV-ni hədəf vəzifəyə uyğunlaşdır.
+    <strong>Bu CV seçilən ixtisasa uyğun görünmür.</strong>
+    İxtisas tələblərinə uyğunluq ${clampScore(score)}/100-dür. CV-də bu ixtisasa aid təcrübə və bacarıqlar görünmürsə, başqa ixtisas seç və ya CV-ni hədəf vəzifəyə uyğunlaşdır.
   </div>`;
 }
 
@@ -153,55 +168,115 @@ const pageHeader = (title, subtitle) => `
 const loadingHtml = () => `<p class="text-sm text-slate-500">Yüklənir...</p>`;
 
 function showError(msg) {
-  $("view").innerHTML = `<div class="${CARD} p-6 text-red-600 text-sm">${esc(msg)}</div>`;
+  $("view").innerHTML = `<div role="alert" class="${CARD} p-6 text-red-600 text-sm">${esc(msg)}</div>`;
 }
+
+let toastTimer = null;
+function notify(msg, isError = false) {
+  const el = $("toast");
+  if (!el) return;
+  el.textContent = msg;
+  el.className = `fixed top-4 right-4 z-50 max-w-sm rounded-lg px-4 py-3 text-sm text-white shadow-lg ${isError ? "bg-red-600" : "bg-emerald-600"}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = "hidden"; }, 3500);
+}
+
+const MIN_PASSWORD = 8;
+const INPUT_CLS = "mt-1 w-full border border-slate-300 rounded-lg p-2 text-sm bg-white";
+
+// <option>s grouped like the site: groups in API order, names alphabetical, "Digər" last.
+function specialtyOptions(fields, selected = "") {
+  const groups = new Map();
+  fields.forEach((f) => {
+    if (!groups.has(f.group)) groups.set(f.group, []);
+    groups.get(f.group).push(f);
+  });
+  return [...groups].map(([group, items]) => `<optgroup label="${esc(group)}">${[...items]
+    .sort((a, b) => (a.name === "Digər") - (b.name === "Digər") || a.name.localeCompare(b.name, "az"))
+    .map((f) => `<option value="${esc(f.id)}" ${f.id === selected ? "selected" : ""}>${esc(f.name)}</option>`).join("")}</optgroup>`).join("");
+}
+
+const fullName = (u) => [u.first_name, u.last_name].filter(Boolean).join(" ");
 
 function renderAuth(signup = false, notice = "") {
   $("sidebar").classList.add("hidden");
+  $("menu-btn").classList.add("hidden");
   $("main").classList.remove("lg:pl-64");
+  const signupFields = signup ? `
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label class="block text-sm">Ad<input name="first_name" autocomplete="given-name" required minlength="2" maxlength="60" class="${INPUT_CLS}"></label>
+        <label class="block text-sm">Soyad<input name="last_name" autocomplete="family-name" required minlength="2" maxlength="60" class="${INPUT_CLS}"></label>
+      </div>` : "";
+  const signupTail = signup ? `
+      <label class="block text-sm">Şifrə təkrarı<input name="password2" type="password" autocomplete="new-password" required minlength="${MIN_PASSWORD}" maxlength="128" class="${INPUT_CLS}"></label>
+      <label class="block text-sm">İxtisas<select name="specialty_id" required class="${INPUT_CLS}"><option value="">Yüklənir...</option></select></label>
+      <label class="flex items-start gap-2 text-sm"><input name="consent" type="checkbox" required class="mt-1 h-4 w-4 accent-indigo-600">
+        <span>CV məlumatlarımın analiz üçün emal olunmasına razıyam.</span></label>` : "";
   $("view").innerHTML = `<div class="max-w-md mx-auto mt-12 ${CARD} p-8">
     <h1 class="text-2xl font-bold mb-2">Karyera Mentoru</h1>
     <p class="text-sm text-slate-500 mb-6">${signup ? "Yeni hesab yarat" : "Hesabına daxil ol"}</p>
     <form id="auth-form" class="space-y-4">
-      <label class="block text-sm">E-poçt<input name="email" type="email" autocomplete="email" required maxlength="254" class="mt-1 w-full border rounded-lg p-2"></label>
-      <label class="block text-sm">Parol<input name="password" type="password" autocomplete="${signup ? "new-password" : "current-password"}" required minlength="12" maxlength="128" class="mt-1 w-full border rounded-lg p-2"></label>
-      <button class="w-full bg-indigo-600 text-white p-2.5 rounded-lg disabled:opacity-50">${signup ? "Qeydiyyatdan keç" : "Daxil ol"}</button>
+      ${signupFields}
+      <label class="block text-sm">E-poçt<input name="email" type="email" autocomplete="email" required maxlength="254" class="${INPUT_CLS}"></label>
+      <label class="block text-sm">Şifrə<input name="password" type="password" autocomplete="${signup ? "new-password" : "current-password"}" required ${signup ? `minlength="${MIN_PASSWORD}"` : ""} maxlength="128" ${signup ? 'aria-describedby="password-hint"' : ""} class="${INPUT_CLS}"></label>
+      ${signup ? `<p id="password-hint" class="text-xs text-slate-500 -mt-2">Ən azı ${MIN_PASSWORD} simvol.</p>` : ""}
+      ${signupTail}
+      <button type="submit" class="w-full bg-indigo-600 text-white p-2.5 rounded-lg disabled:opacity-50">${signup ? "Qeydiyyatdan keç" : "Daxil ol"}</button>
       <p id="auth-notice" role="status" class="text-sm text-emerald-600">${esc(notice)}</p>
       <p id="auth-error" role="alert" class="text-sm text-red-600"></p>
     </form>
     <button id="auth-switch" class="mt-4 text-sm text-indigo-600">${signup ? "Hesabın var? Daxil ol" : "Hesabın yoxdur? Qeydiyyatdan keç"}</button>
   </div>`;
   $("auth-switch").addEventListener("click", () => renderAuth(!signup));
+
+  if (signup) {
+    loadFields().then((fields) => {
+      const select = $("auth-form") && $("auth-form").elements.specialty_id;
+      if (select) select.innerHTML = `<option value="">İxtisasını seç</option>` + specialtyOptions(fields);
+    }).catch((e) => { if ($("auth-error")) $("auth-error").textContent = e.message; });
+  }
+
   $("auth-form").addEventListener("submit", async (ev) => {
     ev.preventDefault();
     const form = ev.currentTarget;
+    const f = form.elements;
     const button = form.querySelector("button");
+    if (signup && f.password.value !== f.password2.value) {
+      $("auth-error").textContent = "Şifrələr eyni deyil.";
+      return;
+    }
     button.disabled = true;
     try {
-      const email = form.elements.email.value;
+      const email = f.email.value;
+      const body = signup
+        ? { email, password: f.password.value, first_name: f.first_name.value, last_name: f.last_name.value,
+            specialty_id: f.specialty_id.value, consent: f.consent.checked }
+        : { email, password: f.password.value };
       const user = await api(`/api/auth/${signup ? "signup" : "login"}`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password: form.elements.password.value }),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
       });
       if (signup) {
-        // The API signs the new user in; drop that session so they log in explicitly.
-        await api("/api/auth/logout", { method: "POST" });
         renderAuth(false, "Hesab yaradıldı. İndi daxil ol.");
         $("auth-form").elements.email.value = email;
         $("auth-form").elements.password.focus();
         return;
       }
       state.user = user;
-      state.fields = []; state.history = []; state.latest = null; state.current = null;
-      $("sidebar").classList.remove("hidden");
-      $("main").classList.add("lg:pl-64");
-      $("account-email").textContent = state.user.email;
+      state.history = []; state.latest = null; state.current = null;
+      showApp();
       route();
     } catch (e) {
       $("auth-error").textContent = e.message;
       button.disabled = false;
     }
   });
+}
+
+function showApp() {
+  $("sidebar").classList.remove("hidden");
+  $("menu-btn").classList.remove("hidden");
+  $("main").classList.add("lg:pl-64");
+  $("account-email").textContent = fullName(state.user) || state.user.email;
 }
 
 function comingSoon(iconName, bullets) {
@@ -261,9 +336,8 @@ function renderResult(r) {
     return `<div class="${CARD} p-8 text-center text-sm text-slate-500">
       Nəticə burada görünəcək. CV-ni yüklə və <strong>Analiz et</strong> düyməsini bas.</div>`;
   }
-  const isLatest = r._id && state.latest && r._id === state.latest._id;
-  const roadmapLink = isLatest
-    ? `<div class="text-right"><a href="#/roadmap" class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg">Yol xəritəsini aç</a></div>`
+  const roadmapLink = r._id
+    ? `<div class="text-right"><a href="#/roadmap/${encodeURIComponent(r._id)}" class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg">Yol xəritəsini aç</a></div>`
     : "";
   return `<div class="space-y-6">
     <div class="${CARD} p-6 flex flex-col sm:flex-row gap-6 items-center">
@@ -272,7 +346,7 @@ function renderResult(r) {
         <div class="flex flex-wrap items-center gap-2">
           <h2 class="text-lg font-semibold">${esc(r.field_name)}</h2>${readyBadge(r.readiness)}
         </div>
-        <p class="text-xs text-slate-400">Bal sahəyə uyğunluğa əsaslanır; CV keyfiyyəti onu tənzimləyir · ${esc(r.filename)}</p>
+        <p class="text-xs text-slate-400">Bal ixtisasa uyğunluğa əsaslanır; CV keyfiyyəti onu tənzimləyir · ${esc(r.filename)}</p>
         <p class="text-sm text-slate-700">${esc(r.summary)}</p>
       </div>
     </div>
@@ -285,7 +359,7 @@ function renderResult(r) {
 /* Pages */
 async function renderDashboard() {
   const t = routeToken;
-  const header = pageHeader("Dashboard", "Karyera hazırlığının ümumi görünüşü");
+  const header = pageHeader("İdarə paneli", "Karyera hazırlığının ümumi görünüşü");
   $("view").innerHTML = header + loadingHtml();
 
   let latest;
@@ -381,9 +455,9 @@ async function renderCV() {
         <input id="cv-file" type="file" accept="application/pdf,.pdf" class="block w-full text-sm border border-slate-300 rounded-lg p-2 bg-white">
       </div>
       <div>
-        <label class="block text-sm font-medium mb-1">Hədəf sahə</label>
+        <label class="block text-sm font-medium mb-1">İxtisas</label>
         <select id="cv-field" class="block w-full border border-slate-300 rounded-lg p-2 text-sm bg-white">
-          ${fields.map((f) => `<option value="${esc(f.id)}">${esc(f.name)}</option>`).join("")}
+          ${specialtyOptions(fields, (shown && shown.field_id) || state.user.specialty_id)}
         </select>
       </div>
       <button id="cv-run" ${state.evaluating ? "disabled" : ""} class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-medium">Analiz et</button>
@@ -440,15 +514,57 @@ async function runEvaluate() {
   }
 }
 
+async function renderProfile() {
+  const t = routeToken;
+  const header = pageHeader("Profil", "Ad, soyad və ixtisas məlumatların");
+  $("view").innerHTML = header + loadingHtml();
+  let fields;
+  try { fields = await loadFields(); }
+  catch (e) { if (t === routeToken) showError(e.message); return; }
+  if (t !== routeToken) return;
+  const u = state.user;
+  $("view").innerHTML = header + `
+    <form id="profile-form" class="${CARD} p-5 grid gap-4 sm:grid-cols-2 max-w-2xl">
+      <label class="block text-sm">Ad<input name="first_name" required minlength="2" maxlength="60" value="${esc(u.first_name)}" class="${INPUT_CLS}"></label>
+      <label class="block text-sm">Soyad<input name="last_name" required minlength="2" maxlength="60" value="${esc(u.last_name)}" class="${INPUT_CLS}"></label>
+      <label class="block text-sm sm:col-span-2">İxtisas<select name="specialty_id" required class="${INPUT_CLS}">
+        ${u.specialty_id ? "" : '<option value="">İxtisasını seç</option>'}${specialtyOptions(fields, u.specialty_id)}</select></label>
+      <p class="text-sm text-slate-500 sm:col-span-2">E-poçt: ${esc(u.email)}</p>
+      <div class="sm:col-span-2 flex items-center gap-3">
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-medium">Yadda saxla</button>
+        <p id="profile-error" role="alert" class="text-sm text-red-600"></p>
+      </div>
+    </form>`;
+  $("profile-form").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const f = ev.currentTarget.elements;
+    const button = ev.currentTarget.querySelector("button");
+    button.disabled = true;
+    $("profile-error").textContent = "";
+    try {
+      state.user = await api("/api/auth/me", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ first_name: f.first_name.value, last_name: f.last_name.value, specialty_id: f.specialty_id.value }),
+      });
+      showApp();
+      notify("Profil yeniləndi.");
+    } catch (e) {
+      $("profile-error").textContent = e.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
+
 function renderPlaceholder(iconName, title, subtitle, bullets) {
   $("view").innerHTML = pageHeader(title, subtitle) + comingSoon(iconName, bullets);
 }
 
 /* Navigation */
 
-// renderRoadmap is defined in roadmap.js, which loads before this file
+// renderRoadmap and renderApplications are defined in roadmap.js and applications.js, which load before this file
 const ROUTES = {
-  dashboard: { label: "Dashboard", render: renderDashboard },
+  dashboard: { label: "İdarə paneli", render: renderDashboard },
   cv: { label: "CV Mərkəzi", render: renderCV },
   roadmap: { label: "Yol Xəritəsi", render: renderRoadmap },
   jobs: {
@@ -456,11 +572,8 @@ const ROUTES = {
     render: () => renderPlaceholder("jobs", "Vakansiyalar", "Bazar uyğunluğu",
       ["Real vakansiyalarla CV uyğunluğu", "Sahə üzrə bazar tələbləri", "Uyğunluq balına görə sıralama"]),
   },
-  applications: {
-    label: "Müraciətlər", soon: true,
-    render: () => renderPlaceholder("applications", "Müraciətlər", "Müraciət izləmə",
-      ["Göndərilən müraciətlərin siyahısı", "Status izləmə: göndərildi, müsahibə, rədd, təklif", "Növbəti addım xatırlatmaları"]),
-  },
+  applications: { label: "Müraciətlər", render: renderApplications },
+  profile: { label: "Profil", render: renderProfile },
   mentor: {
     label: "AI Mentor", soon: true,
     render: () => renderPlaceholder("mentor", "AI Mentor", "İnteraktiv karyera çatı",
@@ -468,10 +581,15 @@ const ROUTES = {
   },
 };
 
+// Hash format: #/<route>[/<param>], e.g. #/roadmap/42
+const hashParts = () => location.hash.replace(/^#\/?/, "").split("/");
+
 function currentRoute() {
-  const key = location.hash.replace("#/", "");
+  const key = hashParts()[0];
   return ROUTES[key] ? key : "dashboard";
 }
+
+const routeParam = () => decodeURIComponent(hashParts()[1] || "");
 
 function renderNav() {
   const active = currentRoute();
@@ -485,11 +603,13 @@ function renderNav() {
 function openMenu() {
   $("sidebar").classList.remove("-translate-x-full");
   $("backdrop").classList.remove("hidden");
+  $("menu-btn").setAttribute("aria-expanded", "true");
 }
 
 function closeMenu() {
   $("sidebar").classList.add("-translate-x-full");
   $("backdrop").classList.add("hidden");
+  $("menu-btn").setAttribute("aria-expanded", "false");
 }
 
 async function route() {
@@ -497,17 +617,27 @@ async function route() {
   routeToken++;
   renderNav();
   closeMenu();
+  const t = routeToken;
   await ROUTES[currentRoute()].render();
+  if (t !== routeToken) return;
   window.scrollTo(0, 0);
+  // Move keyboard and screen-reader focus to the new page title.
+  const h1 = $("view").querySelector("h1");
+  if (h1 && h1.focus) {
+    h1.tabIndex = -1;
+    h1.focus({ preventScroll: true });
+  }
 }
 
 /* Startup */
 $("menu-btn").addEventListener("click", openMenu);
 $("backdrop").addEventListener("click", closeMenu);
+document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") closeMenu(); });
 $("logout-btn").addEventListener("click", async () => {
   try { await api("/api/auth/logout", { method: "POST" }); }
   finally {
     state.user = null; state.latest = null; state.current = null; state.history = [];
+    state.fields = [];
     routeToken++;
     renderAuth();
   }
@@ -516,20 +646,25 @@ window.addEventListener("hashchange", route);
 
 $("view").addEventListener("click", async (ev) => {
   const btn = ev.target.closest("[data-open]");
-  if (!btn) return;
+  if (!btn || btn.disabled) return;
+  btn.disabled = true;
+  btn.setAttribute("aria-busy", "true");
   try {
     const d = await api("/api/history/" + btn.dataset.open);
     state.current = { ...d.result, _id: d.id, _at: d.created_at };
     location.hash = "#/cv";
   } catch (e) {
-    alert(e.message);
+    notify(e.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.removeAttribute("aria-busy");
   }
 });
 
 async function boot() {
   try {
     state.user = await api("/api/auth/me");
-    $("account-email").textContent = state.user.email;
+    showApp();
     route();
   } catch { renderAuth(); }
 }
