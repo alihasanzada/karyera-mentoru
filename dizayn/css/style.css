@@ -2926,6 +2926,18 @@ body:has(.modal[open]) {
   background: var(--card);
 }
 
+@media (max-height: 520px) {
+  .chat-head,
+  .chat-chips,
+  .chat-form {
+    flex-shrink: 0;
+  }
+
+  .chat-log {
+    min-height: 0;
+  }
+}
+
 .chat-send {
   flex: none;
   width: 46px;
