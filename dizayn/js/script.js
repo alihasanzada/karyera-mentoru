@@ -1730,9 +1730,9 @@ function updateCurrentUser(changes) {
   return user;
 }
 
-// Backend parolun ən azı 12 simvol olmasını tələb edir
+// Backend və sayt parolun ən azı 8 simvol olmasını tələb edir
 function minPasswordLength() {
-  return apiMode ? 12 : 6;
+  return 8;
 }
 
 function removeStorage(key) {

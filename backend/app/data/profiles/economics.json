@@ -1,0 +1,28 @@
+{
+    "id": "economics",
+    "role": "İqtisadçı",
+    "level": "Junior",
+    "description": "İqtisadçı vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Excel",
+        "Ekonometrika",
+        "Power BI",
+        "Maliyyə təhlili",
+        "Makroiqtisadiyyat"
+    ],
+    "preferred_skills": [
+        "Python və ya R",
+        "Hesabat yazma",
+        "İngilis dili"
+    ],
+    "ats_keywords": [
+        "Excel",
+        "Ekonometrika",
+        "Power BI",
+        "Maliyyə təhlili",
+        "Makroiqtisadiyyat",
+        "Python və ya R",
+        "Hesabat yazma",
+        "İngilis dili"
+    ]
+}

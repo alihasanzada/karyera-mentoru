@@ -1,0 +1,28 @@
+{
+    "id": "stage",
+    "role": "Səhnə sənəti mütəxəssisi",
+    "level": "Junior",
+    "description": "Səhnə sənəti mütəxəssisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Səhnə danışığı",
+        "İmprovizasiya",
+        "Ssenari təhlili",
+        "Kamera qarşısında iş",
+        "Plastika"
+    ],
+    "preferred_skills": [
+        "Rejissor təfəkkürü",
+        "Video montaj",
+        "Komanda işi"
+    ],
+    "ats_keywords": [
+        "Səhnə danışığı",
+        "İmprovizasiya",
+        "Ssenari təhlili",
+        "Kamera qarşısında iş",
+        "Plastika",
+        "Rejissor təfəkkürü",
+        "Video montaj",
+        "Komanda işi"
+    ]
+}

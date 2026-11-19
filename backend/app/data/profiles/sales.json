@@ -1,0 +1,28 @@
+{
+    "id": "sales",
+    "role": "Satış meneceri",
+    "level": "Junior",
+    "description": "Satış meneceri vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Danışıqlar",
+        "CRM",
+        "Müştəri xidməti",
+        "Satış hunisi",
+        "Prezentasiya"
+    ],
+    "preferred_skills": [
+        "Excel",
+        "B2B satış",
+        "Soyuq zənglər"
+    ],
+    "ats_keywords": [
+        "Danışıqlar",
+        "CRM",
+        "Müştəri xidməti",
+        "Satış hunisi",
+        "Prezentasiya",
+        "Excel",
+        "B2B satış",
+        "Soyuq zənglər"
+    ]
+}

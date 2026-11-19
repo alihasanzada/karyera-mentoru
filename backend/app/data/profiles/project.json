@@ -1,0 +1,28 @@
+{
+    "id": "project",
+    "role": "Layihə koordinatoru",
+    "level": "Junior",
+    "description": "Layihə koordinatoru vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Agile/Scrum",
+        "Jira",
+        "Risk idarəetməsi",
+        "MS Project",
+        "Büdcələmə"
+    ],
+    "preferred_skills": [
+        "Kommunikasiya",
+        "Trello",
+        "PMP əsasları"
+    ],
+    "ats_keywords": [
+        "Agile/Scrum",
+        "Jira",
+        "Risk idarəetməsi",
+        "MS Project",
+        "Büdcələmə",
+        "Kommunikasiya",
+        "Trello",
+        "PMP əsasları"
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "id": "general",
+    "role": "Ofis koordinatoru",
+    "level": "Junior",
+    "description": "Ofis koordinatoru vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Kommunikasiya",
+        "Excel",
+        "Komanda işi",
+        "İngilis dili",
+        "Vaxtın idarə edilməsi"
+    ],
+    "preferred_skills": [
+        "Problemin həlli",
+        "Prezentasiya",
+        "Kritik düşünmə"
+    ],
+    "ats_keywords": [
+        "Kommunikasiya",
+        "Excel",
+        "Komanda işi",
+        "İngilis dili",
+        "Vaxtın idarə edilməsi",
+        "Problemin həlli",
+        "Prezentasiya",
+        "Kritik düşünmə"
+    ]
+}

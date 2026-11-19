@@ -1,0 +1,28 @@
+{
+    "id": "design",
+    "role": "Qrafik dizayner",
+    "level": "Junior",
+    "description": "Qrafik dizayner vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Photoshop",
+        "Illustrator",
+        "Figma",
+        "Tipoqrafiya",
+        "Brendinq"
+    ],
+    "preferred_skills": [
+        "Portfolio",
+        "Motion dizayn",
+        "Rəng nəzəriyyəsi"
+    ],
+    "ats_keywords": [
+        "Photoshop",
+        "Illustrator",
+        "Figma",
+        "Tipoqrafiya",
+        "Brendinq",
+        "Portfolio",
+        "Motion dizayn",
+        "Rəng nəzəriyyəsi"
+    ]
+}

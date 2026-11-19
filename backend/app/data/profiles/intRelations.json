@@ -1,0 +1,28 @@
+{
+    "id": "intRelations",
+    "role": "Beynəlxalq əlaqələr mütəxəssisi",
+    "level": "Junior",
+    "description": "Beynəlxalq əlaqələr mütəxəssisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Diplomatik yazışma",
+        "Xarici dillər",
+        "Analitik yazı",
+        "Danışıqlar",
+        "Geosiyasət"
+    ],
+    "preferred_skills": [
+        "Beynəlxalq hüquq",
+        "İctimai çıxış",
+        "Tədqiqat"
+    ],
+    "ats_keywords": [
+        "Diplomatik yazışma",
+        "Xarici dillər",
+        "Analitik yazı",
+        "Danışıqlar",
+        "Geosiyasət",
+        "Beynəlxalq hüquq",
+        "İctimai çıxış",
+        "Tədqiqat"
+    ]
+}

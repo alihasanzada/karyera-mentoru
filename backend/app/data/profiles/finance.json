@@ -1,0 +1,28 @@
+{
+    "id": "finance",
+    "role": "Maliyyə analitiki",
+    "level": "Junior",
+    "description": "Maliyyə analitiki vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Excel",
+        "1C",
+        "MHBS (IFRS)",
+        "Maliyyə təhlili",
+        "Vergi qanunvericiliyi"
+    ],
+    "preferred_skills": [
+        "Büdcələmə",
+        "Power BI",
+        "ACCA əsasları"
+    ],
+    "ats_keywords": [
+        "Excel",
+        "1C",
+        "MHBS (IFRS)",
+        "Maliyyə təhlili",
+        "Vergi qanunvericiliyi",
+        "Büdcələmə",
+        "Power BI",
+        "ACCA əsasları"
+    ]
+}

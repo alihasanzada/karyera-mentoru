@@ -1,0 +1,28 @@
+{
+    "id": "management",
+    "role": "Menecer",
+    "level": "Junior",
+    "description": "Menecer vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Strateji planlaşdırma",
+        "Komanda idarəçiliyi",
+        "Excel",
+        "Büdcələmə",
+        "Agile/Scrum"
+    ],
+    "preferred_skills": [
+        "Kommunikasiya",
+        "Biznes təhlili",
+        "CRM"
+    ],
+    "ats_keywords": [
+        "Strateji planlaşdırma",
+        "Komanda idarəçiliyi",
+        "Excel",
+        "Büdcələmə",
+        "Agile/Scrum",
+        "Kommunikasiya",
+        "Biznes təhlili",
+        "CRM"
+    ]
+}

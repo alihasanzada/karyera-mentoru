@@ -1,6 +1,9 @@
 /* Roadmap tab: career gap comparison and 7/14/21 day plan */
 let rmData = null;
 let rmBound = false;
+let rmGenerating = null; // evaluation_id whose plan is being generated
+
+const rmBusy = () => rmGenerating !== null && rmData && rmGenerating === rmData.evaluation_id;
 
 const RM_STATUS = {
     has: { label: "Var", cls: "bg-green-100 text-green-800", color: "#16a34a", path: "M5 13l4 4L19 7" },
@@ -27,7 +30,6 @@ function rmStatusIcon(status) {
 }
 
 function rmResource(r) {
-    // Links are search URLs built from the model's query, never model-written URLs
     const q = encodeURIComponent(r.search_query || r.title);
     const url = r.kind === "video"
         ? `https://www.youtube.com/results?search_query=${q}`
@@ -95,8 +97,8 @@ function rmCareerGap(d) {
         : `<p class="text-xs text-slate-400 mt-4">İzahlar və resurs tövsiyələri yol xəritəsi yaradıldıqdan sonra görünəcək.</p>`;
 
     return `<section class="${CARD} p-6">
-    <h2 class="text-lg font-semibold">Career Gap</h2>
-    <p class="text-sm text-slate-500 mb-5">${esc(d.field_name)} sahəsində izlənilən ${g.skills.length} bacarıq: ${have.length} mövcud, ${gaps.length} boşluq.</p>
+    <h2 class="text-lg font-semibold">Bacarıq boşluğu</h2>
+    <p class="text-sm text-slate-500 mb-5">${esc(d.field_name)} ixtisası üzrə izlənilən ${g.skills.length} bacarıq: ${have.length} mövcud, ${gaps.length} boşluq.</p>
     <div class="grid gap-4 sm:grid-cols-2 mb-6">
       ${coverage("Tələb olunan bacarıqların örtülməsi", g.required_coverage)}
       ${coverage("Arzuolunan bacarıqların örtülməsi", g.preferred_coverage)}
@@ -115,7 +117,6 @@ function rmCareerGap(d) {
   </section>`;
 }
 
-/* Task progress is kept in the browser only */
 const rmProgressKey = (id) => `karyera_progress_${id}`;
 
 function rmLoadProgress(id) {
@@ -183,8 +184,8 @@ function rmPlan(d) {
     if (!d.generated) {
         return `<section class="${CARD} p-8 text-center">
       <h2 class="text-lg font-semibold">7/14/21 günlük plan</h2>
-      <p class="text-sm text-slate-500 mt-1 mb-5">AI Career Gap nəticəsinə əsasən fərdi plan və resurs tövsiyələri hazırlayacaq.</p>
-      <button data-rm-generate class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-medium">Yol xəritəsi yarat</button>
+      <p class="text-sm text-slate-500 mt-1 mb-5">AI bacarıq boşluğu nəticəsinə əsasən fərdi plan və resurs tövsiyələri hazırlayacaq.</p>
+      <button data-rm-generate ${rmBusy() ? "disabled" : ""} class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-medium">Yol xəritəsi yarat</button>
       <p id="rm-status" class="text-sm mt-3"></p>
     </section>`;
     }
@@ -196,7 +197,7 @@ function rmPlan(d) {
           <h2 class="text-lg font-semibold">7/14/21 günlük plan</h2>
           <p class="text-sm text-slate-600 mt-1">${esc(d.summary)}</p>
         </div>
-        <button data-rm-generate class="text-sm text-indigo-600 hover:text-indigo-800 disabled:opacity-50 font-medium whitespace-nowrap">Yenidən yarat</button>
+        <button data-rm-generate ${rmBusy() ? "disabled" : ""} class="text-sm text-indigo-600 hover:text-indigo-800 disabled:opacity-50 font-medium whitespace-nowrap">Yenidən yarat</button>
       </div>
       <div>
         <div class="flex justify-between text-sm mb-1">
@@ -212,7 +213,7 @@ function rmPlan(d) {
 
 function rmPaint() {
     $("view").innerHTML =
-        pageHeader("Yol Xəritəsi", "Career Gap təhlili və 7/14/21 günlük fərdi inkişaf planı") +
+        pageHeader("Yol Xəritəsi", "Bacarıq boşluğu təhlili və 7/14/21 günlük fərdi inkişaf planı") +
         `<div class="space-y-6">${rmCareerGap(rmData)}${rmPlan(rmData)}</div>`;
 }
 
@@ -238,29 +239,36 @@ function rmSetStatus(msg, isError = false) {
     el.className = "text-sm mt-3 " + (isError ? "text-red-600" : "text-slate-600");
 }
 
+const rmSetButtons = (disabled) =>
+    document.querySelectorAll("[data-rm-generate]").forEach((b) => { b.disabled = disabled; });
+
 async function rmGenerate() {
     const current = rmData;
-    if (!current) return;
+    if (!current || rmGenerating !== null) return;
     if (current.generated && !confirm("Plan yenidən yaradılsın? Tapşırıqlar üzrə irəliləyiş sıfırlanacaq.")) return;
 
-    const buttons = document.querySelectorAll("[data-rm-generate]");
-    buttons.forEach((b) => { b.disabled = true; });
+    rmGenerating = current.evaluation_id;
+    rmSetButtons(true);
     const started = Date.now();
     rmSetStatus("AI plan hazırlayır...");
     const ticker = setInterval(() => {
-        rmSetStatus(`AI plan hazırlayır... ${Math.round((Date.now() - started) / 1000)} san`);
+        if (rmBusy()) rmSetStatus(`AI plan hazırlayır... ${Math.round((Date.now() - started) / 1000)} san`);
     }, 1000);
 
     try {
         const fresh = await api("/api/roadmap/" + current.evaluation_id, { method: "POST" }, 180000);
         rmSaveProgress(current.evaluation_id, {});
-        rmData = fresh;
-        if (currentRoute() === "roadmap") rmPaint();
+        // Ignore the answer if the user has since opened another evaluation's roadmap.
+        if (rmData && rmData.evaluation_id === current.evaluation_id) {
+            rmData = fresh;
+            if (currentRoute() === "roadmap") rmPaint();
+        }
     } catch (e) {
         rmSetStatus(e.message, true);
-        buttons.forEach((b) => { b.disabled = false; });
     } finally {
         clearInterval(ticker);
+        rmGenerating = null;
+        rmSetButtons(false);
     }
 }
 
@@ -286,20 +294,25 @@ function rmBind() {
 
 async function renderRoadmap() {
     const t = routeToken;
-    const header = pageHeader("Yol Xəritəsi", "Career Gap təhlili və 7/14/21 günlük fərdi inkişaf planı");
+    const header = pageHeader("Yol Xəritəsi", "Bacarıq boşluğu təhlili və 7/14/21 günlük fərdi inkişaf planı");
     rmBind();
     $("view").innerHTML = header + loadingHtml();
 
-    let latest;
-    try {
-        latest = await loadLatest();
-    } catch (e) {
-        if (t === routeToken) showError(e.message);
-        return;
+    // #/roadmap/<id> opens a specific evaluation; plain #/roadmap uses the latest one.
+    let evaluationId = routeParam();
+    if (!evaluationId) {
+        let latest;
+        try {
+            latest = await loadLatest();
+        } catch (e) {
+            if (t === routeToken) showError(e.message);
+            return;
+        }
+        if (t !== routeToken) return;
+        evaluationId = latest && latest._id;
     }
-    if (t !== routeToken) return;
 
-    if (!latest) {
+    if (!evaluationId) {
         $("view").innerHTML = header + `
       <div class="${CARD} p-10 text-center">
         <h2 class="text-lg font-semibold">Əvvəl CV analiz et</h2>
@@ -310,7 +323,7 @@ async function renderRoadmap() {
     }
 
     try {
-        rmData = await api("/api/roadmap/" + latest._id);
+        rmData = await api("/api/roadmap/" + encodeURIComponent(evaluationId));
     } catch (e) {
         if (t === routeToken) showError(e.message);
         return;

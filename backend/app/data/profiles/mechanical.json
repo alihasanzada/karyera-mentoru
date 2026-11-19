@@ -1,0 +1,28 @@
+{
+    "id": "mechanical",
+    "role": "Mexanika mühəndisi",
+    "level": "Junior",
+    "description": "Mexanika mühəndisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "AutoCAD",
+        "SolidWorks",
+        "Texniki rəsm",
+        "Materialşünaslıq",
+        "CNC əsasları"
+    ],
+    "preferred_skills": [
+        "HSE",
+        "Keyfiyyətə nəzarət",
+        "Texniki ingilis dili"
+    ],
+    "ats_keywords": [
+        "AutoCAD",
+        "SolidWorks",
+        "Texniki rəsm",
+        "Materialşünaslıq",
+        "CNC əsasları",
+        "HSE",
+        "Keyfiyyətə nəzarət",
+        "Texniki ingilis dili"
+    ]
+}
