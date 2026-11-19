@@ -1,0 +1,28 @@
+{
+    "id": "pharmacy",
+    "role": "Əczaçı",
+    "level": "Junior",
+    "description": "Əczaçı vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Farmakologiya",
+        "Dərman qarşılıqlı təsiri",
+        "Aptek proqramları",
+        "GMP standartları",
+        "Müştəri məsləhəti"
+    ],
+    "preferred_skills": [
+        "İnventar idarəetməsi",
+        "Tibbi ingilis dili",
+        "Keyfiyyətə nəzarət"
+    ],
+    "ats_keywords": [
+        "Farmakologiya",
+        "Dərman qarşılıqlı təsiri",
+        "Aptek proqramları",
+        "GMP standartları",
+        "Müştəri məsləhəti",
+        "İnventar idarəetməsi",
+        "Tibbi ingilis dili",
+        "Keyfiyyətə nəzarət"
+    ]
+}

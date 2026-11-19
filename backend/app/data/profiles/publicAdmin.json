@@ -1,0 +1,28 @@
+{
+    "id": "publicAdmin",
+    "role": "Dövlət idarəçiliyi mütəxəssisi",
+    "level": "Junior",
+    "description": "Dövlət idarəçiliyi mütəxəssisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Normativ aktlar",
+        "Sənədləşmə",
+        "Dövlət qulluğu qanunvericiliyi",
+        "Layihə idarəçiliyi",
+        "Excel"
+    ],
+    "preferred_skills": [
+        "Analitik yazı",
+        "Kommunikasiya",
+        "Elektron hökumət xidmətləri"
+    ],
+    "ats_keywords": [
+        "Normativ aktlar",
+        "Sənədləşmə",
+        "Dövlət qulluğu qanunvericiliyi",
+        "Layihə idarəçiliyi",
+        "Excel",
+        "Analitik yazı",
+        "Kommunikasiya",
+        "Elektron hökumət xidmətləri"
+    ]
+}

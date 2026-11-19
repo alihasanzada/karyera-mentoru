@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
-from app.models.schemas import GapInsight, PhasePlan, SkillCheck, WeeklyTask
-from app.services.roadmap import _phase, _priority, build_career_gap
+from app.models.schemas import DailyTask, GapInsight, PhasePlan, SkillCheck
+from app.services.roadmap import PHASES, _phase, _priority, build_career_gap
 
 
 def test_priority():
@@ -11,16 +11,22 @@ def test_priority():
     assert _priority("required", "has") is None
 
 
-def test_phase_clamps_weeks():
+def test_phase_clamps_days():
     plan = PhasePlan(
         goal="g",
         milestone="m",
         tasks=[
-            WeeklyTask(week=9, title="a", details="d", deliverable="x"),
-            WeeklyTask(week=0, title="b", details="d", deliverable="x"),
+            DailyTask(day=9, title="a", details="d", deliverable="x"),
+            DailyTask(day=0, title="b", details="d", deliverable="x"),
         ],
     )
-    assert [t.week for t in _phase("foundation", plan).tasks] == [1, 4]
+    assert [t.day for t in _phase("foundation", plan).tasks] == [1, 7]
+    assert [t.day for t in _phase("interview", plan).tasks] == [15, 15]
+
+
+def test_phases_cover_7_14_21_days():
+    assert [PHASES[k][1] for k in ("foundation", "practice", "interview")] == ["1-7", "8-14", "15-21"]
+    assert PHASES["interview"][3] == 21
 
 
 def test_career_gap_merges_insights():

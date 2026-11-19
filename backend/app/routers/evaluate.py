@@ -25,7 +25,7 @@ async def evaluate_endpoint(
     if field_id not in ROLES:
         raise HTTPException(
             status_code=400,
-            detail=f"Naməlum sahə. Mövcud sahələr: {', '.join(ROLES.keys())}",
+            detail="Naməlum ixtisas. Siyahıdan ixtisas seç.",
         )
 
     text, pages = await read_pdf(file)

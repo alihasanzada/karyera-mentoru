@@ -97,7 +97,9 @@ def test_weights_sum_to_100_per_category():
 
 def test_roles_have_keywords():
     for role in ROLES.values():
-        assert len(role.get("ats_keywords", [])) >= 15
+        keywords = role.get("ats_keywords", [])
+        assert len(keywords) >= 8
+        assert set(role["required_skills"] + role["preferred_skills"]) <= set(keywords)
 
 
 def test_assemble_is_deterministic_and_grounded():

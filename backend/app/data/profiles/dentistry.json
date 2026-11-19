@@ -1,0 +1,28 @@
+{
+    "id": "dentistry",
+    "role": "Stomatoloq",
+    "level": "Junior",
+    "description": "Stomatoloq vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Klinik bacarıqlar",
+        "Stomatoloji diaqnostika",
+        "Rentgen təhlili",
+        "Sterilizasiya",
+        "Pasiyentlə ünsiyyət"
+    ],
+    "preferred_skills": [
+        "Tibbi etika",
+        "Tibbi ingilis dili",
+        "Elektron tibbi qeydlər"
+    ],
+    "ats_keywords": [
+        "Klinik bacarıqlar",
+        "Stomatoloji diaqnostika",
+        "Rentgen təhlili",
+        "Sterilizasiya",
+        "Pasiyentlə ünsiyyət",
+        "Tibbi etika",
+        "Tibbi ingilis dili",
+        "Elektron tibbi qeydlər"
+    ]
+}

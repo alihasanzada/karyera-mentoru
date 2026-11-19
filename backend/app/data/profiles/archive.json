@@ -1,0 +1,28 @@
+{
+    "id": "archive",
+    "role": "Arxiv və muzey mütəxəssisi",
+    "level": "Junior",
+    "description": "Arxiv və muzey mütəxəssisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Kataloqlaşdırma",
+        "Rəqəmsal arxiv",
+        "Kitabxana proqramları",
+        "Sənədlərin mühafizəsi",
+        "Tədqiqat"
+    ],
+    "preferred_skills": [
+        "Ekspozisiya",
+        "Xarici dil",
+        "Excel"
+    ],
+    "ats_keywords": [
+        "Kataloqlaşdırma",
+        "Rəqəmsal arxiv",
+        "Kitabxana proqramları",
+        "Sənədlərin mühafizəsi",
+        "Tədqiqat",
+        "Ekspozisiya",
+        "Xarici dil",
+        "Excel"
+    ]
+}

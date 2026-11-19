@@ -1,0 +1,28 @@
+{
+    "id": "backend",
+    "role": "Backend developer",
+    "level": "Junior",
+    "description": "Backend developer vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Python",
+        "SQL",
+        "REST API",
+        "Docker",
+        "Git"
+    ],
+    "preferred_skills": [
+        "Linux",
+        "Security",
+        "Node.js"
+    ],
+    "ats_keywords": [
+        "Python",
+        "SQL",
+        "REST API",
+        "Docker",
+        "Git",
+        "Linux",
+        "Security",
+        "Node.js"
+    ]
+}

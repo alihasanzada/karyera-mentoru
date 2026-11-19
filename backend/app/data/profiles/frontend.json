@@ -1,0 +1,49 @@
+{
+    "id": "frontend",
+    "role": "Frontend developer",
+    "level": "Junior",
+    "description": "Frontend developer vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "HTML/CSS",
+        "JavaScript",
+        "React",
+        "TypeScript",
+        "Git"
+    ],
+    "preferred_skills": [
+        "Responsiv dizayn",
+        "REST API",
+        "Testləşdirmə"
+    ],
+    "ats_keywords": [
+        "HTML/CSS",
+        "JavaScript",
+        "React",
+        "TypeScript",
+        "Git",
+        "Responsiv dizayn",
+        "REST API",
+        "Testləşdirmə",
+        "HTML",
+        "HTML5",
+        "CSS",
+        "CSS3",
+        "Vue",
+        "Angular",
+        "Next.js",
+        "Tailwind",
+        "SASS",
+        "Bootstrap",
+        "GitHub",
+        "Responsive Design",
+        "Flexbox",
+        "Webpack",
+        "Vite",
+        "Jest",
+        "Figma",
+        "Accessibility",
+        "Redux",
+        "Node.js",
+        "npm"
+    ]
+}

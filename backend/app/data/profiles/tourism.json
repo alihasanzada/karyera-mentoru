@@ -1,0 +1,28 @@
+{
+    "id": "tourism",
+    "role": "Turizm meneceri",
+    "level": "Junior",
+    "description": "Turizm meneceri vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Müştəri xidməti",
+        "Xarici dillər",
+        "Rezervasiya sistemləri",
+        "Tur planlama",
+        "Satış"
+    ],
+    "preferred_skills": [
+        "Tədbir təşkili",
+        "Mədəniyyətlərarası ünsiyyət",
+        "Problemin həlli"
+    ],
+    "ats_keywords": [
+        "Müştəri xidməti",
+        "Xarici dillər",
+        "Rezervasiya sistemləri",
+        "Tur planlama",
+        "Satış",
+        "Tədbir təşkili",
+        "Mədəniyyətlərarası ünsiyyət",
+        "Problemin həlli"
+    ]
+}
