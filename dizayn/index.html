@@ -42,7 +42,7 @@
   <!-- ===== 1. Elan zolağı ===== -->
   <div class="announcement" id="elan">
     <p class="announcement-text">
-      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.8 5.8 1.9-5.8 1.9L12 18.4l-1.9-5.8-5.8-1.9 5.8-1.9z"/></svg> <strong>Qapalı beta qeydiyyatı başladı!</strong> İlk 30 tələbə üçün tam pulsuz sınaq
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.8 5.8 1.9-5.8 1.9L12 18.4l-1.9-5.8-5.8-1.9 5.8-1.9z"/></svg> <strong>Beta prototip.</strong> Hazırda bütün imkanlar pulsuzdur; ödəniş, vakansiya və AI Mentor hələ demo səviyyəsindədir.
     </p>
     <button type="button" class="announcement-close" aria-label="Elanı bağla"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
   </div>
@@ -193,7 +193,7 @@
           <h1 id="hero-title">CV-dən <span class="hl">konkret karyera planına</span> bir platforma</h1>
           <p class="hero-lead">
             Tələbə və gənc məzunlar üçün AI karyera mentoru: CV analizi, bacarıq boşluğu,
-            7/14/21 günlük plan və vakansiya uyğunluğu.
+            7/14/21 günlük plan və demo vakansiya uyğunluğu.
           </p>
           <div class="hero-actions">
             <a href="#cv-yoxla" class="btn btn-primary">İndi CV-ni Yüklə</a>
@@ -260,7 +260,7 @@
         <div class="section-head">
           <span class="eyebrow">Proses</span>
           <h2 id="steps-title">Necə işləyir?</h2>
-          <p class="section-sub">CV-ni yükləməkdən uyğun vakansiyaya qədər — 5 sadə addım.</p>
+          <p class="section-sub">CV-ni yükləməkdən nümunə vakansiya uyğunluğuna qədər — 5 sadə addım.</p>
         </div>
 
         <ol class="steps">
@@ -290,9 +290,9 @@
           </li>
           <li class="card step reveal">
             <span class="step-num" aria-hidden="true">5</span>
-            <h3>Vakansiya uyğunluğu</h3>
-            <p>Vakansiyalarla uyğunluq faizini gör və hansı elana müraciət edəcəyini bil.</p>
-            <span class="step-tag">Uyğunluq %</span>
+            <h3>Vakansiya uyğunluğu (demo)</h3>
+            <p>Nümunə vakansiyalarla təxmini uyğunluq faizini gör. Canlı vakansiya mənbəyi hələ yoxdur.</p>
+            <span class="step-tag">Demo</span>
           </li>
         </ol>
       </div>
@@ -313,7 +313,7 @@
           <div class="field">
             <span class="field-label" id="cv-file-label">CV faylı</span>
             <label class="dropzone" id="dropzone" for="cv-file">
-              <input type="file" id="cv-file" class="visually-hidden" accept="application/pdf,.pdf" aria-describedby="cv-file-hint cv-file-error">
+              <input type="file" id="cv-file" class="visually-hidden" accept="application/pdf,.pdf" aria-describedby="cv-file-hint cv-file-error cv-privacy-note">
               <span class="dropzone-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></span>
               <span class="dropzone-title">PDF faylını bura sürüklə və ya <u>kompüterdən seç</u></span>
               <span class="dropzone-hint" id="cv-file-hint">Yalnız PDF, maksimum 5 MB</span>
@@ -342,7 +342,7 @@
           </div>
 
           <button type="submit" class="btn btn-primary btn-block" id="analyze-btn">Analiz Et</button>
-          <p class="form-note" id="cv-privacy-note">Demo rejim: fayl heç yerə göndərilmir, yalnız brauzerində qalır.</p>
+          <p class="form-note" id="cv-privacy-note">Demo rejim: fayl serverə və AI-yə göndərilmir, analiz nümayiş üçündür. Fayl adı və nəticə yalnız bu brauzerin yaddaşında qalır.</p>
 
           <!-- Yüklənmə animasiyası -->
           <div class="loader" id="loader" hidden>
@@ -447,8 +447,8 @@
 
           <!-- Tab 4: Vakansiya və tarixçə -->
           <div class="tab-panel" role="tabpanel" id="panel-jobs" aria-labelledby="tab-jobs" hidden>
-            <h4 class="panel-subtitle">Uyğun vakansiyalar</h4>
-            <p class="panel-note">Demo vakansiyalar — uyğunluq CV skoruna və bacarıqlarına görə hesablanır.</p>
+            <h4 class="panel-subtitle">Nümunə vakansiyalar</h4>
+            <p class="panel-note">Bunlar real elan deyil: şirkətlər və vəzifələr şablondan yaradılır, canlı vakansiya mənbəyi hələ yoxdur. Faiz CV nəticən və bacarıqlarına görə hesablanan təxmini göstəricidir.</p>
             <ul class="jobs" id="jobs-list"></ul>
 
             <h4 class="panel-subtitle">Analiz tarixçəsi</h4>
@@ -483,17 +483,17 @@
           <article class="card why-card reveal">
             <span class="why-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
             <h3>Yerli bazar konteksti</h3>
-            <p>Azərbaycan əmək bazarı, yerli vakansiyalar və işəgötürən gözləntiləri nəzərə alınır. Hər şey Azərbaycan dilində.</p>
+            <p>Azərbaycan ixtisasları üçün hazırlanmış sahə profilləri və Azərbaycan dilində nəticələr. Canlı vakansiya məlumatı hələ yoxdur.</p>
           </article>
           <article class="card why-card reveal">
             <span class="why-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></span>
             <h3>Bağlı dövrə</h3>
-            <p>CV analizi → bacarıq boşluğu → plan → vakansiya. Hər addım növbətisinə bağlıdır, heç nə yarımçıq qalmır.</p>
+            <p>CV analizi → bacarıq boşluğu → plan → nümunə vakansiya uyğunluğu. Hər addım növbətisinə bağlıdır, heç nə yarımçıq qalmır.</p>
           </article>
           <article class="card why-card reveal">
             <span class="why-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v3M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg></span>
             <h3>Alıcılıq gücünə uyğun qiymət</h3>
-            <p>Premium cəmi <strong>aylıq 15 AZN</strong> — xarici analoqlardan bir neçə dəfə ucuz. Pulsuz versiya da var.</p>
+            <p>Hazırda bütün imkanlar pulsuzdur. Premium üçün planlaşdırılan qiymət <strong>aylıq 15 AZN</strong>-dir; ödəniş hələ işləmir.</p>
           </article>
         </div>
 
@@ -547,11 +547,11 @@
               </tr>
               <tr class="is-highlight">
                 <th scope="row">Karyera Mentoru</th>
-                <td><strong>15 AZN/ay</strong></td>
+                <td><strong>Hazırda pulsuz</strong> <small>(Premium: 15 AZN/ay planlaşdırılır)</small></td>
                 <td><span class="yes">✓</span><span class="visually-hidden">Var</span></td>
                 <td><span class="yes">✓</span><span class="visually-hidden">Var</span></td>
                 <td><span class="yes">✓</span><span class="visually-hidden">Var</span></td>
-                <td><span class="yes">✓</span><span class="visually-hidden">Var</span></td>
+                <td>Demo</td>
               </tr>
             </tbody>
           </table>
@@ -647,54 +647,57 @@
         <div class="section-head">
           <span class="eyebrow">Qiymətlər</span>
           <h2 id="pricing-title">Qiymətlər</h2>
-          <p class="section-sub">Pulsuz başla, hazır olanda Premium-a keç.</p>
+          <p class="section-sub">Hazırda bütün imkanlar pulsuzdur.</p>
         </div>
+
+        <p class="demo-warning pricing-note" role="note">
+          <strong>Hazırkı vəziyyət</strong>
+          Ayda analiz limiti tətbiq edilmir və Premium heç bir bölməni kilidləmir. Premium düyməsi yalnız test kartı ilə demo ödəniş nümunəsini göstərir: pul çıxılmır, abunə yaranmır. Canlı vakansiyalar və real AI Mentor söhbəti hələ yoxdur.
+        </p>
 
         <div class="pricing">
           <!-- Pulsuz -->
           <article class="card price-card reveal">
             <h3 class="price-name">Pulsuz</h3>
-            <p class="price-desc">Başlamaq və platformanı tanımaq üçün.</p>
+            <p class="price-desc">Hazırda mövcud olan bütün imkanlar.</p>
             <p class="price-amount"><span>0</span> AZN</p>
             <ul class="price-features">
-              <li>Ayda 1 CV analizi</li>
+              <li>CV analizi (ayda limit tətbiq edilmir)</li>
               <li>Ümumi bal və 4 kateqoriya</li>
-              <li>Bacarıq boşluğu (qısa)</li>
-              <li>7 günlük plan</li>
+              <li>Bacarıq boşluğu</li>
+              <li>7/14/21 günlük plan</li>
+              <li>Analiz tarixçəsi (hesabla)</li>
             </ul>
             <a href="#cv-yoxla" class="btn btn-ghost btn-block">Pulsuz başla</a>
           </article>
 
           <!-- Premium Tələbə (vurğulanmış) -->
-          <article class="card price-card is-featured reveal" aria-label="Premium Tələbə — ən populyar plan">
-            <span class="price-badge">Ən Populyar</span>
+          <article class="card price-card is-featured reveal" aria-label="Premium Tələbə — planlaşdırılan plan, hazırda demo">
+            <span class="price-badge">Demo</span>
             <h3 class="price-name">Premium Tələbə</h3>
-            <p class="price-desc">İşə hazırlaşan tələbə üçün tam paket.</p>
+            <p class="price-desc">Planlaşdırılan plan. Hazırda yalnız demo ödəniş nümunəsi var.</p>
             <p class="price-amount"><span>15</span> AZN<small>/ay</small></p>
             <ul class="price-features">
-              <li>Limitsiz CV analizi</li>
-              <li>Tam bacarıq boşluğu</li>
-              <li>7/14/21 günlük planlar</li>
-              <li>Vakansiya uyğunluğu (%)</li>
-              <li>AI Mentor çatı</li>
-              <li>Analiz tarixçəsi</li>
+              <li>Hazırda pulsuz planda olan bütün imkanlar</li>
+              <li>Planlaşdırılır: canlı vakansiya uyğunluğu</li>
+              <li>Planlaşdırılır: real AI Mentor söhbəti</li>
+              <li>Hazırda ayrıca Premium imkanı yoxdur</li>
             </ul>
-            <button type="button" class="btn btn-primary btn-block" data-plan="premium">Premium-a keç</button>
+            <button type="button" class="btn btn-primary btn-block" data-plan="premium">Demo ödənişi sına</button>
           </article>
 
           <!-- Universitet Lisenziyası -->
           <article class="card price-card reveal">
             <h3 class="price-name">Universitet Lisenziyası</h3>
-            <p class="price-desc">Universitet və karyera mərkəzləri üçün illik B2B lisenziya.</p>
+            <p class="price-desc">Universitet və karyera mərkəzləri üçün planlaşdırılan lisenziya. Şərtlər hələ təsdiqlənməyib.</p>
             <p class="price-amount price-amount-text">Fərdi təklif</p>
-            <p class="price-pilot"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg> İlk pilot pulsuz</p>
+            <p class="price-pilot"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg> Pilot şərtləri hələ yoxdur</p>
             <ul class="price-features">
-              <li>Bütün tələbələr üçün Premium</li>
-              <li>Karyera mərkəzi üçün idarə paneli</li>
-              <li>Toplu hesabatlar və statistika</li>
-              <li>Təlim və dəstək</li>
+              <li>Planlaşdırılır: bütün tələbələr üçün giriş</li>
+              <li>Planlaşdırılır: karyera mərkəzi üçün idarə paneli</li>
+              <li>Planlaşdırılır: toplu hesabatlar</li>
             </ul>
-            <a href="#terefdasliq" class="btn btn-ghost btn-block">Əlaqə saxla</a>
+            <a href="#terefdasliq" class="btn btn-ghost btn-block">Tərəfdaşlıq statusuna bax</a>
           </article>
         </div>
       </div>
@@ -761,7 +764,7 @@
             </h3>
             <div class="faq-a" id="faq-a4" role="region" aria-labelledby="faq-q4">
               <div class="faq-a-inner">
-                <p>Pulsuz versiyada ayda 1 analiz, ümumi bal və 7 günlük plan var. Premium (aylıq 15 AZN) limitsiz analiz, tam bacarıq boşluğu, 14 və 21 günlük planlar, vakansiya uyğunluğu və AI Mentor çatını açır.</p>
+                <p>Hazırda funksional fərq yoxdur: ayda analiz limiti tətbiq edilmir və bütün bölmələr hər hesabda açıqdır. Premium (planlaşdırılan qiymət: aylıq 15 AZN) hələ satışda deyil; saytdakı ödəniş yalnız test kartı ilə demo nümunədir və yeni imkan açmır. Canlı vakansiyalar və real AI Mentor söhbəti hələ yoxdur: vakansiyalar nümunədir, mentor isə açar sözlərə görə hazır məsləhətlər verir.</p>
               </div>
             </div>
           </div>
@@ -769,13 +772,13 @@
           <div class="faq-item">
             <h3 class="faq-q">
               <button type="button" class="faq-btn" aria-expanded="false" aria-controls="faq-a5" id="faq-q5">
-                Universitetlər necə qoşulur?
+                Universitetlər necə qoşula bilər?
                 <span class="faq-icon" aria-hidden="true"></span>
               </button>
             </h3>
             <div class="faq-a" id="faq-a5" role="region" aria-labelledby="faq-q5">
               <div class="faq-a-inner">
-                <p>Universitetlər və karyera mərkəzləri illik lisenziya ilə bütün tələbələrinə Premium verə bilər. İlk pilot pulsuzdur — aşağıdakı Tərəfdaşlıq formunu doldurun, sizinlə əlaqə saxlayaq.</p>
+                <p>Universitet lisenziyası və tərəfdaşlıq proqramı hələ hazırlanır, şərtləri təsdiqlənməyib. Saytda işləyən müraciət kanalı yoxdur: aşağıdakı Tərəfdaşlıq forması hələ heç yerə göndərmir.</p>
               </div>
             </div>
           </div>
@@ -803,7 +806,7 @@
             </h3>
             <div class="faq-a" id="faq-a7" role="region" aria-labelledby="faq-q7">
               <div class="faq-a-inner">
-                <p>Bu demo versiyada CV faylın heç yerə göndərilmir, yalnız sənin brauzerində qalır. Real versiyada məlumatlar şifrələnmiş şəkildə saxlanacaq, üçüncü tərəflərə verilməyəcək və istədiyin vaxt silinə biləcək.</p>
+                <p id="faq-privacy-answer">Bu demo rejimdə (fayl kimi açılanda və ya server tapılmayanda) CV faylın serverə və AI-yə göndərilmir, analiz nümayiş üçündür. Fayl adı, nəticə və hesab məlumatı yalnız bu brauzerin yaddaşında (localStorage) qalır və brauzer məlumatını təmizləməklə silinir. Server rejimində (sayt backend tərəfindən açılanda) CV analiz üçün serverə və Gemini-yə göndərilir; bu rejimin qaydaları sayt backend ilə açılanda göstərilir.</p>
               </div>
             </div>
           </div>
@@ -817,22 +820,23 @@
         <div class="partner reveal">
           <div class="partner-text">
             <span class="partner-label">Tərəfdaşlıq</span>
-            <h2 id="partner-title">Universitet, akademiya və ya kampus səfiri olun</h2>
-            <p>Tələbələrinizə AI karyera mentoru verin. Universitetlər üçün ilk pilot pulsuzdur, kampus səfirləri isə Premium-u hədiyyə alır.</p>
+            <h2 id="partner-title">Tərəfdaşlıq proqramı hazırlanır</h2>
+            <p>Universitet, akademiya və kampus səfirləri ilə əməkdaşlıq planlaşdırılır. Pilot şərtləri və səfir imtiyazları hələ təsdiqlənməyib.</p>
+            <p class="form-note partner-note" id="partner-note" role="note"><strong>Bu forma hələ işləmir.</strong> Yazdıqların heç yerə göndərilmir və saxlanmır. İşlək əlaqə kanalı əlavə olunanda müraciət buradan açılacaq.</p>
           </div>
 
           <form class="partner-form" id="partner-form" novalidate>
             <div class="field">
               <label class="field-label" for="partner-name">Ad / Təşkilat</label>
-              <input type="text" id="partner-name" class="input" autocomplete="organization" aria-describedby="partner-name-error">
+              <input type="text" id="partner-name" class="input" autocomplete="organization" disabled aria-describedby="partner-note partner-name-error">
               <p class="field-error" id="partner-name-error" role="alert"></p>
             </div>
             <div class="field">
               <label class="field-label" for="partner-email">E-poçt</label>
-              <input type="email" id="partner-email" class="input" autocomplete="email" aria-describedby="partner-email-error">
+              <input type="email" id="partner-email" class="input" autocomplete="email" disabled aria-describedby="partner-note partner-email-error">
               <p class="field-error" id="partner-email-error" role="alert"></p>
             </div>
-            <button type="submit" class="btn btn-light btn-block">Müraciət göndər</button>
+            <button type="submit" class="btn btn-light btn-block" disabled>Müraciət hələ qəbul edilmir</button>
           </form>
         </div>
       </div>
@@ -850,11 +854,12 @@
         </a>
         <p class="footer-desc">Tələbə və gənc məzunlar üçün Azərbaycan dilində AI karyera mentoru.</p>
         <form class="newsletter" id="newsletter-form" novalidate>
-          <label class="footer-title" for="newsletter-email">Bülletenə abunə ol</label>
+          <label class="footer-title" for="newsletter-email">Bülleten (hazırlanır)</label>
           <div class="newsletter-row">
-            <input type="email" id="newsletter-email" class="input" placeholder="E-poçt ünvanın" autocomplete="email">
-            <button type="submit" class="btn btn-primary">Abunə ol</button>
+            <input type="email" id="newsletter-email" class="input" placeholder="E-poçt ünvanın" autocomplete="email" disabled aria-describedby="newsletter-note">
+            <button type="submit" class="btn btn-primary" disabled>Tezliklə</button>
           </div>
+          <p class="form-note newsletter-note" id="newsletter-note">Bülleten hələ işləmir: e-poçtun göndərilmir, saxlanmır və abunə yaranmır.</p>
         </form>
       </div>
 
@@ -929,6 +934,7 @@
           </div>
           <p class="field-error" id="login-pass-error" role="alert"></p>
         </div>
+        <p class="form-notice" id="login-notice" role="status"></p>
         <p class="form-error" id="login-error" role="alert"></p>
         <button type="submit" class="btn btn-primary btn-block">Daxil ol</button>
         <p class="auth-switch">Hesabın yoxdur? <button type="button" class="link-btn auth-switch-btn" data-tab="tab-register">Qeydiyyatdan keç</button></p>
@@ -1003,61 +1009,43 @@
     </div>
 
     <p class="demo-warning" role="note">
-      <strong><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg> DEMO — real kart məlumatı daxil etməyin.</strong>
-      Bu, prototipdir: heç bir ödəniş alınmır və yazdıqların heç yerə göndərilmir, saxlanmır.
+      <strong><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg> DEMO — kart məlumatı daxil etmə.</strong>
+      Bu pəncərədə kart sahəsi yoxdur: yalnız test kartı ilə ödənişin nümunəsi göstərilir. Pul çıxılmır, real abunə yaranmır və yeni imkan açılmır.
     </p>
 
-    <!-- Ödəniş forması -->
+    <!-- Ödəniş nümunəsi -->
     <div id="pay-step-form">
       <div class="pay-summary">
         <div>
-          <p class="pay-plan">Premium Tələbə</p>
-          <p class="pay-plan-note">Limitsiz analiz · 7/14/21 günlük planlar · AI Mentor</p>
+          <p class="pay-plan">Premium Tələbə (demo)</p>
+          <p class="pay-plan-note">Planlaşdırılan plan · hazırda ayrıca imkan açmır</p>
         </div>
         <p class="pay-price"><strong>15</strong> AZN<small>/ay</small></p>
       </div>
 
-      <button type="button" class="btn btn-ghost btn-block pay-test-btn" id="pay-test"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2h12.4a1.5 1.5 0 0 0 1.3-2L14 9V3"/></svg> Test kartı ilə doldur</button>
-
       <form class="auth-form" id="pay-form" novalidate autocomplete="off">
-        <div class="field">
-          <label class="field-label" for="pay-name">Kart sahibinin adı</label>
-          <input type="text" id="pay-name" class="input" autocomplete="off" placeholder="AD SOYAD" aria-describedby="pay-name-error">
-          <p class="field-error" id="pay-name-error" role="alert"></p>
-        </div>
-        <div class="field">
-          <label class="field-label" for="pay-number">Kart nömrəsi</label>
-          <input type="text" id="pay-number" class="input" inputmode="numeric" autocomplete="off" maxlength="19" placeholder="0000 0000 0000 0000" aria-describedby="pay-number-error">
-          <p class="field-error" id="pay-number-error" role="alert"></p>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label class="field-label" for="pay-exp">Son istifadə tarixi</label>
-            <input type="text" id="pay-exp" class="input" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="AA/İİ" aria-describedby="pay-exp-error">
-            <p class="field-error" id="pay-exp-error" role="alert"></p>
-          </div>
-          <div class="field">
-            <label class="field-label" for="pay-cvv">CVV</label>
-            <input type="password" id="pay-cvv" class="input" inputmode="numeric" autocomplete="off" maxlength="3" placeholder="•••" aria-describedby="pay-cvv-error">
-            <p class="field-error" id="pay-cvv-error" role="alert"></p>
-          </div>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block" id="pay-submit">15 AZN ödə (DEMO)</button>
-        <p class="form-note">Demo rejim: real abunəlik yaranmır, kartdan pul çıxılmır.</p>
+        <dl class="pay-test-card" aria-label="Test kartı nümunəsi">
+          <div><dt>Kart</dt><dd>Test kartı (real kart deyil)</dd></div>
+          <div><dt>Nömrə</dt><dd>4242 4242 4242 4242</dd></div>
+          <div><dt>Müddət</dt><dd>12/28</dd></div>
+          <div><dt>CVV</dt><dd>123</dd></div>
+        </dl>
+        <button type="submit" class="btn btn-primary btn-block" id="pay-submit">Test kartı ilə demo ödənişi tamamla</button>
+        <p class="form-note">Demo rejim: kartdan pul çıxılmır, real abunəlik yaranmır.</p>
       </form>
     </div>
 
     <!-- Emal olunur -->
     <div class="pay-step pay-processing" id="pay-step-processing" hidden>
       <span class="loader-spinner" aria-hidden="true"></span>
-      <p role="status">Ödəniş emal olunur… (DEMO)</p>
+      <p role="status">Demo ödəniş nümunəsi emal olunur…</p>
     </div>
 
     <!-- Uğurlu -->
     <div class="pay-step pay-success" id="pay-step-success" hidden>
       <span class="pay-success-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4 12 14l-3-3"/></svg></span>
-      <h3>Premium aktivləşdi!</h3>
-      <p>Bu demo ödənişdir — heç bir pul çıxılmayıb. İndi bütün Premium imkanlarından istifadə edə bilərsən.</p>
+      <h3>Demo ödəniş tamamlandı</h3>
+      <p>Heç bir pul çıxılmayıb və real abunə yaranmayıb. Bu qeyd yalnız bu brauzerdə saxlanır; yeni imkan açılmır, bütün bölmələr əvvəlcədən açıqdır.</p>
       <button type="button" class="btn btn-primary btn-block" id="pay-done">Davam et</button>
     </div>
   </dialog>
@@ -1072,7 +1060,7 @@
       <span class="chat-avatar" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="12" rx="3"/><path d="M12 4v4M9 14h.01M15 14h.01"/></svg></span>
       <div class="chat-head-text">
         <h2 class="chat-title" id="chat-title">AI Mentor</h2>
-        <p class="chat-sub">Demo · açar sözlərə görə hazır cavablar</p>
+        <p class="chat-sub">Demo · AI deyil, açar sözlərə görə hazır cavablar. Yazdıqların serverə göndərilmir.</p>
       </div>
       <button type="button" class="modal-close chat-close" id="chat-close" aria-label="Çatı bağla"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>

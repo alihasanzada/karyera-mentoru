@@ -1,4 +1,7 @@
 const MAX_MB = 5;
+// Same wording as the server-mode note on the /dizayn/ page
+const CV_PRIVACY_NOTE =
+  "Analiz üçün PDF serverə göndərilir. PDF-in özü daimi saxlanmır, lakin ondan çıxarılan mətnin ilk 15 000 simvolu analiz üçün Gemini-yə ötürülə bilər. Analiz nəticəsi, fayl adı və CV-dən götürülən sitatlar tarixçədə (ən son 50 nəticə), fayl adı olmadan isə analiz keşində qala bilər. Saytda silmə düyməsi yoxdur; ətraflı məlumat FAQ-dadır.";
 
 const state = { fields: [], history: [], latest: null, current: null, evaluating: false, user: null };
 let routeToken = 0;
@@ -452,7 +455,7 @@ async function renderCV() {
     <div class="${CARD} p-5 space-y-4">
       <div>
         <label class="block text-sm font-medium mb-1">CV (PDF, maksimum ${MAX_MB} MB)</label>
-        <input id="cv-file" type="file" accept="application/pdf,.pdf" class="block w-full text-sm border border-slate-300 rounded-lg p-2 bg-white">
+        <input id="cv-file" type="file" accept="application/pdf,.pdf" aria-describedby="cv-privacy" class="block w-full text-sm border border-slate-300 rounded-lg p-2 bg-white">
       </div>
       <div>
         <label class="block text-sm font-medium mb-1">İxtisas</label>
@@ -461,6 +464,7 @@ async function renderCV() {
         </select>
       </div>
       <button id="cv-run" ${state.evaluating ? "disabled" : ""} class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-medium">Analiz et</button>
+      <p id="cv-privacy" class="text-xs text-slate-500">${CV_PRIVACY_NOTE}</p>
       <p id="cv-status" class="text-sm" aria-live="polite">${state.evaluating ? "AI analiz edir..." : ""}</p>
     </div>
     <div id="cv-result" class="mt-6">${renderResult(shown)}</div>`;
