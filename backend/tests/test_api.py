@@ -2,7 +2,10 @@ import asyncio
 import json
 from unittest.mock import AsyncMock
 
+import httpx
 import pytest
+from google import genai
+from google.genai import types
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
@@ -151,6 +154,44 @@ def test_plan_progress_isolation_and_legacy_preservation(api, evaluation, monkey
     assert client.delete(f"/api/history/{daily_id}", cookies=first).status_code == 200
     with factory() as db:
         assert db.scalars(select(RoadmapCompletion)).all() == []
+
+
+def test_empty_generated_roadmap_is_not_saved_and_can_be_retried(api, evaluation, monkeypatch):
+    client, factory = api
+    owner = signup(client, "roadmap-retry@example.com")
+    with factory() as db:
+        evaluation_id = history.save_record(db, "user-1", "evaluation", "cv.pdf", evaluation)
+    url = f"/api/roadmap/{evaluation_id}"
+    valid = plan_payload("day", (1, 8, 15))
+    empty_phase = {**valid, "foundation": {**valid["foundation"], "tasks": []}}
+    responses = iter([empty_phase, valid])
+
+    def respond(request):
+        assert request.url.path.endswith(":generateContent")
+        return httpx.Response(200, json={"candidates": [{
+            "content": {"role": "model", "parts": [{"text": json.dumps(next(responses))}]},
+            "finishReason": "STOP",
+        }]})
+
+    transport = httpx.AsyncClient(transport=httpx.MockTransport(respond), trust_env=False)
+    sdk = genai.Client(api_key="test-placeholder", vertexai=False,
+                       http_options=types.HttpOptions(httpx_async_client=transport))
+    monkeypatch.setattr(ai_analyzer, "_client", sdk)
+    monkeypatch.setattr(ai_analyzer.settings, "gemini_models", "test-model")
+    monkeypatch.setattr(ai_analyzer, "ROUNDS", 1)
+    try:
+        assert client.post(url, cookies=owner).status_code == 502
+        assert not client.get(url, cookies=owner).json()["generated"]
+        with factory() as db:
+            assert db.scalar(select(RoadmapRecord)) is None
+        generated = client.post(url, cookies=owner)
+        assert generated.status_code == 200
+        assert generated.json()["generated"]
+        assert [phase["tasks"][0]["day"] for phase in generated.json()["roadmap"]] == [1, 8, 15]
+        assert client.get(url, cookies=owner).json() == generated.json()
+    finally:
+        client.portal.call(sdk.aio.aclose)
+        sdk.close()
 
 
 def test_mentor_minimizes_context_and_handles_provider_errors(api, evaluation, monkeypatch):

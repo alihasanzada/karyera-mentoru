@@ -1,5 +1,8 @@
 import json
 from pathlib import Path
+from typing import Self
+
+from pydantic import model_validator
 
 from app.models.schemas import (
     CareerGap,
@@ -27,6 +30,16 @@ PHASES = {
     "practice": ("Təcrübə", "8-14", 8, 14),
     "interview": ("Müsahibəyə hazırlıq", "15-21", 15, 21),
 }
+
+class GeneratedRoadmap(RoadmapLLMOutput):
+    """Require actionable phases on new results while reading saved plans as before."""
+
+    @model_validator(mode="after")
+    def require_tasks_in_every_phase(self) -> Self:
+        if any(not getattr(self, phase).tasks for phase in PHASES):
+            raise ValueError("Each generated phase must contain at least one task.")
+        return self
+
 
 LEGACY_PHASES = {
     "foundation": ("1-30", 1, 4),
@@ -154,4 +167,4 @@ async def generate_roadmap_plan(evaluation: EvaluationResponse) -> RoadmapLLMOut
         ],
     }
     contents = f"<profile>\n{json.dumps(payload, ensure_ascii=False, indent=2)}\n</profile>\n\nHazırla."
-    return await generate_structured(ROADMAP_PROMPT, contents, RoadmapLLMOutput)
+    return await generate_structured(ROADMAP_PROMPT, contents, GeneratedRoadmap)
