@@ -9,6 +9,7 @@ logging.getLogger("pdfminer").setLevel(logging.ERROR)
 PAGE_MARKER = re.compile(
     r"^\s*(?:Səhifə|Page|Seite|Стр\.?)\s*\d+\s*(?:/|of|из)\s*\d+\s*$", re.IGNORECASE
 )
+MAX_PDF_PAGES = 20
 
 
 class PDFParseError(Exception):
@@ -27,8 +28,12 @@ def extract_text_from_pdf(file_bytes: bytes) -> tuple[str, int]:
     try:
         with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
             page_count = len(pdf.pages)
+            if page_count > MAX_PDF_PAGES:
+                raise PDFParseError(f"CV maksimum {MAX_PDF_PAGES} səhifə ola bilər.")
             for page in pdf.pages:
                 pages_text.append(page.extract_text() or "")
+    except PDFParseError:
+        raise
     except Exception as e:
         raise PDFParseError("PDF faylını oxumaq mümkün olmadı.") from e
 

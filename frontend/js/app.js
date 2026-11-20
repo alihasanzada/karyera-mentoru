@@ -209,7 +209,11 @@ function renderAuth(signup = false, notice = "") {
       </div>` : "";
   const signupTail = signup ? `
       <label class="block text-sm">Şifrə təkrarı<input name="password2" type="password" autocomplete="new-password" required minlength="${MIN_PASSWORD}" maxlength="128" class="${INPUT_CLS}"></label>
-      <label class="block text-sm">İxtisas<select name="specialty_id" required class="${INPUT_CLS}"><option value="">Yüklənir...</option></select></label>
+      <div class="text-sm">
+        <label for="signup-specialty">İxtisas</label>
+        <input id="signup-specialty-search" type="search" aria-label="İxtisas axtar" aria-controls="signup-specialty" placeholder="İxtisas axtar" class="${INPUT_CLS}">
+        <select id="signup-specialty" name="specialty_id" required class="${INPUT_CLS}"><option value="">Yüklənir...</option></select>
+      </div>
       <label class="flex items-start gap-2 text-sm"><input name="consent" type="checkbox" required class="mt-1 h-4 w-4 accent-indigo-600">
         <span>CV məlumatlarımın analiz üçün emal olunmasına razıyam.</span></label>` : "";
   $("view").innerHTML = `<div class="max-w-md mx-auto mt-12 ${CARD} p-8">
@@ -232,7 +236,9 @@ function renderAuth(signup = false, notice = "") {
   if (signup) {
     loadFields().then((fields) => {
       const select = $("auth-form") && $("auth-form").elements.specialty_id;
-      if (select) select.innerHTML = `<option value="">İxtisasını seç</option>` + specialtyOptions(fields);
+      if (select && typeof bindSpecialtySearch === "function") {
+        bindSpecialtySearch($("signup-specialty-search"), select, fields, "");
+      }
     }).catch((e) => { if ($("auth-error")) $("auth-error").textContent = e.message; });
   }
 
@@ -455,16 +461,22 @@ async function renderCV() {
         <input id="cv-file" type="file" accept="application/pdf,.pdf" class="block w-full text-sm border border-slate-300 rounded-lg p-2 bg-white">
       </div>
       <div>
-        <label class="block text-sm font-medium mb-1">İxtisas</label>
+        <label for="cv-field" class="block text-sm font-medium mb-1">İxtisas</label>
+        <input id="cv-specialty-search" type="search" aria-label="İxtisas axtar" aria-controls="cv-field" placeholder="İxtisas axtar" class="${INPUT_CLS} mb-1">
         <select id="cv-field" class="block w-full border border-slate-300 rounded-lg p-2 text-sm bg-white">
           ${specialtyOptions(fields, (shown && shown.field_id) || state.user.specialty_id)}
         </select>
       </div>
+      <label class="flex gap-2 text-sm">
+        <input id="cv-consent" type="checkbox" class="h-4 w-4 accent-indigo-600">
+        <span>CV mətninin analiz üçün Gemini-yə göndərilməsinə razıyam.</span>
+      </label>
       <button id="cv-run" ${state.evaluating ? "disabled" : ""} class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-medium">Analiz et</button>
       <p id="cv-status" class="text-sm" aria-live="polite">${state.evaluating ? "AI analiz edir..." : ""}</p>
     </div>
     <div id="cv-result" class="mt-6">${renderResult(shown)}</div>`;
 
+  bindSpecialtySearch($("cv-specialty-search"), $("cv-field"), fields, (shown && shown.field_id) || state.user.specialty_id);
   $("cv-run").addEventListener("click", runEvaluate);
 }
 
@@ -481,6 +493,8 @@ async function runEvaluate() {
   if (!file) return setCvStatus("Əvvəlcə PDF faylı seç.", true);
   if (!file.name.toLowerCase().endsWith(".pdf")) return setCvStatus("Yalnız PDF faylı qəbul olunur.", true);
   if (file.size > MAX_MB * 1024 * 1024) return setCvStatus(`Fayl çox böyükdür (maksimum ${MAX_MB} MB).`, true);
+  if (!$("cv-field").value) return setCvStatus("İxtisasını siyahıdan seç.", true);
+  if (!$("cv-consent").checked) return setCvStatus("Analiz üçün CV məlumatlarının emalına razılıq ver.", true);
 
   const form = new FormData();
   form.append("file", file);
@@ -527,14 +541,19 @@ async function renderProfile() {
     <form id="profile-form" class="${CARD} p-5 grid gap-4 sm:grid-cols-2 max-w-2xl">
       <label class="block text-sm">Ad<input name="first_name" required minlength="2" maxlength="60" value="${esc(u.first_name)}" class="${INPUT_CLS}"></label>
       <label class="block text-sm">Soyad<input name="last_name" required minlength="2" maxlength="60" value="${esc(u.last_name)}" class="${INPUT_CLS}"></label>
-      <label class="block text-sm sm:col-span-2">İxtisas<select name="specialty_id" required class="${INPUT_CLS}">
-        ${u.specialty_id ? "" : '<option value="">İxtisasını seç</option>'}${specialtyOptions(fields, u.specialty_id)}</select></label>
+      <div class="text-sm sm:col-span-2">
+        <label for="profile-specialty">İxtisas</label>
+        <input id="profile-specialty-search" type="search" aria-label="İxtisas axtar" aria-controls="profile-specialty" placeholder="İxtisas axtar" class="${INPUT_CLS}">
+        <select id="profile-specialty" name="specialty_id" required class="${INPUT_CLS}"></select>
+      </div>
       <p class="text-sm text-slate-500 sm:col-span-2">E-poçt: ${esc(u.email)}</p>
+      <a class="text-indigo-700 underline text-sm sm:col-span-2" href="/dizayn/#kabinet">Ətraflı profil və CV-dən bacarıq təklifləri</a>
       <div class="sm:col-span-2 flex items-center gap-3">
         <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-medium">Yadda saxla</button>
         <p id="profile-error" role="alert" class="text-sm text-red-600"></p>
       </div>
     </form>`;
+  bindSpecialtySearch($("profile-specialty-search"), $("profile-specialty"), fields, u.specialty_id);
   $("profile-form").addEventListener("submit", async (ev) => {
     ev.preventDefault();
     const f = ev.currentTarget.elements;
@@ -575,9 +594,11 @@ const ROUTES = {
   applications: { label: "Müraciətlər", render: renderApplications },
   profile: { label: "Profil", render: renderProfile },
   mentor: {
-    label: "AI Mentor", soon: true,
-    render: () => renderPlaceholder("mentor", "AI Mentor", "İnteraktiv karyera çatı",
-      ["CV nəticələrinə əsasən sual-cavab", "Müsahibə hazırlığı", "Fərdi karyera məsləhəti"]),
+    label: "AI Mentor",
+    render: () => {
+      $("view").innerHTML = pageHeader("AI Mentor", "CV nəticələrin və inkişaf planın əsasında karyera məsləhəti") +
+        `<a href="/dizayn/#ai-mentor" class="inline-block rounded-lg bg-indigo-600 px-5 py-2.5 text-white">Mentor çatını aç</a>`;
+    },
   },
 };
 

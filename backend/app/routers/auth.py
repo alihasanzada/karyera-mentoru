@@ -6,13 +6,16 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field, StringConstraints, field_validator
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.db.db_models import LoginSession, User
+from app.db.profile_migration import has_legacy_design_columns
 from app.deps import current_user
+from app.models.schemas import ProfileInput
+from app.routers.profile import load_profile, store_profile
 from app.services.matcher import ROLES
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
@@ -62,14 +65,29 @@ class ProfileUpdate(BaseModel):
         return None if value is None else _known_specialty(value)
 
 
-def _public(user: User) -> dict:
-    return {"id": user.id, "email": user.email, "first_name": user.first_name,
-            "last_name": user.last_name, "specialty_id": user.specialty_id}
+def _public(user: User, profile: ProfileInput) -> dict:
+    return {"id": user.id, "email": user.email, "first_name": profile.name,
+            "last_name": profile.surname, "specialty_id": profile.field_id}
 
 
 def _hash_password(password: str, salt: bytes) -> str:
     digest = scrypt(password.encode(), salt=salt, n=16384, r=8, p=1, dklen=32)
     return salt.hex() + ":" + digest.hex()
+
+
+def _create_user(db: Session, email: str, password_hash: str) -> User:
+    if has_legacy_design_columns(db.connection()):
+        # Some design databases have NOT NULL legacy columns without server defaults.
+        user_id = db.execute(text(
+            "INSERT INTO users (email, password_hash, created_at, first_name, last_name, specialty_id) "
+            "VALUES (:email, :password_hash, :created_at, '', '', '') RETURNING id"
+        ), {"email": email, "password_hash": password_hash,
+            "created_at": datetime.now(timezone.utc).replace(tzinfo=None)}).scalar_one()
+        return db.get(User, user_id)
+    user = User(email=email, password_hash=password_hash)
+    db.add(user)
+    db.flush()
+    return user
 
 
 def _login(response: Response, request: Request, db: Session, user: User):
@@ -79,22 +97,22 @@ def _login(response: Response, request: Request, db: Session, user: User):
     db.commit()
     response.set_cookie("session", token, max_age=SESSION_DAYS * 86400,
                         httponly=True, secure=request.url.scheme == "https", samesite="strict", path="/")
-    return _public(user)
+    return _public(user, load_profile(db, user.id))
 
 
 @router.post("/signup", status_code=201)
 def signup(data: SignupData, db: Session = Depends(get_db)):
-    user = User(email=data.email, password_hash=_hash_password(data.password, secrets.token_bytes(16)),
-                first_name=data.first_name, last_name=data.last_name, specialty_id=data.specialty_id)
-    db.add(user)
+    profile = ProfileInput(name=data.first_name, surname=data.last_name, field_id=data.specialty_id)
     try:
+        user = _create_user(db, data.email, _hash_password(data.password, secrets.token_bytes(16)))
+        store_profile(db, user.id, profile)
         db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="Bu e-poçt artıq qeydiyyatdan keçib.")
     db.refresh(user)
     # No session here: the user signs in explicitly after creating the account.
-    return _public(user)
+    return _public(user, profile)
 
 
 @router.post("/login")
@@ -110,17 +128,19 @@ def login(data: Credentials, response: Response, request: Request, db: Session =
 
 
 @router.get("/me")
-def me(user: User = Depends(current_user)):
-    return _public(user)
+def me(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    return _public(user, load_profile(db, user.id))
 
 
 @router.patch("/me")
 def update_me(data: ProfileUpdate, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    for field, value in data.model_dump(exclude_none=True).items():
-        setattr(user, field, value)
+    profile = load_profile(db, user.id)
+    names = {"first_name": "name", "last_name": "surname", "specialty_id": "field_id"}
+    updates = {names[key]: value for key, value in data.model_dump(exclude_none=True).items()}
+    updated = profile.model_copy(update=updates)
+    store_profile(db, user.id, updated)
     db.commit()
-    db.refresh(user)
-    return _public(user)
+    return _public(user, updated)
 
 
 @router.post("/logout")

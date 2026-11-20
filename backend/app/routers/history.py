@@ -1,13 +1,14 @@
 import json
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.db_models import AnalysisRecord, RoadmapRecord
+from app.db.db_models import AnalysisRecord
 from app.deps import get_client_id
 from app.models.schemas import HistoryDetail, HistoryItem
+from app.services.history import delete_roadmaps
 
 router = APIRouter(prefix="/api/history", tags=["History"])
 
@@ -54,10 +55,7 @@ def get_history(record_id: int, client_id: str = Depends(get_client_id), db: Ses
 @router.delete("/{record_id}")
 def delete_history(record_id: int, client_id: str = Depends(get_client_id), db: Session = Depends(get_db)):
     r = _get_own(db, client_id, record_id)
-    db.execute(delete(RoadmapRecord).where(
-        RoadmapRecord.client_id == client_id,
-        RoadmapRecord.evaluation_id == record_id,
-    ))
+    delete_roadmaps(db, client_id, [record_id])
     db.delete(r)
     db.commit()
     return {"deleted": record_id}

@@ -1,27 +1,33 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import inspect, text
 
 from app.config import BASE_DIR, settings
 from app.db import db_models  # noqa: F401  (registers ORM tables on Base.metadata)
 from app.db.database import Base, engine
-from app.routers import applications, auth, cv, evaluate, history, match, roadmap
+from app.db.profile_migration import backfill_design_profiles
+from app.routers import applications, auth, cv, evaluate, history, match, mentor, profile, roadmap
+from app.services.request_limits import BetaRequestLimits
 
 Base.metadata.create_all(bind=engine)
+backfill_design_profiles(engine)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.request_limits = BetaRequestLimits()
+    yield
 
 
-def _add_missing_user_columns() -> None:
-    # create_all does not alter existing tables; add profile columns to older databases.
-    existing = {c["name"] for c in inspect(engine).get_columns("users")}
-    with engine.begin() as conn:
-        for name in ("first_name", "last_name", "specialty_id"):
-            if name not in existing:
-                conn.execute(text(f"ALTER TABLE users ADD COLUMN {name} VARCHAR NOT NULL DEFAULT ''"))
+app = FastAPI(title=settings.app_name, version="0.7.0", lifespan=lifespan)
+app.state.request_limits = BetaRequestLimits()
 
 
-_add_missing_user_columns()
+@app.middleware("http")
+async def limit_requests(request, call_next):
+    return await app.state.request_limits(request, call_next)
 
-app = FastAPI(title=settings.app_name, version="0.7.0")
+
 app.include_router(auth.router)
 app.include_router(cv.router)
 app.include_router(match.router)
@@ -29,6 +35,8 @@ app.include_router(history.router)
 app.include_router(evaluate.router)
 app.include_router(roadmap.router)
 app.include_router(applications.router)
+app.include_router(profile.router)
+app.include_router(mentor.router)
 
 
 @app.get("/health")

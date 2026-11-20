@@ -159,6 +159,13 @@ class DailyTask(BaseModel):
     deliverable: str = Field(description="Measurable output of the task")
 
 
+class LegacyWeeklyTask(BaseModel):
+    week: int
+    title: str
+    details: str
+    deliverable: str
+
+
 class PhasePlan(BaseModel):
     goal: str
     milestone: str
@@ -171,6 +178,20 @@ class RoadmapLLMOutput(BaseModel):
     foundation: PhasePlan
     practice: PhasePlan
     interview: PhasePlan
+
+
+class LegacyPhasePlan(BaseModel):
+    goal: str
+    milestone: str
+    tasks: list[LegacyWeeklyTask]
+
+
+class LegacyRoadmapOutput(BaseModel):
+    summary: str
+    gaps: list[GapInsight]
+    foundation: LegacyPhasePlan
+    practice: LegacyPhasePlan
+    interview: LegacyPhasePlan
 
 
 class GapSkill(BaseModel):
@@ -195,7 +216,7 @@ class RoadmapPhaseResult(BaseModel):
     days: str
     goal: str
     milestone: str
-    tasks: list[DailyTask]
+    tasks: list[DailyTask | LegacyWeeklyTask]
 
 
 class RoadmapResponse(BaseModel):
@@ -206,6 +227,40 @@ class RoadmapResponse(BaseModel):
     summary: str
     career_gap: CareerGap
     roadmap: list[RoadmapPhaseResult]
+    format: Literal["daily", "legacy_weekly"] = "daily"
+    completed_task_ids: list[str] = Field(default_factory=list)
+
+
+class CompletionUpdate(BaseModel):
+    completed: bool
+
+
+ProfileName = Annotated[str, StringConstraints(strip_whitespace=True, max_length=60)]
+SkillName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=60)]
+
+
+class ProfileInput(BaseModel):
+    name: ProfileName = ""
+    surname: ProfileName = ""
+    field_id: str = Field(default="", max_length=64)
+    education: str = Field(default="", max_length=240)
+    interests: str = Field(default="", max_length=240)
+    skills: list[SkillName] = Field(default_factory=list, max_length=24)
+
+
+class MentorTurn(BaseModel):
+    question: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=600)]
+    answer: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2400)]
+
+
+class MentorRequest(BaseModel):
+    question: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=600)]
+    evaluation_id: int | None = Field(default=None, gt=0)
+    history: list[MentorTurn] = Field(default_factory=list, max_length=3)
+
+
+class MentorReply(BaseModel):
+    answer: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2400)]
 
 
 # --- Applications tracker ---

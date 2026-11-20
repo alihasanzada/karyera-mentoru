@@ -201,8 +201,9 @@ function showToast(message, type = "success") {
 // ===== API rejimi (backend ilə əlaqə) =====
 // Sayt backend tərəfindən açılanda (http://…/dizayn/) real API istifadə olunur:
 // qeydiyyat/giriş, CV analizi, tarixçə və 7/14/21 günlük plan.
-// Fayl kimi açılanda (file://) və ya backend cavab vermədikdə demo rejim qalır.
-let apiMode = false;
+// Yalnız fayl kimi açılanda (file://) prototip məlumatı işləyir.
+const apiMode = location.protocol !== "file:";
+document.documentElement.classList.toggle("api-mode", apiMode);
 let apiChecked = false;
 let apiUser = null; // {id, email, name, surname, major, premium}
 let apiFields = []; // /api/match/fields
@@ -217,6 +218,7 @@ class ApiError extends Error {
 }
 
 async function api(path, options = {}, timeoutMs = 60000) {
+  const owner = apiUser;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -226,8 +228,14 @@ async function api(path, options = {}, timeoutMs = 60000) {
       try {
         const data = await res.json();
         if (typeof data.detail === "string") message = data.detail;
+        else if (res.status === 422) message = "Daxil etdiyin məlumatın formatını və uzunluğunu yoxla.";
       } catch (error) {
         // Cavab JSON deyil — ümumi mesaj qalır
+      }
+      if (res.status === 401 && owner && apiUser?.id === owner.id && !path.startsWith("/api/auth/")) {
+        clearAccountState();
+        renderUser();
+        updateView();
       }
       throw new ApiError(message, res.status);
     }
@@ -241,51 +249,34 @@ async function api(path, options = {}, timeoutMs = 60000) {
   }
 }
 
-function postJson(path, body) {
+function sendJson(path, body, method = "POST", timeoutMs) {
   return api(path, {
-    method: "POST",
+    method,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  });
+  }, timeoutMs);
 }
 
-// Backend varmı? (/health)
-const apiReady = (async () => {
-  if (location.protocol === "file:") return false;
-  try {
-    const health = await api("/health", {}, 5000);
-    apiMode = health.status === "ok";
-  } catch (error) {
-    apiMode = false;
-  }
-  return apiMode;
-})().finally(() => {
-  apiChecked = true;
-});
-
-// Backend-də istifadəçinin yalnız e-poçtu var — ad, soyad, ixtisas və Premium bu brauzerdə saxlanır
-function readProfile(email) {
-  try {
-    return JSON.parse(readStorage(`profil:${email}`)) || {};
-  } catch (error) {
-    return {};
-  }
-}
-
-function writeProfile(email, changes) {
-  writeStorage(`profil:${email}`, JSON.stringify({ ...readProfile(email), ...changes }));
-}
-
-function makeApiUser(me) {
-  const profile = readProfile(me.email);
+function makeApiUser(me, profile = {}) {
   return {
-    id: me.id,
-    email: me.email,
+    id: me.id, email: me.email,
     name: profile.name || me.email.split("@")[0],
     surname: profile.surname || "",
-    major: profile.major || "",
-    premium: Boolean(profile.premium),
+    major: profile.field_id || "",
+    education: profile.education || "",
+    interests: profile.interests || "",
+    skills: profile.skills || [],
   };
+}
+
+async function signedInUser(me) {
+  try {
+    return makeApiUser(me, await api("/api/profile"));
+  } catch (error) {
+    if (error.status === 401) throw error;
+    showToast(error.message, "error");
+    return makeApiUser(me);
+  }
 }
 
 function fieldName(id) {
@@ -306,9 +297,13 @@ function fromEvaluation(data, id, createdAt) {
     file: data.filename,
     major: data.field_id,
     majorName: data.field_name,
+    majorRole: apiFields.find((field) => field.id === data.field_id)?.role,
     total: data.overall_score,
     scores: cats.map((c) => c.score),
     labels: cats.map((c) => c.label),
+    categories: cats,
+    recommendations: data.recommendations || [],
+    detectedSkills: data.detected_skills || [],
     readiness: data.readiness,
     summary: data.summary || "",
     matchScore: match.match_score,
@@ -322,7 +317,9 @@ function fromEvaluation(data, id, createdAt) {
 }
 
 async function loadApiHistory() {
+  const owner = apiUser;
   const list = await api("/api/history");
+  if (apiUser?.id !== owner?.id || !owner) return [];
   apiHistory = list
     .filter((item) => item.kind === "evaluation")
     .map((item) => ({
@@ -715,11 +712,14 @@ fillSpecialtySelect(majorSelect);
 
 // API rejimində siyahı backend-in real analiz edə bildiyi sahələrdən qurulur
 function fillApiFieldSelect(select) {
-  const selected = select.value;
-  select.innerHTML = "";
-  select.appendChild(new Option("Hədəf sahəni seç", ""));
-  apiFields.forEach((field) => select.appendChild(new Option(field.name, field.id)));
-  if (apiFields.some((f) => f.id === selected)) select.value = selected;
+  const search = document.createElement("input");
+  search.className = "input specialty-search";
+  search.type = "search";
+  search.placeholder = "İxtisas axtar";
+  search.setAttribute("aria-label", search.placeholder);
+  search.setAttribute("aria-controls", select.id);
+  select.before(search);
+  bindSpecialtySearch(search, select, apiFields, select.value);
 }
 
 // Zəif kateqoriyalar üçün plan tapşırıqları
@@ -868,6 +868,21 @@ function applyApiResult(entry) {
   resultSummary.textContent = entry.summary;
   resultSummary.hidden = !entry.summary;
   resultWarning.hidden = !(typeof entry.matchScore === "number" && entry.matchScore < 35);
+  const explanations = document.querySelector("#result-explanations");
+  explanations.replaceChildren();
+  entry.categories.forEach((category) => {
+    const details = document.createElement("details");
+    const title = document.createElement("summary");
+    title.textContent = category.label;
+    const reasoning = document.createElement("p");
+    reasoning.textContent = category.reasoning;
+    const fixes = document.createElement("ul");
+    fillList(fixes, category.fixes || []);
+    details.append(title, reasoning, fixes);
+    explanations.append(details);
+  });
+  fillList(document.querySelector("#result-recommendations"),
+    entry.recommendations.map((item) => item.title + " — " + item.details));
 }
 
 function fillList(list, items) {
@@ -952,9 +967,11 @@ function renderSkills(analysis) {
   const total = have.length + missing.length;
   const percent = Math.round((have.length / total) * 100);
 
-  document.querySelector("#gap-summary").textContent =
-    `Sahənin ${total} əsas bacarığından ${have.length}-i CV-ində var (${percent}%).`;
-  document.querySelector("#gap-bar").style.setProperty("--value", percent);
+  const match = analysis.matchScore;
+  document.querySelector("#gap-summary").textContent = typeof match === "number"
+    ? `Sahəyə uyğunluq: ${match}%. ${have.length} bacarıq tam təsdiqləndi.`
+    : `Sahənin ${total} əsas bacarığından ${have.length}-i CV-ində var (${percent}%).`;
+  document.querySelector("#gap-bar").style.setProperty("--value", match ?? percent);
 
   const haveList = document.querySelector("#skills-have");
   const missingList = document.querySelector("#skills-missing");
@@ -1044,17 +1061,8 @@ const PHASES_BY_DAYS = {
   21: ["foundation", "practice", "interview"],
 };
 
-function apiPlanKey(analysis) {
-  return `plan_api_${analysis.id}`;
-}
-
 function readApiPlanState(analysis) {
-  try {
-    const saved = JSON.parse(readStorage(apiPlanKey(analysis)));
-    return Array.isArray(saved) ? saved : [];
-  } catch (error) {
-    return [];
-  }
+  return apiRoadmaps.get(analysis.id)?.completed_task_ids || [];
 }
 
 function planMessage(text) {
@@ -1067,10 +1075,12 @@ function planMessage(text) {
 }
 
 async function generateApiPlan(analysis, button) {
+  const owner = apiUser;
   button.disabled = true;
   button.textContent = "AI plan hazırlayır… (1 dəqiqəyə qədər)";
   try {
     const roadmap = await api(`/api/roadmap/${analysis.id}`, { method: "POST" }, 180000);
+    if (apiUser?.id !== owner?.id) return;
     apiRoadmaps.set(analysis.id, roadmap);
     showToast("21 günlük plan hazırdır!", "success");
   } catch (error) {
@@ -1089,14 +1099,28 @@ async function renderApiPlan(analysis) {
   if (!roadmap) {
     planMessage("Plan yüklənir…");
     try {
-      apiRoadmaps.set(analysis.id, await api(`/api/roadmap/${analysis.id}`));
+      const owner = apiUser;
+      const fresh = await api("/api/roadmap/" + analysis.id);
+      if (apiUser?.id !== owner?.id) return;
+      apiRoadmaps.set(analysis.id, fresh);
     } catch (error) {
-      planMessage(error.message);
+      if (currentAnalysis === analysis) {
+        planMessage(error.message);
+        const retry = document.createElement("button");
+        retry.type = "button";
+        retry.className = "btn btn-ghost";
+        retry.textContent = "Yenidən cəhd et";
+        retry.addEventListener("click", () => renderApiPlan(analysis));
+        planDaysEl.append(retry);
+      }
       return;
     }
     if (currentAnalysis === analysis) renderApiPlan(analysis);
     return;
   }
+
+  const legacy = roadmap.format === "legacy_weekly";
+  document.querySelector(".segmented").hidden = legacy;
 
   // Plan hələ yaradılmayıb — AI ilə yaratmaq düyməsi
   if (!roadmap.generated) {
@@ -1116,12 +1140,18 @@ async function renderApiPlan(analysis) {
     return;
   }
 
-  const phases = roadmap.roadmap.filter((phase) => PHASES_BY_DAYS[days].includes(phase.key));
+  const phases = legacy ? roadmap.roadmap : roadmap.roadmap.filter((phase) => PHASES_BY_DAYS[days].includes(phase.key));
   const checked = new Set(readApiPlanState(analysis));
   let total = 0;
   let done = 0;
 
   planDaysEl.innerHTML = "";
+  if (legacy) {
+    const caption = document.createElement("p");
+    caption.className = "plan-summary";
+    caption.textContent = "Saxlanılmış 30/60/90 günlük plan";
+    planDaysEl.append(caption);
+  }
   if (roadmap.summary) {
     const summary = document.createElement("p");
     summary.className = "plan-summary";
@@ -1130,11 +1160,19 @@ async function renderApiPlan(analysis) {
   }
 
   phases.forEach((phase) => {
+    const heading = document.createElement("h5");
+    heading.className = "panel-subtitle";
+    heading.textContent = `${phase.label} · ${phase.days} gün`;
+    const goal = document.createElement("p");
+    goal.className = "plan-summary";
+    goal.textContent = `${phase.goal} Nəticə: ${phase.milestone}`;
+    planDaysEl.append(heading, goal);
     // Tapşırıqları günlərə qruplaşdır
     const byDay = new Map();
     phase.tasks.forEach((task, index) => {
-      if (!byDay.has(task.day)) byDay.set(task.day, []);
-      byDay.get(task.day).push({ task, id: `${phase.key}-${index}` });
+      const period = legacy ? task.week : task.day;
+      if (!byDay.has(period)) byDay.set(period, []);
+      byDay.get(period).push({ task, id: `${phase.key}-${index}` });
     });
 
     [...byDay.keys()].sort((a, b) => a - b).forEach((dayNumber) => {
@@ -1142,7 +1180,7 @@ async function renderApiPlan(analysis) {
       day.className = "plan-day";
       const title = document.createElement("p");
       title.className = "plan-day-title";
-      title.textContent = `Gün ${dayNumber} · ${phase.label}`;
+      title.textContent = (legacy ? "Həftə " : "Gün ") + dayNumber + " · " + phase.label;
       day.appendChild(title);
 
       const list = document.createElement("ul");
@@ -1222,16 +1260,27 @@ function renderPlan(analysis) {
 }
 
 // Çekboks işarələnəndə yadda saxla və irəliləyişi yenilə
-planDaysEl.addEventListener("change", (event) => {
+planDaysEl.addEventListener("change", async (event) => {
   if (!event.target.matches('input[type="checkbox"]') || !currentAnalysis) return;
   const boxes = [...planDaysEl.querySelectorAll('input[type="checkbox"]')];
   const doneCount = boxes.filter((b) => b.checked).length;
 
   if (currentAnalysis.api) {
-    // Bütün 21 günlük planın vəziyyəti bir yerdə saxlanır (7/14/21 görünüşü dəyişsə də itmir)
-    const state = new Set(readApiPlanState(currentAnalysis));
-    boxes.forEach((b) => (b.checked ? state.add(b.dataset.task) : state.delete(b.dataset.task)));
-    writeStorage(apiPlanKey(currentAnalysis), JSON.stringify([...state]));
+    const analysis = currentAnalysis;
+    const owner = apiUser;
+    const box = event.target;
+    boxes.forEach((input) => { input.disabled = true; });
+    try {
+      const updated = await sendJson("/api/roadmap/" + analysis.id + "/tasks/" + box.dataset.task,
+        { completed: box.checked }, "PUT");
+      if (apiUser?.id !== owner?.id) return;
+      apiRoadmaps.set(analysis.id, updated);
+    } catch (error) {
+      showToast(error.message, "error");
+    } finally {
+      if (currentAnalysis === analysis) renderApiPlan(analysis);
+    }
+    return;
   } else {
     const done = boxes.filter((b) => b.checked).map((b) => Number(b.dataset.index));
     writeStorage(planKey(currentAnalysis, currentAnalysis.planDays), JSON.stringify(done));
@@ -1262,7 +1311,7 @@ const JOB_TEMPLATES = [
 function renderJobs(analysis) {
   // Backend-də hələ vakansiya mənbəyi yoxdur — vakansiyalar demo olaraq qalır,
   // amma API rejimində real sahə adı və real bacarıqlar istifadə olunur
-  const role = analysis.api ? analysis.majorName : getRole(analysis.major);
+  const role = analysis.api ? analysis.majorRole || analysis.majorName : getRole(analysis.major);
   const all = analysis.api
     ? [...analysis.have, ...analysis.missing.map((s) => s.replace(/ \(qismən\)$/, ""))]
     : getSkills(analysis.major);
@@ -1289,7 +1338,7 @@ function renderJobs(analysis) {
           <h5 class="job-title"></h5>
           <p class="job-meta"></p>
         </div>
-        <span class="job-match ${level}" aria-label="Uyğunluq ${job.match} faiz">${job.match}%</span>
+        <span class="job-match ${level}" aria-label="Nümunə uyğunluq ${job.match} faiz">${job.match}%</span>
       </div>
       <div class="bar" aria-hidden="true"><span class="bar-fill ${level}" style="--value: ${job.match}"></span></div>
       <ul class="pill-list"></ul>`;
@@ -1323,7 +1372,7 @@ function planStats(entry) {
     if (!roadmap || !roadmap.generated) return { days: 21, done: 0, total: 0, percent: null };
     const ids = roadmap.roadmap.flatMap((phase) => phase.tasks.map((_, i) => `${phase.key}-${i}`));
     const done = readApiPlanState(entry).filter((id) => ids.includes(id)).length;
-    return { days: 21, done, total: ids.length, percent: ids.length ? Math.round((done / ids.length) * 100) : 0 };
+    return { days: roadmap.format === "legacy_weekly" ? 90 : 21, done, total: ids.length, percent: ids.length ? Math.round((done / ids.length) * 100) : 0 };
   }
   const analysis = withSkills(entry);
   let best = { days: 7, done: 0, total: buildPlanTasks(analysis, 7).length, percent: 0 };
@@ -1371,6 +1420,8 @@ function renderHistory(currentId) {
 
 // ===== 5. CV Yoxla: real AI analizi (API rejimi) =====
 async function runApiAnalysis(file, fieldId) {
+  if (analyzeBtn.disabled) return;
+  const owner = apiUser;
   analyzeBtn.disabled = true;
   analyzeBtn.textContent = "Analiz edilir…";
   result.hidden = true;
@@ -1382,7 +1433,9 @@ async function runApiAnalysis(file, fieldId) {
     form.append("field_id", fieldId);
     const data = await api("/api/evaluate", { method: "POST", body: form }, 180000);
 
+    if (apiUser?.id !== owner?.id) return;
     const entry = fromEvaluation(data, data.evaluation_id);
+    apiHistory = [entry, ...apiHistory.filter((item) => item.id !== entry.id)];
     apiRoadmaps.delete(entry.id);
     stopLoader();
     presentAnalysis(entry);
@@ -1403,6 +1456,7 @@ async function runApiAnalysis(file, fieldId) {
       openAuth("tab-login");
     }
   } finally {
+    stopLoader();
     analyzeBtn.disabled = false;
     analyzeBtn.textContent = "Analiz Et";
   }
@@ -1439,6 +1493,11 @@ cvForm.addEventListener("submit", async (event) => {
     if (!apiUser) {
       openAuth("tab-login");
       googleNote.textContent = "CV analizi üçün əvvəlcə daxil ol və ya qeydiyyatdan keç.";
+      return;
+    }
+    if (!document.querySelector("#cv-consent").checked) {
+      showToast("Davam etmək üçün CV məlumatlarının emalına razılıq ver.", "error");
+      document.querySelector("#cv-consent").focus();
       return;
     }
     await runApiAnalysis(file, major);
@@ -1622,56 +1681,10 @@ function setFieldError(input, errorEl, message) {
 }
 
 // ===== 10. Tərəfdaşlıq forması =====
-const partnerForm = document.querySelector("#partner-form");
-const partnerName = document.querySelector("#partner-name");
-const partnerEmail = document.querySelector("#partner-email");
-const partnerNameError = document.querySelector("#partner-name-error");
-const partnerEmailError = document.querySelector("#partner-email-error");
-
-partnerForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-
-  const nameOk = partnerName.value.trim().length >= 2;
-  const emailOk = isValidEmail(partnerEmail.value);
-
-  setFieldError(partnerName, partnerNameError, nameOk ? "" : "Ad və ya təşkilat adını yaz.");
-  setFieldError(partnerEmail, partnerEmailError, emailOk ? "" : "Düzgün e-poçt ünvanı yaz, məsələn ad@mail.az.");
-
-  if (!nameOk || !emailOk) {
-    showToast("Zəhmət olmasa formu düzgün doldurun.", "error");
-    (nameOk ? partnerEmail : partnerName).focus();
-    return;
-  }
-
-  showToast("Müraciətiniz qəbul edildi! Tezliklə əlaqə saxlayacağıq.", "success");
-  partnerForm.reset();
+// Önizləmə formaları heç bir məlumat göndərmir.
+["#partner-form", "#newsletter-form"].forEach((selector) => {
+  document.querySelector(selector).addEventListener("submit", (event) => event.preventDefault());
 });
-
-[partnerName, partnerEmail].forEach((input) => {
-  input.addEventListener("input", () => {
-    const errorEl = input === partnerName ? partnerNameError : partnerEmailError;
-    setFieldError(input, errorEl, "");
-  });
-});
-
-// ===== 11. Footer: bülleten =====
-const newsletterForm = document.querySelector("#newsletter-form");
-const newsletterEmail = document.querySelector("#newsletter-email");
-
-newsletterForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  if (!isValidEmail(newsletterEmail.value)) {
-    setFieldError(newsletterEmail, null, "error");
-    showToast("Düzgün e-poçt ünvanı yaz.", "error");
-    newsletterEmail.focus();
-    return;
-  }
-  setFieldError(newsletterEmail, null, "");
-  showToast("Bülletenə abunə oldun! 🎉", "success");
-  newsletterForm.reset();
-});
-
-newsletterEmail.addEventListener("input", () => setFieldError(newsletterEmail, null, ""));
 
 // ===== 11. Footer: hələ hazır olmayan linklər =====
 document.querySelectorAll("[data-soon]").forEach((btn) => {
@@ -1718,9 +1731,7 @@ function getCurrentUser() {
 function updateCurrentUser(changes) {
   if (apiMode) {
     if (!apiUser) return null;
-    writeProfile(apiUser.email, changes);
-    apiUser = { ...apiUser, ...changes };
-    return apiUser;
+    return null;
   }
   const users = readUsers();
   const user = users.find((u) => u.email === readStorage("aktivIstifadeci"));
@@ -1798,7 +1809,7 @@ document.querySelectorAll(".pass-toggle").forEach((btn) => {
 });
 
 document.querySelector("#google-btn").addEventListener("click", () => {
-  googleNote.textContent = "Google ilə giriş demo versiyada işləmir — e-poçt ilə qeydiyyatdan keç.";
+  googleNote.textContent = "Google ilə giriş planlaşdırılır. Hazırda e-poçt ilə daxil ola bilərsən.";
 });
 
 // Xətaları göstər / təmizlə
@@ -1826,11 +1837,6 @@ function fieldError(id, message) {
 function renderUser() {
   const user = getCurrentUser();
 
-  // Qiymət kartındakı düymə premium istifadəçidə dəyişsin
-  document.querySelectorAll('[data-plan="premium"]').forEach((btn) => {
-    btn.textContent = user && user.premium ? "✓ Premium aktivdir" : "Premium-a keç";
-  });
-
   loginBtn.hidden = Boolean(user);
   userMenu.hidden = !user;
   userDropdown.hidden = true;
@@ -1841,7 +1847,7 @@ function renderUser() {
   document.querySelector("#user-name").textContent = user.name;
   document.querySelector("#user-full-name").textContent = `${user.name} ${user.surname}`;
   document.querySelector("#user-email").textContent = user.email;
-  document.querySelector("#user-plan").textContent = user.premium ? "✨ Premium Tələbə" : "Pulsuz plan";
+  document.querySelector("#user-plan").textContent = apiMode ? "Pulsuz beta" : "Demo hesabı";
 
   // CV Yoxla-da ixtisas boşdursa, istifadəçinin ixtisasını seç
   if (!majorSelect.value) majorSelect.value = user.major;
@@ -1876,14 +1882,6 @@ function signIn(user, message) {
         if (!cabinet.hidden && apiUser) renderCabinet(apiUser);
       })
       .catch(() => {});
-  }
-
-  // Premium almaq istəyirdisə, ödəniş pəncərəsini aç
-  if (pendingPayment) {
-    pendingPayment = false;
-    updateView();
-    openPayment();
-    return;
   }
 
   // Kabinetə girmək istəyirdisə, ora apar
@@ -1925,15 +1923,19 @@ registerForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  // API rejimi: hesab serverdə yaradılır (backend dərhal daxil edir)
+  // API rejimi: qeydiyyatdan sonra ayrıca giriş tələb olunur
   if (apiMode) {
     const submit = registerForm.querySelector('button[type="submit"]');
     submit.disabled = true;
     try {
-      const me = await postJson("/api/auth/signup", { email, password: pass });
-      writeProfile(me.email, { name, surname, major });
-      apiUser = makeApiUser(me);
-      signIn(apiUser, `Xoş gəldin, ${name}! Hesabın yaradıldı.`);
+      await sendJson("/api/auth/signup", {
+        email, password: pass, first_name: name, last_name: surname, specialty_id: major, consent,
+      });
+      registerForm.reset();
+      activateTab(document.querySelector("#tab-login"), false);
+      document.querySelector("#login-email").value = email;
+      document.querySelector("#login-pass").focus();
+      googleNote.textContent = "Hesab yaradıldı. İndi daxil ol.";
     } catch (error) {
       if (error.status === 409) {
         fieldError("reg-email", error.message);
@@ -1980,8 +1982,8 @@ loginForm.addEventListener("submit", async (event) => {
     const submit = loginForm.querySelector('button[type="submit"]');
     submit.disabled = true;
     try {
-      const me = await postJson("/api/auth/login", { email, password: pass });
-      apiUser = makeApiUser(me);
+      const me = await sendJson("/api/auth/login", { email, password: pass });
+      apiUser = await signedInUser(me);
       signIn(apiUser, `Xoş gəldin, ${apiUser.name}!`);
     } catch (error) {
       document.querySelector("#login-error").textContent = error.message;
@@ -2016,13 +2018,28 @@ document.addEventListener("click", (event) => {
   }
 });
 
-function logout() {
+function clearAccountState() {
+  apiUser = null;
+  apiHistory = [];
+  apiRoadmaps.clear();
+  resetChat();
+  profileOwner = null;
+  profileForm.reset();
+  clearFile();
+  document.querySelector("#cv-consent").checked = false;
+  result.hidden = true;
+  currentAnalysis = null;
+}
+
+async function logout() {
   if (apiMode) {
-    // Serverdəki sessiyanı bağla; cavabı gözləmədən interfeysi yenilə
-    api("/api/auth/logout", { method: "POST" }).catch(() => {});
-    apiUser = null;
-    apiHistory = [];
-    apiRoadmaps.clear();
+    try {
+      await api("/api/auth/logout", { method: "POST" });
+    } catch (error) {
+      showToast(error.message, "error");
+      return;
+    }
+    clearAccountState();
   }
   removeStorage("aktivIstifadeci");
   setMenu(false);
@@ -2050,6 +2067,7 @@ const cabinet = document.querySelector("#kabinet");
 const landingSections = [...document.querySelectorAll("main > section:not(#kabinet)")];
 const profileForm = document.querySelector("#profile-form");
 const profileMajor = document.querySelector("#profile-major");
+let profileOwner = null;
 let pendingCabinet = false;
 
 profileMajor.innerHTML = majorSelect.innerHTML;
@@ -2102,8 +2120,10 @@ async function refreshApiCabinet() {
   try {
     await loadApiHistory();
     const latest = apiHistory[0];
-    if (latest && !apiRoadmaps.has(latest.id)) {
-      apiRoadmaps.set(latest.id, await api(`/api/roadmap/${latest.id}`));
+    if (latest) {
+      const owner = apiUser;
+      const fresh = await api("/api/roadmap/" + latest.id);
+      if (apiUser?.id === owner?.id) apiRoadmaps.set(latest.id, fresh);
     }
   } catch (error) {
     showToast(error.message, "error");
@@ -2119,8 +2139,8 @@ function renderCabinet(user) {
   const hello = document.querySelector("#cabinet-hello");
   hello.textContent = `Salam, ${user.name}! Burada bütün CV analizlərin və irəliləyişin var. `;
   const badge = document.createElement("span");
-  badge.className = user.premium ? "premium-badge" : "pill pill-accent";
-  badge.textContent = user.premium ? "✨ Premium" : "Pulsuz plan";
+  badge.className = "pill pill-accent";
+  badge.textContent = apiMode ? "Pulsuz beta" : "Demo";
   hello.appendChild(badge);
 
   // Son CV skoru
@@ -2183,7 +2203,11 @@ function renderCabinet(user) {
     body.appendChild(tr);
   });
 
-  // Profil forması
+  if (profileOwner === user.id && apiMode) return;
+  profileOwner = user.id;
+  document.querySelector("#profile-education").value = user.education || "";
+  document.querySelector("#profile-interests").value = user.interests || "";
+  document.querySelector("#profile-skills").value = (user.skills || []).join(", ");
   document.querySelector("#profile-name").value = user.name;
   document.querySelector("#profile-surname").value = user.surname;
   document.querySelector("#profile-email").value = user.email;
@@ -2193,10 +2217,12 @@ function renderCabinet(user) {
 
 // Tarixçədən köhnə analizi aç
 async function openAnalysisFromCabinet(entry) {
+  const owner = apiUser;
   // API rejimi: tarixçə siyahısında yalnız qısa məlumat var — tam nəticəni yüklə
   if (entry.api && entry.partial) {
     try {
       const detail = await api(`/api/history/${entry.id}`);
+      if (!owner || apiUser?.id !== owner.id) return;
       entry = fromEvaluation(detail.result, detail.id, detail.created_at);
     } catch (error) {
       showToast(error.message, "error");
@@ -2222,7 +2248,7 @@ profileForm.addEventListener("input", (event) => {
   if (document.getElementById(`${event.target.id}-error`)) fieldError(event.target.id, "");
 });
 
-profileForm.addEventListener("submit", (event) => {
+profileForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const name = document.querySelector("#profile-name").value.trim();
   const surname = document.querySelector("#profile-surname").value.trim();
@@ -2235,13 +2261,59 @@ profileForm.addEventListener("submit", (event) => {
   ];
   if (ok.includes(false)) return;
 
-  const user = updateCurrentUser({ name, surname, major });
+  let user;
+  if (apiMode) {
+    const owner = apiUser;
+    const button = profileForm.querySelector('button[type="submit"]');
+    button.disabled = true;
+    try {
+      const profile = await sendJson("/api/profile", {
+        name, surname, field_id: major,
+        education: document.querySelector("#profile-education").value.trim(),
+        interests: document.querySelector("#profile-interests").value.trim(),
+        skills: [...new Set(document.querySelector("#profile-skills").value.split(",").map((v) => v.trim()).filter(Boolean))],
+      }, "PUT");
+      if (apiUser?.id !== owner?.id) return;
+      user = apiUser = makeApiUser(owner, profile);
+    } catch (error) {
+      showToast(error.message, "error");
+      return;
+    } finally {
+      button.disabled = false;
+    }
+  } else {
+    user = updateCurrentUser({ name, surname, major });
+  }
   if (!user) return;
 
   renderUser();
   majorSelect.value = major;
   renderCabinet(user);
   showToast("Profil yadda saxlanıldı.", "success");
+});
+
+document.querySelector("#profile-suggest").addEventListener("click", async () => {
+  const owner = apiUser;
+  const latest = apiHistory[0];
+  if (!latest || !owner) {
+    showToast("Təkliflər üçün əvvəlcə CV-ni analiz et.", "error");
+    return;
+  }
+  try {
+    const evaluation = latest.partial
+      ? (await api("/api/history/" + latest.id)).result
+      : { detected_skills: latest.detectedSkills, field_id: latest.major };
+    if (apiUser?.id !== owner.id) return;
+    const input = document.querySelector("#profile-skills");
+    const existing = input.value.split(",").map((v) => v.trim()).filter(Boolean);
+    input.value = [...new Set([...existing, ...(evaluation.detected_skills || []).filter((v) => v.length <= 60)])]
+      .slice(0, 24).join(", ");
+    if (!profileMajor.value) profileMajor.value = evaluation.field_id;
+    showToast("Təklifləri yoxla və yadda saxla.", "success");
+    input.focus();
+  } catch (error) {
+    showToast(error.message, "error");
+  }
 });
 
 document.querySelector("#cabinet-logout").addEventListener("click", logout);
@@ -2254,152 +2326,14 @@ authModal.addEventListener("close", () => {
 window.addEventListener("hashchange", updateView);
 updateView();
 
-// ===== Ödəniş pəncərəsi (DEMO) =====
-// Kart məlumatı heç yerdə saxlanmır və heç yerə göndərilmir
-const payModal = document.querySelector("#pay-modal");
-const payForm = document.querySelector("#pay-form");
-const payStepForm = document.querySelector("#pay-step-form");
-const payStepProcessing = document.querySelector("#pay-step-processing");
-const payStepSuccess = document.querySelector("#pay-step-success");
-const payNumber = document.querySelector("#pay-number");
-const payExp = document.querySelector("#pay-exp");
-const payCvv = document.querySelector("#pay-cvv");
-const premiumButtons = document.querySelectorAll('[data-plan="premium"]');
-let pendingPayment = false;
-
-function showPayStep(step) {
-  payStepForm.hidden = step !== "form";
-  payStepProcessing.hidden = step !== "processing";
-  payStepSuccess.hidden = step !== "success";
-}
-
-function openPayment() {
-  const user = getCurrentUser();
-  if (!user) {
-    pendingPayment = true;
-    openAuth("tab-register");
-    googleNote.textContent = "Premium almaq üçün əvvəlcə hesab yarat və ya daxil ol.";
-    return;
-  }
-  if (user.premium) {
-    showToast("Premium artıq aktivdir ✨", "success");
-    return;
-  }
-  payForm.reset();
-  ["pay-name", "pay-number", "pay-exp", "pay-cvv"].forEach((id) => fieldError(id, ""));
-  showPayStep("form");
-  payModal.showModal();
-  document.querySelector("#pay-name").focus();
-}
-
-function closePayment() {
-  payModal.close();
-}
-
-// Bağlananda formu təmizlə — kart məlumatı yaddaşda qalmasın
-payModal.addEventListener("close", () => {
-  payForm.reset();
-  showPayStep("form");
+// ===== Premium önizləməsi =====
+const paymentPreview = document.querySelector("#pay-modal");
+document.querySelector('[data-plan="premium"]').addEventListener("click", () => paymentPreview.showModal());
+["#pay-close", "#pay-done"].forEach((selector) => {
+  document.querySelector(selector).addEventListener("click", () => paymentPreview.close());
 });
-
-premiumButtons.forEach((btn) => btn.addEventListener("click", openPayment));
-document.querySelector("#pay-close").addEventListener("click", closePayment);
-document.querySelector("#pay-done").addEventListener("click", closePayment);
-payModal.addEventListener("click", (event) => {
-  if (event.target === payModal && payStepProcessing.hidden) closePayment();
-});
-
-// Giriş pəncərəsi ödənişə keçmədən bağlanarsa, gözləməni ləğv et
-authModal.addEventListener("close", () => {
-  if (!getCurrentUser()) pendingPayment = false;
-});
-
-// Yazarkən formatla: "4242 4242 4242 4242", "12/28", yalnız rəqəm
-payNumber.addEventListener("input", () => {
-  const digits = payNumber.value.replace(/\D/g, "").slice(0, 16);
-  payNumber.value = digits.replace(/(\d{4})(?=\d)/g, "$1 ");
-});
-
-payExp.addEventListener("input", (event) => {
-  let digits = payExp.value.replace(/\D/g, "").slice(0, 4);
-  if (digits.length >= 3 || (digits.length === 2 && event.inputType !== "deleteContentBackward")) {
-    digits = `${digits.slice(0, 2)}/${digits.slice(2)}`;
-  }
-  payExp.value = digits;
-});
-
-payCvv.addEventListener("input", () => {
-  payCvv.value = payCvv.value.replace(/\D/g, "").slice(0, 3);
-});
-
-payForm.addEventListener("input", (event) => {
-  if (document.getElementById(`${event.target.id}-error`)) fieldError(event.target.id, "");
-});
-
-// Rəsmi test kartı nömrəsi (real kart deyil)
-document.querySelector("#pay-test").addEventListener("click", () => {
-  const user = getCurrentUser();
-  const next = new Date();
-  document.querySelector("#pay-name").value = user ? `${user.name} ${user.surname}`.toLocaleUpperCase("az") : "TEST İSTİFADƏÇİ";
-  payNumber.value = "4242 4242 4242 4242";
-  payExp.value = `12/${String(next.getFullYear() + 2).slice(2)}`;
-  payCvv.value = "123";
-  ["pay-name", "pay-number", "pay-exp", "pay-cvv"].forEach((id) => fieldError(id, ""));
-});
-
-// Kart nömrəsinin düzgünlüyü (Luhn alqoritmi)
-function luhnValid(digits) {
-  let sum = 0;
-  [...digits].reverse().forEach((char, i) => {
-    let n = Number(char);
-    if (i % 2 === 1) {
-      n *= 2;
-      if (n > 9) n -= 9;
-    }
-    sum += n;
-  });
-  return digits.length === 16 && sum % 10 === 0;
-}
-
-function expiryValid(value) {
-  const match = /^(\d{2})\/(\d{2})$/.exec(value);
-  if (!match) return false;
-  const month = Number(match[1]);
-  const year = 2000 + Number(match[2]);
-  if (month < 1 || month > 12) return false;
-  const now = new Date();
-  return year > now.getFullYear() || (year === now.getFullYear() && month >= now.getMonth() + 1);
-}
-
-payForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const name = document.querySelector("#pay-name").value.trim();
-  const digits = payNumber.value.replace(/\s/g, "");
-
-  const ok = [
-    fieldError("pay-name", name.length >= 3 ? "" : "Kart sahibinin adını yaz."),
-    fieldError("pay-number", luhnValid(digits) ? "" : "Kart nömrəsi düzgün deyil (16 rəqəm)."),
-    fieldError("pay-exp", expiryValid(payExp.value) ? "" : "Tarixi AA/İİ formatında yaz, məsələn 12/28."),
-    fieldError("pay-cvv", /^\d{3}$/.test(payCvv.value) ? "" : "CVV 3 rəqəmdir."),
-  ];
-  if (ok.includes(false)) {
-    payForm.querySelector(".is-invalid")?.focus();
-    return;
-  }
-
-  // Kart məlumatını dərhal sil — yalnız "ödəniş oldu" qeydi saxlanır
-  payForm.reset();
-  showPayStep("processing");
-
-  setTimeout(() => {
-    // Backend-də ödəniş yoxdur — Premium qeydi bu brauzerdə saxlanır (DEMO)
-    const user = updateCurrentUser({ premium: true, premiumSince: new Date().toISOString() });
-    showPayStep("success");
-    document.querySelector("#pay-done").focus();
-    renderUser();
-    if (!cabinet.hidden && user) renderCabinet(user);
-    showToast("Premium aktivləşdi! (DEMO ödəniş)", "success");
-  }, 1500);
+paymentPreview.addEventListener("click", (event) => {
+  if (event.target === paymentPreview) paymentPreview.close();
 });
 
 // ===== AI Mentor çatı =====
@@ -2410,131 +2344,72 @@ const chatForm = document.querySelector("#chat-form");
 const chatInput = document.querySelector("#chat-input");
 let chatStarted = false;
 
-// Açar sözlər və hazır cavablar
-const CHAT_TOPICS = [
-  {
-    keys: ["cv", "rezüme", "rezume", "özgeçmiş"],
-    text: "Güclü CV üçün əsas qaydalar:",
-    tips: [
-      "1 səhifə: Əlaqə → Təhsil → Təcrübə → Bacarıqlar → Layihələr.",
-      "Hər təcrübə bəndini fel ilə başla və rəqəmlə bitir: “Satışları 3 ayda 15% artırdım”.",
-      "Vakansiyadakı açar sözləri CV-yə əlavə et — ATS sistemləri onları axtarır.",
-      "Şəkil, cədvəl və rəngli fon istifadə etmə — ATS onları oxumaya bilər.",
-    ],
-    link: { href: "#cv-yoxla", label: "CV-ni yoxlat →" },
-  },
-  {
-    keys: ["müsahibə", "musahibe", "interview", "müsahibəyə"],
-    text: "Müsahibəyə hazırlıq üçün:",
-    tips: [
-      "Şirkəti araşdır: nə edir, son xəbərləri, dəyərləri.",
-      "“Özün haqqında danış” sualına 1 dəqiqəlik hazır cavab yaz.",
-      "Çətin suallara STAR metodu ilə cavab ver: Situasiya, Tapşırıq, Addım, Nəticə.",
-      "Sonda ən azı 2 sual ver — məsələn, “Bu vəzifədə ilk 3 ayda uğur nə deməkdir?”",
-    ],
-  },
-  {
-    keys: ["linkedin", "linkdin", "profil"],
-    text: "LinkedIn profilini gücləndir:",
-    tips: [
-      "Peşəkar şəkil və aydın başlıq: “Data analitika tələbəsi | SQL, Power BI”.",
-      "“Haqqında” bölməsində 3–4 cümlə: kimsən, nə bacarırsan, nə axtarırsan.",
-      "Layihələrini və sertifikatlarını “Featured” bölməsinə əlavə et.",
-      "Sahəndəki insanlarla şəxsi mesajla əlaqə qur — boş dəvət göndərmə.",
-    ],
-  },
-  {
-    keys: ["staj", "təcrübə proqram", "tecrube", "internship", "praktika", "təcrübəçi"],
-    text: "Staj tapmaq üçün:",
-    tips: [
-      "Universitetinin karyera mərkəzinə yazıl — çox staj elanı ilk ora gəlir.",
-      "Böyük şirkətlərin “təcrübə proqramı” səhifələrini izlə, adətən yaz və payızda açılır.",
-      "Kiçik şirkətlərə və startaplara birbaşa e-poçt yaz — rəqabət azdır.",
-      "Bitirdiyin hər layihəni portfolioya əlavə et — təcrübən yoxdursa, nümunələrin danışsın.",
-    ],
-    link: { href: "#qiymetler", label: "Premium-da vakansiya uyğunluğu →" },
-  },
-  {
-    keys: ["maaş", "maas", "əmək haqqı", "emek haqqi", "salary", "danışıq"],
-    text: "Maaş danışığında:",
-    tips: [
-      "Əvvəlcə araşdır: eyni vəzifə üçün elanlardakı maaş aralıqlarına bax.",
-      "Rəqəmi ilk sən demə — “Bu vəzifə üçün büdcəniz nədir?” deyə soruş.",
-      "Dəqiq rəqəm əvəzinə aralıq de, aşağı həddi gözləntindən bir az yuxarı qoy.",
-      "Yalnız maaşı yox, bonus, təlim, uzaqdan iş və məzuniyyəti də nəzərə al.",
-    ],
-  },
-  {
-    keys: ["salam", "hello", "sabahın xeyir", "günaydın"],
-    text: "Salam! 👋 Sənə necə kömək edə bilərəm? CV, müsahibə, LinkedIn, staj və ya maaş haqqında soruş.",
-  },
-  {
-    keys: ["təşəkkür", "tesekkur", "sağ ol", "sag ol", "çox sağ", "thanks"],
-    text: "Dəyməz! 😊 Başqa sualın olsa, yaz — uğurlar!",
-  },
-];
+let chatHistory = [];
+let chatBusy = false;
+let chatVersion = 0;
 
-const CHAT_FALLBACK = {
-  text: "Bu suala hələ cavab verə bilmirəm (demo versiya). Bu mövzulardan birini seç:",
-  tips: ["CV yazmaq", "Müsahibəyə hazırlıq", "LinkedIn profili", "Staj tapmaq", "Maaş danışığı"],
-};
-
-function findAnswer(question) {
-  const q = question.toLocaleLowerCase("az");
-  return CHAT_TOPICS.find((topic) => topic.keys.some((key) => q.includes(key))) || CHAT_FALLBACK;
+function resetChat() {
+  chatVersion += 1;
+  chatHistory = [];
+  chatBusy = false;
+  chatStarted = false;
+  chatForm.reset();
+  chatForm.querySelector("button").disabled = false;
+  chatLog.replaceChildren();
+  toggleChat(false);
 }
 
 function addMessage(from, content) {
   const msg = document.createElement("div");
-  msg.className = `msg msg-${from}`;
-
+  msg.className = "msg msg-" + from;
   const p = document.createElement("p");
-  p.textContent = typeof content === "string" ? content : content.text;
-  msg.appendChild(p);
-
-  if (content.tips) {
-    const ul = document.createElement("ul");
-    content.tips.forEach((tip) => {
-      const li = document.createElement("li");
-      li.textContent = tip;
-      ul.appendChild(li);
-    });
-    msg.appendChild(ul);
-  }
-
-  if (content.link) {
-    const a = document.createElement("a");
-    a.className = "msg-link";
-    a.href = content.link.href;
-    a.textContent = content.link.label;
-    a.addEventListener("click", () => toggleChat(false));
-    msg.appendChild(a);
-  }
-
-  chatLog.appendChild(msg);
+  p.textContent = content;
+  msg.append(p);
+  chatLog.append(msg);
   chatLog.scrollTop = chatLog.scrollHeight;
   return msg;
 }
 
-function botReply(question) {
-  const typing = document.createElement("div");
-  typing.className = "msg msg-bot msg-typing";
-  typing.setAttribute("aria-label", "AI Mentor yazır");
-  typing.innerHTML = "<span></span><span></span><span></span>";
-  chatLog.appendChild(typing);
-  chatLog.scrollTop = chatLog.scrollHeight;
-
-  setTimeout(() => {
-    typing.remove();
-    addMessage("bot", findAnswer(question));
-  }, reduceMotion ? 200 : 700);
-}
-
-function sendQuestion(text) {
+async function sendQuestion(text) {
   const question = text.trim();
-  if (!question) return;
+  if (!question || chatBusy) return;
+  if (!apiMode || !apiUser) {
+    if (apiMode) {
+      toggleChat(false);
+      openAuth("tab-login");
+      googleNote.textContent = "AI Mentor ilə danışmaq üçün hesabına daxil ol.";
+    } else {
+      addMessage("bot", "AI Mentor üçün saytı yerli serverdən aç.");
+    }
+    return;
+  }
+  const version = chatVersion;
+  const submit = chatForm.querySelector("button");
+  chatBusy = true;
+  submit.disabled = true;
+  chatInput.value = "";
   addMessage("user", question);
-  botReply(question);
+  const status = addMessage("bot", "AI Mentor cavab hazırlayır…");
+  try {
+    const reply = await sendJson("/api/mentor", {
+      question,
+      evaluation_id: currentAnalysis ? Number(currentAnalysis.id) : null,
+      history: chatHistory,
+    }, "POST", 180000);
+    if (version !== chatVersion) return;
+    status.remove();
+    chatHistory = [...chatHistory, { question, answer: reply.answer }].slice(-3);
+    addMessage("bot", reply.answer);
+  } catch (error) {
+    if (version !== chatVersion) return;
+    status.textContent = error.message;
+    if (!chatInput.value) chatInput.value = question;
+  } finally {
+    if (version === chatVersion) {
+      chatBusy = false;
+      submit.disabled = false;
+    }
+  }
 }
 
 function toggleChat(open) {
@@ -2547,9 +2422,8 @@ function toggleChat(open) {
     if (!chatStarted) {
       chatStarted = true;
       const user = getCurrentUser();
-      addMessage("bot", {
-        text: `Salam${user ? `, ${user.name}` : ""}! Mən AI Mentoram (demo). CV, müsahibə, LinkedIn, staj və ya maaş haqqında soruş — və ya aşağıdakı düymələrdən birini seç.`,
-      });
+      addMessage("bot", "Salam" + (user ? ", " + user.name : "") +
+        "! CV, bacarıqlar, inkişaf planı və ya müsahibə hazırlığı haqqında sual ver.");
     }
     chatInput.focus();
   }
@@ -2564,7 +2438,6 @@ document.querySelector("#chat-close").addEventListener("click", () => {
 chatForm.addEventListener("submit", (event) => {
   event.preventDefault();
   sendQuestion(chatInput.value);
-  chatInput.value = "";
 });
 
 document.querySelectorAll(".chat-chip").forEach((chip) => {
@@ -2586,38 +2459,37 @@ document.querySelector("#to-top").addEventListener("click", () => {
 });
 
 // ===== API rejimini işə sal =====
-// Backend tapılsa: real sahələr, real hesab və tarixçə; tapılmasa demo rejim olduğu kimi qalır
-apiReady.then(async (enabled) => {
-  if (!enabled) {
+(async () => {
+  if (!apiMode) {
+    apiChecked = true;
     updateView();
     return;
   }
-  document.documentElement.classList.add("api-mode");
+  document.querySelector("#cv-privacy-note").textContent =
+    "CV mətni Gemini-yə göndərilir. PDF faylı saxlanmır. Fayl adı, qısa sitatlar və nəticə yerli bazada qala bilər.";
+  document.querySelector("#reg-pass-hint").textContent = `(min. ${minPasswordLength()} simvol)`;
 
   // Hədəf sahələr (backend-in real analiz edə bildiyi)
   try {
     apiFields = await api("/api/match/fields");
     [majorSelect, regMajor, profileMajor].forEach(fillApiFieldSelect);
-    document.querySelector('label[for="cv-major"]').textContent = "Hədəf sahə";
-    document.querySelector('label[for="reg-major"]').textContent = "Hədəf sahə";
-    document.querySelector('label[for="profile-major"]').textContent = "Hədəf sahə";
+    document.querySelector('label[for="cv-major"]').textContent = "İxtisas";
+    document.querySelector('label[for="reg-major"]').textContent = "İxtisas";
+    document.querySelector('label[for="profile-major"]').textContent = "İxtisas";
   } catch (error) {
     showToast(error.message, "error");
   }
 
-  // Mətnlər real rejimə uyğun
-  document.querySelector("#cv-privacy-note").textContent =
-    "CV mətni AI analizi üçün serverə göndərilir; PDF faylın özü saxlanmır. Analiz üçün hesaba daxil ol.";
-  document.querySelector("#reg-pass-hint").textContent = `(min. ${minPasswordLength()} simvol)`;
-
   // Artıq daxil olubsa (sessiya cookie-si), istifadəçini və tarixçəni yüklə
   try {
-    apiUser = makeApiUser(await api("/api/auth/me"));
-    await loadApiHistory();
+    apiUser = await signedInUser(await api("/api/auth/me"));
+    loadApiHistory().catch((error) => showToast(error.message, "error"));
   } catch (error) {
     apiUser = null;
   }
 
+  apiChecked = true;
   renderUser();
   updateView();
-});
+  if (location.hash === "#ai-mentor") toggleChat(true);
+})();

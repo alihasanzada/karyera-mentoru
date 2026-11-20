@@ -8,7 +8,7 @@ function setup(fetch) {
   const nodes = new Map();
   const node = (id) => {
     if (!nodes.has(id)) nodes.set(id, {
-      innerHTML: "", textContent: "", disabled: false, value: "cybersecurity",
+      innerHTML: "", textContent: "", disabled: false, checked: true, value: "cybersecurity",
       files: [{ name: "cv.pdf", size: 100 }],
       classList: { add() {}, remove() {} }, addEventListener() {}, scrollIntoView() {},
       elements: { email: { value: "first@example.com" }, password: { value: "long-test-password" } },
@@ -57,6 +57,13 @@ test("a second click cannot launch a duplicate evaluation", async () => {
   resolve({ ok: true, json: async () => ({ evaluation_id: 7, categories: [] }) });
   await pending;
   assert.equal(app.node("cv-run").disabled, false);
+});
+
+test("evaluation waits for CV processing consent", async () => {
+  const app = setup(() => assert.fail("Unexpected request without consent"));
+  app.node("cv-consent").checked = false;
+  await app.run();
+  assert.match(app.node("cv-status").textContent, /razılıq/);
 });
 
 test("failed evaluation displays server feedback and allows retry", async () => {

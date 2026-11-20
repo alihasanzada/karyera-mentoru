@@ -117,22 +117,11 @@ function rmCareerGap(d) {
   </section>`;
 }
 
-const rmProgressKey = (id) => `karyera_progress_${id}`;
-
-function rmLoadProgress(id) {
-    try { return JSON.parse(localStorage.getItem(rmProgressKey(id)) || "{}"); }
-    catch { return {}; }
-}
-
-function rmSaveProgress(id, progress) {
-    try { localStorage.setItem(rmProgressKey(id), JSON.stringify(progress)); } catch { }
-}
-
 function rmStats(d) {
-    const done = rmLoadProgress(d.evaluation_id);
+    const done = new Set(d.completed_task_ids || []);
     const phases = d.roadmap.map((p) => {
         const total = p.tasks.length;
-        const n = p.tasks.filter((_, i) => done[`${p.key}-${i}`]).length;
+        const n = p.tasks.filter((_, i) => done.has(`${p.key}-${i}`)).length;
         return { key: p.key, total, done: n, pct: total ? Math.round((100 * n) / total) : 0 };
     });
     const total = phases.reduce((a, p) => a + p.total, 0);
@@ -142,19 +131,23 @@ function rmStats(d) {
 
 function rmPhase(p, d, stats) {
     const ps = stats.phases.find((x) => x.key === p.key);
-    const done = rmLoadProgress(d.evaluation_id);
+    const done = new Set(d.completed_task_ids || []);
 
     const byDay = {};
-    p.tasks.forEach((t, i) => { (byDay[t.day] = byDay[t.day] || []).push({ t, i }); });
+    const legacy = d.format === "legacy_weekly";
+    p.tasks.forEach((t, i) => {
+        const period = legacy ? t.week : t.day;
+        (byDay[period] = byDay[period] || []).push({ t, i });
+    });
 
     const days = Object.keys(byDay).map(Number).sort((a, b) => a - b).map((w) => `
     <div>
-      <h4 class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Gün ${w}</h4>
+      <h4 class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">${legacy ? "Həftə" : "Gün"} ${w}</h4>
       <ul class="space-y-2">
         ${byDay[w].map(({ t, i }) => `
           <li class="border border-slate-200 rounded-lg p-3">
             <label class="flex items-start gap-3 cursor-pointer">
-              <input type="checkbox" data-task="${p.key}-${i}" class="mt-1 h-4 w-4 accent-indigo-600" ${done[`${p.key}-${i}`] ? "checked" : ""}>
+              <input type="checkbox" data-task="${p.key}-${i}" class="mt-1 h-4 w-4 accent-indigo-600" ${done.has(`${p.key}-${i}`) ? "checked" : ""}>
               <div class="min-w-0">
                 <div class="text-sm font-medium">${esc(t.title)}</div>
                 <p class="text-sm text-slate-600 mt-1">${esc(t.details)}</p>
@@ -186,7 +179,7 @@ function rmPlan(d) {
       <h2 class="text-lg font-semibold">7/14/21 günlük plan</h2>
       <p class="text-sm text-slate-500 mt-1 mb-5">AI bacarıq boşluğu nəticəsinə əsasən fərdi plan və resurs tövsiyələri hazırlayacaq.</p>
       <button data-rm-generate ${rmBusy() ? "disabled" : ""} class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-medium">Yol xəritəsi yarat</button>
-      <p id="rm-status" class="text-sm mt-3"></p>
+      <p id="rm-status" role="status" class="text-sm mt-3"></p>
     </section>`;
     }
 
@@ -194,10 +187,9 @@ function rmPlan(d) {
     return `<section class="${CARD} p-6 space-y-4">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="min-w-0">
-          <h2 class="text-lg font-semibold">7/14/21 günlük plan</h2>
+          <h2 class="text-lg font-semibold">${d.format === "legacy_weekly" ? "Saxlanılmış 30/60/90 günlük plan" : "7/14/21 günlük plan"}</h2>
           <p class="text-sm text-slate-600 mt-1">${esc(d.summary)}</p>
         </div>
-        <button data-rm-generate ${rmBusy() ? "disabled" : ""} class="text-sm text-indigo-600 hover:text-indigo-800 disabled:opacity-50 font-medium whitespace-nowrap">Yenidən yarat</button>
       </div>
       <div>
         <div class="flex justify-between text-sm mb-1">
@@ -206,7 +198,7 @@ function rmPlan(d) {
         </div>
         <div id="rm-overall-bar">${progressBar(stats.overall)}</div>
       </div>
-      <p id="rm-status" class="text-sm"></p>
+      <p id="rm-status" role="status" class="text-sm"></p>
     </section>
     ${d.roadmap.map((p) => rmPhase(p, d, stats)).join("")}`;
 }
@@ -244,8 +236,8 @@ const rmSetButtons = (disabled) =>
 
 async function rmGenerate() {
     const current = rmData;
-    if (!current || rmGenerating !== null) return;
-    if (current.generated && !confirm("Plan yenidən yaradılsın? Tapşırıqlar üzrə irəliləyiş sıfırlanacaq.")) return;
+    if (!current || current.generated || rmGenerating !== null) return;
+    const token = routeToken;
 
     rmGenerating = current.evaluation_id;
     rmSetButtons(true);
@@ -257,14 +249,11 @@ async function rmGenerate() {
 
     try {
         const fresh = await api("/api/roadmap/" + current.evaluation_id, { method: "POST" }, 180000);
-        rmSaveProgress(current.evaluation_id, {});
-        // Ignore the answer if the user has since opened another evaluation's roadmap.
-        if (rmData && rmData.evaluation_id === current.evaluation_id) {
-            rmData = fresh;
-            if (currentRoute() === "roadmap") rmPaint();
-        }
+        if (token !== routeToken || rmData !== current) return;
+        rmData = fresh;
+        rmPaint();
     } catch (e) {
-        rmSetStatus(e.message, true);
+        if (token === routeToken) rmSetStatus(e.message, true);
     } finally {
         clearInterval(ticker);
         rmGenerating = null;
@@ -281,14 +270,28 @@ function rmBind() {
         if (ev.target.closest("[data-rm-generate]")) rmGenerate();
     });
 
-    view.addEventListener("change", (ev) => {
+    view.addEventListener("change", async (ev) => {
         const box = ev.target.closest("input[data-task]");
-        if (!box || !rmData) return;
-        const progress = rmLoadProgress(rmData.evaluation_id);
-        if (box.checked) progress[box.dataset.task] = true;
-        else delete progress[box.dataset.task];
-        rmSaveProgress(rmData.evaluation_id, progress);
-        rmUpdateProgress();
+        const current = rmData;
+        if (!box || !current) return;
+        const boxes = [...view.querySelectorAll("input[data-task]")];
+        boxes.forEach((item) => { item.disabled = true; });
+        try {
+            const fresh = await api("/api/roadmap/" + current.evaluation_id + "/tasks/" + box.dataset.task, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ completed: box.checked }),
+            });
+            if (rmData !== current || !box.isConnected) return;
+            rmData = fresh;
+            rmUpdateProgress();
+        } catch (error) {
+            if (!box.isConnected) return;
+            box.checked = !box.checked;
+            rmSetStatus(error.message, true);
+        } finally {
+            boxes.forEach((item) => { item.disabled = false; });
+        }
     });
 }
 
@@ -323,7 +326,9 @@ async function renderRoadmap() {
     }
 
     try {
-        rmData = await api("/api/roadmap/" + encodeURIComponent(evaluationId));
+        const fresh = await api("/api/roadmap/" + encodeURIComponent(evaluationId));
+        if (t !== routeToken) return;
+        rmData = fresh;
     } catch (e) {
         if (t === routeToken) showError(e.message);
         return;

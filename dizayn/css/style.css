@@ -1391,6 +1391,7 @@ section[id] {
 
 /* Tarixçə cədvəli */
 .table-wrap {
+  position: relative;
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -2925,6 +2926,18 @@ body:has(.modal[open]) {
   background: var(--card);
 }
 
+@media (max-height: 520px) {
+  .chat-head,
+  .chat-chips,
+  .chat-form {
+    flex-shrink: 0;
+  }
+
+  .chat-log {
+    min-height: 0;
+  }
+}
+
 .chat-send {
   flex: none;
   width: 46px;
@@ -3700,4 +3713,21 @@ p {
 /* Qaranlıq fonda loqo ikonu daha parlaq olsun */
 [data-theme="dark"] .logo img {
   filter: brightness(1.7) saturate(1.1);
+}
+.api-mode .prototype-only,
+html:not(.api-mode) :is(.beta-only, .beta-only.btn),
+.segmented[hidden] {
+  display: none !important;
+}
+
+.result-explanations details {
+  padding-block: .45rem;
+}
+
+.result-explanations summary {
+  cursor: pointer;
+}
+
+.specialty-search {
+  margin-bottom: .4rem;
 }
