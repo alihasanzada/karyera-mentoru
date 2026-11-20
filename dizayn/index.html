@@ -105,7 +105,7 @@
           </div>
           <div class="cabinet-head-actions">
             <a href="#cv-yoxla" class="btn btn-primary">+ Yeni CV yoxla</a>
-            <a class="btn btn-ghost beta-only" href="/#/applications">Müraciətlər</a>
+            <button class="btn btn-ghost beta-only" type="button" id="applications-open" aria-haspopup="dialog">Müraciətlər</button>
             <button type="button" class="btn btn-ghost" id="cabinet-logout">Çıxış</button>
           </div>
         </div>
@@ -1020,6 +1020,43 @@
     <p class="auth-demo prototype-only"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> DEMO: hesab yalnız bu brauzerdə saxlanılır. Real şifrəni istifadə etmə.</p>
   </dialog>
 
+  <dialog class="modal applications-modal" id="applications-modal" aria-labelledby="applications-title">
+    <div class="modal-head">
+      <h2 class="modal-title" id="applications-title">Müraciətlər</h2>
+      <button class="modal-close" type="button" id="applications-close" aria-label="Müraciətləri bağla">×</button>
+    </div>
+    <details id="application-add">
+      <summary>Yeni müraciət əlavə et</summary>
+      <form id="application-form" class="auth-form">
+        <div class="field-row">
+          <label>Şirkət <input class="input" name="company" required maxlength="120"></label>
+          <label>Vəzifə <input class="input" name="position" required maxlength="120"></label>
+        </div>
+        <div class="field-row">
+          <label>Status
+            <select class="input" name="status">
+              <option value="applied">Göndərildi</option>
+              <option value="interview">Müsahibə</option>
+              <option value="offer">Təklif</option>
+              <option value="rejected">Rədd</option>
+            </select>
+          </label>
+          <label>Müraciət tarixi <input class="input" type="date" name="applied_date"></label>
+        </div>
+        <div class="field-row">
+          <label>Növbəti addım <input class="input" name="next_step" maxlength="255"></label>
+          <label>Növbəti addımın tarixi <input class="input" type="date" name="next_step_date"></label>
+        </div>
+        <label>Qeyd <textarea class="input" name="notes" maxlength="2000" rows="2"></textarea></label>
+        <button type="submit" class="btn btn-primary">Əlavə et</button>
+      </form>
+    </details>
+    <label for="applications-filter">Statusa görə filtr</label>
+    <select class="input" id="applications-filter"></select>
+    <p id="applications-status" role="status"></p>
+    <ul id="applications-list"></ul>
+  </dialog>
+
   <dialog class="modal pay-modal" id="pay-modal" aria-labelledby="pay-title" aria-describedby="pay-note">
     <div class="modal-head">
       <h2 class="modal-title" id="pay-title">Premium Tələbə · Demo</h2>
@@ -1070,5 +1107,6 @@
   <!-- İnteraktivlik -->
   <script src="js/specialty-search.js"></script>
   <script src="js/script.js"></script>
+  <script src="js/applications.js"></script>
 </body>
 </html>

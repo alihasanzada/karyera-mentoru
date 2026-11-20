@@ -2019,6 +2019,8 @@ document.addEventListener("click", (event) => {
 });
 
 function clearAccountState() {
+  const applications = document.querySelector("#applications-modal");
+  if (applications.open) applications.close();
   apiUser = null;
   apiHistory = [];
   apiRoadmaps.clear();

@@ -3731,3 +3731,32 @@ html:not(.api-mode) :is(.beta-only, .beta-only.btn),
 .specialty-search {
   margin-bottom: .4rem;
 }
+
+.applications-modal {
+  width: min(620px, calc(100% - 2rem));
+  max-width: none;
+}
+
+.applications-modal details,
+.applications-modal form {
+  margin-bottom: 1rem;
+}
+
+#applications-list {
+  display: grid;
+  gap: .6rem;
+  padding: 0;
+  list-style: none;
+}
+
+#applications-list > li {
+  display: grid;
+  gap: .4rem;
+  padding: .8rem;
+  overflow-wrap: anywhere;
+}
+
+#applications-list p {
+  margin: 0;
+  white-space: pre-wrap;
+}

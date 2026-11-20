@@ -13,7 +13,7 @@ if (!(Test-Path .env)) { Copy-Item .env.example .env }
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
 ```
 
-Open [the beta](http://127.0.0.1:8000/dizayn/). The API docs are at `/docs`, and `/` serves the original interface. On other platforms create the virtual environment with `python3.12 -m venv .venv` and use `.venv/bin/python` for the same commands.
+Open [the canonical beta](http://127.0.0.1:8000/dizayn/). Use `/dizayn/` for browser tests and the presentation, and `/dizayn/#kabinet` for the signed-in dashboard. The API docs are at `/docs`, and `/` serves the original interface. On other platforms create the virtual environment with `python3.12 -m venv .venv` and use `.venv/bin/python` for the same commands.
 
 For live AI features, set the existing approved `GEMINI_API_KEY` and `GEMINI_MODEL` in the ignored `.env` file. If setting `GEMINI_MODELS`, its list takes precedence over `GEMINI_MODEL`. Use a fictional text PDF for the demonstration. Accounts, profiles and saved history are available without a provider key. An optional `DATABASE_PATH` points to a separate SQLite file for a clean demo.
 
