@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.db.database import Base, get_db
-from app.db.db_models import AnalysisRecord, RoadmapRecord
+from app.db.db_models import AnalysisRecord, RoadmapRecord, User
 from app.main import app
 from app.models.schemas import EvaluationLLMOutput, MatchResponse
 from app.routers import cv, evaluate
@@ -203,6 +203,23 @@ def test_profile_update(api):
     assert updated.status_code == 200
     assert updated.json()["first_name"] == "Aysel" and updated.json()["last_name"] == "Məmmədov"
     assert client.patch("/api/auth/me", cookies=cookies, json={"specialty_id": "nope"}).status_code == 422
+
+
+def test_legacy_account_with_empty_profile_can_fill_it_and_keeps_it(api):
+    client, factory = api
+    cookies = signup(client, "legacy@example.com")
+    with factory() as db:
+        user = db.scalar(select(User).where(User.email == "legacy@example.com"))
+        user.first_name = user.last_name = user.specialty_id = ""
+        db.commit()
+    assert client.get("/api/auth/me", cookies=cookies).json() == {
+        "id": 1, "email": "legacy@example.com", "first_name": "", "last_name": "", "specialty_id": ""}
+    filled = client.patch("/api/auth/me", cookies=cookies,
+                          json={"first_name": "Tahir", "last_name": "Məmmədov", "specialty_id": "frontend"})
+    assert filled.status_code == 200
+    # A later request (a page reload in either frontend) reads the same values
+    assert client.get("/api/auth/me", cookies=cookies).json() == filled.json()
+    assert filled.json()["specialty_id"] == "frontend"
 
 
 def test_specialties_match_the_site(api):
