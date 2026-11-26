@@ -209,6 +209,11 @@ let apiUser = null; // server hesabı və profili
 let apiFields = []; // /api/match/fields
 let apiHistory = []; // /api/history (yalnız qiymətləndirmələr)
 const apiRoadmaps = new Map(); // evaluation_id → /api/roadmap cavabı
+let accountEpoch = 0;
+let historyRead = null;
+let stopApiEvaluation = null;
+const roadmapReads = new Map();
+const roadmapWrites = new Set();
 
 class ApiError extends Error {
   constructor(message, status, detail) {
@@ -220,6 +225,7 @@ class ApiError extends Error {
 
 async function api(path, options = {}, timeoutMs = 60000) {
   const owner = apiUser;
+  const epoch = accountEpoch;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -236,7 +242,7 @@ async function api(path, options = {}, timeoutMs = 60000) {
       } catch (error) {
         // Cavab JSON deyil — ümumi mesaj qalır
       }
-      if (res.status === 401 && owner && apiUser?.id === owner.id && !path.startsWith("/api/auth/")) {
+      if (res.status === 401 && owner && epoch === accountEpoch && !path.startsWith("/api/auth/")) {
         clearAccountState();
         renderUser();
         updateView();
@@ -366,13 +372,12 @@ function fromEvaluation(data, id, createdAt) {
   };
 }
 
-async function loadApiHistory() {
-  const owner = apiUser;
-  const list = await api("/api/history");
-  if (apiUser?.id !== owner?.id || !owner) return [];
-  apiHistory = list
-    .filter((item) => item.kind === "evaluation")
-    .map((item) => ({
+function loadApiHistory() {
+  if (!apiUser) return Promise.resolve([]);
+  if (historyRead) return historyRead;
+  const read = api("/api/history?kind=evaluation").then((list) => {
+    if (historyRead !== read) return [];
+    apiHistory = list.map((item) => ({
       api: true,
       partial: true, // tam nəticə /api/history/{id} ilə yüklənir
       id: String(item.id),
@@ -382,7 +387,12 @@ async function loadApiHistory() {
       majorName: fieldName(item.field_id),
       total: item.score ?? 0,
     }));
-  return apiHistory;
+    return apiHistory;
+  }).finally(() => {
+    if (historyRead === read) historyRead = null;
+  });
+  historyRead = read;
+  return read;
 }
 
 // ===== 5. CV Yoxla: fayl seçimi =====
@@ -1124,19 +1134,36 @@ function planMessage(text) {
   updatePlanProgress(0, 0);
 }
 
-async function generateApiPlan(analysis, button) {
-  const owner = apiUser;
-  button.disabled = true;
-  button.textContent = "AI plan hazırlayır… (1 dəqiqəyə qədər)";
+function loadApiRoadmap(id) {
+  if (roadmapReads.has(id)) return roadmapReads.get(id);
+  const read = api("/api/roadmap/" + id).then((roadmap) => {
+    if (roadmapReads.get(id) === read && !roadmapWrites.has(id)) apiRoadmaps.set(id, roadmap);
+  }).finally(() => {
+    if (roadmapReads.get(id) === read) roadmapReads.delete(id);
+  });
+  roadmapReads.set(id, read);
+  return read;
+}
+
+async function generateApiPlan(analysis) {
+  const epoch = accountEpoch;
+  if (!apiUser || roadmapWrites.has(analysis.id)) return;
+  roadmapWrites.add(analysis.id);
+  renderApiPlan(analysis);
   try {
     const roadmap = await api(`/api/roadmap/${analysis.id}`, { method: "POST" }, 180000);
-    if (apiUser?.id !== owner?.id) return;
+    if (epoch !== accountEpoch) return;
+    roadmapReads.delete(analysis.id);
     apiRoadmaps.set(analysis.id, roadmap);
     showToast("21 günlük plan hazırdır!", "success");
   } catch (error) {
-    showToast(error.message, "error");
+    if (epoch === accountEpoch) showToast(error.message, "error");
+  } finally {
+    if (epoch === accountEpoch) {
+      roadmapWrites.delete(analysis.id);
+      if (currentAnalysis === analysis) renderApiPlan(analysis);
+    }
   }
-  if (currentAnalysis === analysis) renderApiPlan(analysis);
 }
 
 async function renderApiPlan(analysis) {
@@ -1147,14 +1174,12 @@ async function renderApiPlan(analysis) {
 
   const roadmap = apiRoadmaps.get(analysis.id);
   if (!roadmap) {
+    const epoch = accountEpoch;
     planMessage("Plan yüklənir…");
     try {
-      const owner = apiUser;
-      const fresh = await api("/api/roadmap/" + analysis.id);
-      if (apiUser?.id !== owner?.id) return;
-      apiRoadmaps.set(analysis.id, fresh);
+      await loadApiRoadmap(analysis.id);
     } catch (error) {
-      if (currentAnalysis === analysis) {
+      if (currentAnalysis === analysis && analysis.planDays === days && epoch === accountEpoch) {
         planMessage(error.message);
         const retry = document.createElement("button");
         retry.type = "button";
@@ -1165,7 +1190,7 @@ async function renderApiPlan(analysis) {
       }
       return;
     }
-    if (currentAnalysis === analysis) renderApiPlan(analysis);
+    if (currentAnalysis === analysis && analysis.planDays === days && epoch === accountEpoch) renderApiPlan(analysis);
     return;
   }
 
@@ -1182,8 +1207,9 @@ async function renderApiPlan(analysis) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "btn btn-primary";
-    button.textContent = "AI ilə plan yarat";
-    button.addEventListener("click", () => generateApiPlan(analysis, button));
+    button.disabled = roadmapWrites.has(analysis.id);
+    button.textContent = button.disabled ? "AI plan hazırlayır…" : "AI ilə plan yarat";
+    button.addEventListener("click", () => generateApiPlan(analysis));
     box.append(text, button);
     planDaysEl.appendChild(box);
     updatePlanProgress(0, 0);
@@ -1317,16 +1343,17 @@ planDaysEl.addEventListener("change", async (event) => {
 
   if (currentAnalysis.api) {
     const analysis = currentAnalysis;
-    const owner = apiUser;
+    const epoch = accountEpoch;
     const box = event.target;
     boxes.forEach((input) => { input.disabled = true; });
     try {
       const updated = await sendJson("/api/roadmap/" + analysis.id + "/tasks/" + box.dataset.task,
         { completed: box.checked }, "PUT");
-      if (apiUser?.id !== owner?.id) return;
+      if (epoch !== accountEpoch) return;
+      roadmapReads.delete(analysis.id);
       apiRoadmaps.set(analysis.id, updated);
     } catch (error) {
-      showToast(error.message, "error");
+      if (epoch === accountEpoch) showToast(error.message, "error");
     } finally {
       if (currentAnalysis === analysis) renderApiPlan(analysis);
     }
@@ -1448,7 +1475,7 @@ function presentAnalysis(entry) {
   }
   currentAnalysis = { ...full, planDays: entry.api ? 7 : planStats(entry).days };
   renderSkills(currentAnalysis);
-  renderPlan(currentAnalysis);
+  if (!entry.api) renderPlan(currentAnalysis);
   renderJobs(currentAnalysis);
   renderHistory(entry.id);
   activateTab(document.querySelector("#tab-score"), false);
@@ -1472,11 +1499,12 @@ function renderHistory(currentId) {
 // ===== 5. CV Yoxla: real AI analizi (API rejimi) =====
 async function runApiAnalysis(file, fieldId) {
   if (analyzeBtn.disabled) return;
-  const owner = apiUser;
+  const epoch = accountEpoch;
   analyzeBtn.disabled = true;
   analyzeBtn.textContent = "Analiz edilir…";
   result.hidden = true;
   const stopLoader = startApiLoader(["CV serverə göndərilir…", "AI CV-ni oxuyur…", "Sahə tələbləri ilə müqayisə edilir…", "Bal hesablanır…"]);
+  stopApiEvaluation = stopLoader;
 
   try {
     const form = new FormData();
@@ -1484,32 +1512,30 @@ async function runApiAnalysis(file, fieldId) {
     form.append("field_id", fieldId);
     const data = await api("/api/evaluate", { method: "POST", body: form }, 180000);
 
-    if (apiUser?.id !== owner?.id) return;
+    if (epoch !== accountEpoch) return;
     const entry = fromEvaluation(data, data.evaluation_id);
     apiHistory = [entry, ...apiHistory.filter((item) => item.id !== entry.id)];
     apiRoadmaps.delete(entry.id);
-    stopLoader();
     presentAnalysis(entry);
     showToast("Analiz hazırdır!", "success");
     result.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
     result.focus({ preventScroll: true });
 
     // Tarixçəni yenilə (4-cü tab və kabinet üçün)
+    historyRead = null; // A read started before this write can contain an earlier snapshot.
     loadApiHistory()
-      .then(() => renderHistory(entry.id))
+      .then(() => { if (epoch === accountEpoch) renderHistory(entry.id); })
       .catch(() => {});
   } catch (error) {
-    stopLoader();
-    showToast(error.message, "error");
-    if (error.status === 401) {
-      apiUser = null;
-      renderUser();
-      openAuth("tab-login");
-    }
+    if (epoch === accountEpoch) showToast(error.message, "error");
+    if (error.status === 401 && !apiUser) openAuth("tab-login");
   } finally {
-    stopLoader();
-    analyzeBtn.disabled = false;
-    analyzeBtn.textContent = "Analiz et";
+    if (stopApiEvaluation === stopLoader) {
+      stopLoader();
+      stopApiEvaluation = null;
+      analyzeBtn.disabled = false;
+      analyzeBtn.textContent = "Analiz et";
+    }
   }
 }
 
@@ -1602,6 +1628,7 @@ function activateTab(tab, focus = true) {
     t.tabIndex = selected ? 0 : -1;
     document.getElementById(t.getAttribute("aria-controls")).hidden = !selected;
   });
+  if (tab.id === "tab-plan" && currentAnalysis?.api) renderApiPlan(currentAnalysis);
   if (focus) tab.focus();
 }
 
@@ -1724,11 +1751,6 @@ document.querySelectorAll(".faq-btn").forEach((btn) => {
 // ===== Ümumi: e-poçt yoxlaması =====
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim());
-}
-
-function setFieldError(input, errorEl, message) {
-  input.classList.toggle("is-invalid", Boolean(message));
-  if (errorEl) errorEl.textContent = message;
 }
 
 // ===== 10. Tərəfdaşlıq forması =====
@@ -2051,12 +2073,21 @@ function clearAccountState() {
   const applications = document.querySelector("#applications-modal");
   if (applications.open) applications.close();
   apiUser = null;
+  accountEpoch++;
   apiHistory = [];
+  historyRead = null;
   apiRoadmaps.clear();
+  roadmapReads.clear();
+  roadmapWrites.clear();
   resetChat();
   profileOwner = null;
   profileForm.reset();
+  profileForm.querySelector('button[type="submit"]').disabled = false;
   clearFile();
+  stopApiEvaluation?.();
+  stopApiEvaluation = null;
+  analyzeBtn.disabled = false;
+  analyzeBtn.textContent = "Analiz et";
   document.querySelector("#cv-consent").checked = false;
   result.hidden = true;
   currentAnalysis = null;
@@ -2147,18 +2178,16 @@ function updateView() {
 
 // API rejimi: kabinet açılanda tarixçəni və son analizin planını serverdən yenilə
 async function refreshApiCabinet() {
+  const epoch = accountEpoch;
   try {
     await loadApiHistory();
+    if (epoch !== accountEpoch) return;
     const latest = apiHistory[0];
-    if (latest) {
-      const owner = apiUser;
-      const fresh = await api("/api/roadmap/" + latest.id);
-      if (apiUser?.id === owner?.id) apiRoadmaps.set(latest.id, fresh);
-    }
+    if (latest && !roadmapWrites.has(latest.id)) await loadApiRoadmap(latest.id);
   } catch (error) {
-    showToast(error.message, "error");
+    if (epoch === accountEpoch) showToast(error.message, "error");
   }
-  if (!cabinet.hidden && apiUser) renderCabinet(apiUser);
+  if (epoch === accountEpoch && !cabinet.hidden && apiUser) renderCabinet(apiUser);
 }
 
 function renderCabinet(user) {
@@ -2193,7 +2222,8 @@ function renderCabinet(user) {
   document.querySelector("#stat-count").textContent = entries.length;
   const majors = new Set(entries.map((e) => e.major)).size;
   document.querySelector("#stat-count-note").textContent =
-    entries.length ? `${majors} fərqli ixtisas üzrə` : "Bütün vaxt üzrə";
+    apiMode ? (entries.length ? `Son analizlər · ${majors} fərqli ixtisas` : "Son analizlər") :
+      (entries.length ? `${majors} fərqli ixtisas üzrə` : "Bütün vaxt üzrə");
 
   // Plan tamamlanması (son analiz)
   const plan = latest ? planStats(latest) : null;
@@ -2247,15 +2277,15 @@ function renderCabinet(user) {
 
 // Tarixçədən köhnə analizi aç
 async function openAnalysisFromCabinet(entry) {
-  const owner = apiUser;
+  const epoch = accountEpoch;
   // API rejimi: tarixçə siyahısında yalnız qısa məlumat var — tam nəticəni yüklə
   if (entry.api && entry.partial) {
     try {
       const detail = await api(`/api/history/${entry.id}`);
-      if (!owner || apiUser?.id !== owner.id) return;
+      if (epoch !== accountEpoch) return;
       entry = fromEvaluation(detail.result, detail.id, detail.created_at);
     } catch (error) {
-      showToast(error.message, "error");
+      if (epoch === accountEpoch) showToast(error.message, "error");
       return;
     }
   }
@@ -2295,6 +2325,7 @@ profileForm.addEventListener("submit", async (event) => {
   if (!apiUser) return;
   let user;
   const owner = apiUser;
+  const epoch = accountEpoch;
   const button = profileForm.querySelector('button[type="submit"]');
   button.disabled = true;
   try {
@@ -2304,9 +2335,10 @@ profileForm.addEventListener("submit", async (event) => {
       interests: document.querySelector("#profile-interests").value.trim(),
       skills: [...new Set(document.querySelector("#profile-skills").value.split(",").map((v) => v.trim()).filter(Boolean))],
     }, "PUT");
-    if (apiUser?.id !== owner?.id) return;
+    if (epoch !== accountEpoch) return;
     user = apiUser = makeApiUser(owner, profile);
   } catch (error) {
+    if (epoch !== accountEpoch) return;
     const fields = {
       name: "profile-name", surname: "profile-surname", field_id: "profile-major",
       education: "profile-education", interests: "profile-interests", skills: "profile-skills",
@@ -2322,7 +2354,7 @@ profileForm.addEventListener("submit", async (event) => {
     showToast(error.message, "error");
     return;
   } finally {
-    button.disabled = false;
+    if (epoch === accountEpoch) button.disabled = false;
   }
   if (!user) return;
 
@@ -2333,9 +2365,9 @@ profileForm.addEventListener("submit", async (event) => {
 });
 
 document.querySelector("#profile-suggest").addEventListener("click", async () => {
-  const owner = apiUser;
+  const epoch = accountEpoch;
   const latest = apiHistory[0];
-  if (!latest || !owner) {
+  if (!latest || !apiUser) {
     showToast("Təkliflər üçün əvvəlcə CV-ni analiz et.", "error");
     return;
   }
@@ -2343,7 +2375,7 @@ document.querySelector("#profile-suggest").addEventListener("click", async () =>
     const evaluation = latest.partial
       ? (await api("/api/history/" + latest.id)).result
       : { detected_skills: latest.detectedSkills, field_id: latest.major };
-    if (apiUser?.id !== owner.id) return;
+    if (epoch !== accountEpoch) return;
     const input = document.querySelector("#profile-skills");
     const existing = input.value.split(",").map((v) => v.trim()).filter(Boolean);
     input.value = [...new Set([...existing, ...(evaluation.detected_skills || []).filter((v) => v.length <= 60)])]
@@ -2352,7 +2384,7 @@ document.querySelector("#profile-suggest").addEventListener("click", async () =>
     showToast("Təklifləri yoxla və yadda saxla.", "success");
     input.focus();
   } catch (error) {
-    showToast(error.message, "error");
+    if (epoch === accountEpoch) showToast(error.message, "error");
   }
 });
 

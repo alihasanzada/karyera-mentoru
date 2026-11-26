@@ -61,6 +61,21 @@ test("a second click cannot launch a duplicate evaluation", async () => {
   assert.equal(app.node("cv-run").disabled, false);
 });
 
+test("late CV and history responses cannot update a new legacy session", async () => {
+  const replies = new Map();
+  const app = setup((url) => new Promise((resolve) => replies.set(url, resolve)));
+  vm.runInContext("setSession({id: 1})", app.context);
+  const cv = app.run();
+  const history = vm.runInContext("loadLatest()", app.context);
+  vm.runInContext("setSession(null); setSession({id: 1}); state.evaluating = true", app.context);
+  replies.get("/api/evaluate")({ ok: true, json: async () => ({ evaluation_id: 7 }) });
+  replies.get("/api/history?kind=evaluation")({ ok: true, json: async () => [{ id: 7 }] });
+  await Promise.all([cv, history]);
+  assert.equal(vm.runInContext("state.latest", app.context), null);
+  assert.equal(vm.runInContext("state.history.length", app.context), 0);
+  assert.equal(vm.runInContext("state.evaluating", app.context), true);
+});
+
 test("evaluation waits for CV processing consent", async () => {
   const app = setup(() => assert.fail("Unexpected request without consent"));
   app.node("cv-consent").checked = false;

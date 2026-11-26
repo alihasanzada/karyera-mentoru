@@ -89,6 +89,7 @@ function appPaint() {
 }
 
 async function appCreate(form) {
+    const epoch = sessionEpoch;
     const button = form.querySelector("button");
     const error = $("app-form-error");
     const f = form.elements;
@@ -103,16 +104,19 @@ async function appCreate(form) {
         const created = await api("/api/applications", {
             method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
         });
+        if (epoch !== sessionEpoch) return;
         appItems.unshift(created);
         if (currentRoute() === "applications") appPaint();
         notify("Müraciət əlavə olundu.");
     } catch (e) {
+        if (epoch !== sessionEpoch) return;
         error.textContent = e.message;
         button.disabled = false;
     }
 }
 
 async function appUpdateStatus(select) {
+    const epoch = sessionEpoch;
     const id = Number(select.dataset.appStatus);
     const item = appItems.find((a) => a.id === id);
     if (!item) return;
@@ -122,9 +126,11 @@ async function appUpdateStatus(select) {
             method: "PATCH", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ status: select.value }),
         });
+        if (epoch !== sessionEpoch) return;
         Object.assign(item, updated);
         notify("Status yeniləndi.");
     } catch (e) {
+        if (epoch !== sessionEpoch) return;
         select.value = item.status;
         notify(e.message, true);
     }
@@ -132,16 +138,19 @@ async function appUpdateStatus(select) {
 }
 
 async function appDelete(button) {
+    const epoch = sessionEpoch;
     const id = Number(button.dataset.appDelete);
     const item = appItems.find((a) => a.id === id);
     if (!item || !confirm(`"${item.position}" (${item.company}) müraciəti silinsin?`)) return;
     button.disabled = true;
     try {
         await api("/api/applications/" + id, { method: "DELETE" });
+        if (epoch !== sessionEpoch) return;
         appItems = appItems.filter((a) => a.id !== id);
         if (currentRoute() === "applications") appPaint();
         notify("Müraciət silindi.");
     } catch (e) {
+        if (epoch !== sessionEpoch) return;
         button.disabled = false;
         notify(e.message, true);
     }

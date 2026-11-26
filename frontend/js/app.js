@@ -5,6 +5,7 @@ const CV_PRIVACY_NOTE =
 
 const state = { fields: [], history: [], latest: null, current: null, evaluating: false, user: null };
 let routeToken = 0;
+let sessionEpoch = 0;
 let otpActive = false;
 
 const $ = (id) => document.getElementById(id);
@@ -19,6 +20,7 @@ const fieldName = (id) => (state.fields.find((f) => f.id === id) || {}).name || 
 /* API */
 
 async function api(path, options = {}, timeoutMs = 60000) {
+  const epoch = sessionEpoch;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -38,9 +40,8 @@ async function api(path, options = {}, timeoutMs = 60000) {
         else if (Array.isArray(data.detail) && data.detail.length) msg = validationMessage(data.detail[0]);
       } catch { }
 
-      if (res.status === 401 && !path.startsWith("/api/auth/")) {
-        state.user = null;
-        routeToken++;
+      if (res.status === 401 && epoch === sessionEpoch && !path.startsWith("/api/auth/")) {
+        setSession(null);
         renderAuth();
       }
       throw Object.assign(new Error(msg), {
@@ -80,19 +81,24 @@ async function loadFields() {
 }
 
 async function loadHistory() {
-  state.history = await api("/api/history");
-  return state.history;
+  const epoch = sessionEpoch;
+  const entries = await api("/api/history?kind=evaluation");
+  if (epoch !== sessionEpoch) return [];
+  return state.history = entries;
 }
 
 async function loadLatest() {
+  const epoch = sessionEpoch;
   const hist = await loadHistory();
-  const last = hist.find((h) => h.kind === "evaluation");
+  if (epoch !== sessionEpoch) return null;
+  const last = hist[0];
   if (!last) {
     state.latest = null;
     return null;
   }
   if (!state.latest || state.latest._id !== last.id) {
     const d = await api("/api/history/" + last.id);
+    if (epoch !== sessionEpoch) return null;
     state.latest = { ...d.result, _id: last.id, _at: last.created_at };
   }
   state.latest._at = last.created_at;
@@ -290,10 +296,21 @@ function renderAuth(signup = false, notice = "") {
   });
 }
 
+function setSession(user) {
+  sessionEpoch++;
+  routeToken++;
+  state.user = user;
+  state.history = [];
+  state.latest = state.current = null;
+  state.evaluating = false;
+  appItems = [];
+  appFilter = "all";
+  rmData = rmGenerating = null;
+}
+
 function completeSignIn(user) {
   otpActive = false;
-  state.user = user;
-  state.history = []; state.latest = null; state.current = null;
+  setSession(user);
   showApp();
   route();
 }
@@ -448,7 +465,7 @@ async function renderDashboard() {
       </div>${progressBar(s)}</div>`;
   };
 
-  const recent = state.history.filter((h) => h.kind === "evaluation").slice(0, 5);
+  const recent = state.history.slice(0, 5);
   const recentHtml = recent.map((h) => `
     <li>
       <button data-open="${h.id}" class="w-full flex items-center justify-between gap-3 py-3 px-2 text-left hover:bg-slate-50 rounded-lg">
@@ -550,6 +567,8 @@ async function runEvaluate() {
   if (!$("cv-consent").checked) return setCvStatus("Analiz üçün CV məlumatlarının emalına razılıq ver.", true);
 
   const form = new FormData();
+  const epoch = sessionEpoch;
+  const token = routeToken;
   form.append("file", file);
   form.append("field_id", $("cv-field").value);
 
@@ -558,12 +577,14 @@ async function runEvaluate() {
   const started = Date.now();
   setCvStatus("AI analiz edir...");
   const ticker = setInterval(() => {
-    setCvStatus(`AI analiz edir... ${Math.round((Date.now() - started) / 1000)} san`);
+    if (token === routeToken) setCvStatus(`AI analiz edir... ${Math.round((Date.now() - started) / 1000)} san`);
   }, 1000);
 
   try {
     const data = await api("/api/evaluate", { method: "POST", body: form }, 180000);
+    if (epoch !== sessionEpoch) return;
     state.latest = { ...data, _id: data.evaluation_id };
+    if (token !== routeToken) return;
     state.current = state.latest;
     setCvStatus("");
     const box = $("cv-result");
@@ -572,12 +593,14 @@ async function runEvaluate() {
       box.scrollIntoView({ behavior: "smooth" });
     }
   } catch (e) {
-    setCvStatus(e.message, true);
+    if (token === routeToken) setCvStatus(e.message, true);
   } finally {
-    state.evaluating = false;
     clearInterval(ticker);
-    const btn = $("cv-run");
-    if (btn) btn.disabled = false;
+    if (epoch === sessionEpoch) {
+      state.evaluating = false;
+      const btn = $("cv-run");
+      if (btn) btn.disabled = false;
+    }
   }
 }
 
@@ -614,14 +637,16 @@ async function renderProfile() {
     button.disabled = true;
     $("profile-error").textContent = "";
     try {
-      state.user = await api("/api/auth/me", {
+      const updated = await api("/api/auth/me", {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ first_name: f.first_name.value, last_name: f.last_name.value, specialty_id: f.specialty_id.value }),
       });
+      if (t !== routeToken) return;
+      state.user = updated;
       showApp();
       notify("Profil yeniləndi.");
     } catch (e) {
-      $("profile-error").textContent = e.message;
+      if (t === routeToken) $("profile-error").textContent = e.message;
     } finally {
       button.disabled = false;
     }
@@ -716,9 +741,8 @@ $("logout-btn").addEventListener("click", async () => {
     notify(error.message, true);
     return;
   }
-  state.user = null; state.latest = null; state.current = null; state.history = [];
+  setSession(null);
   state.fields = [];
-  routeToken++;
   renderAuth();
 });
 window.addEventListener("hashchange", route);
@@ -727,13 +751,15 @@ $("view").addEventListener("click", async (ev) => {
   const btn = ev.target.closest("[data-open]");
   if (!btn || btn.disabled) return;
   btn.disabled = true;
+  const token = routeToken;
   btn.setAttribute("aria-busy", "true");
   try {
     const d = await api("/api/history/" + btn.dataset.open);
+    if (token !== routeToken) return;
     state.current = { ...d.result, _id: d.id, _at: d.created_at };
     location.hash = "#/cv";
   } catch (e) {
-    notify(e.message, true);
+    if (token === routeToken) notify(e.message, true);
   } finally {
     btn.disabled = false;
     btn.removeAttribute("aria-busy");
@@ -742,7 +768,7 @@ $("view").addEventListener("click", async (ev) => {
 
 async function boot() {
   try {
-    state.user = await api("/api/auth/me");
+    setSession(await api("/api/auth/me"));
     showApp();
     route();
   } catch { renderAuth(); }

@@ -5414,9 +5414,9 @@ main {
   .chat-panel {
     width: 380px;
     height: min(560px, calc(100dvh - 120px));
-    max-height: none;
+    max-height: calc(100dvh - 120px);
     min-width: 320px;
-    min-height: 380px;
+    min-height: min(380px, calc(100dvh - 120px));
   }
 
   .chat-panel.is-large {
@@ -5431,6 +5431,7 @@ main {
   width: auto;
   height: auto;
   max-height: none;
+  min-height: 0;
 }
 
 @media (max-width: 767px) {

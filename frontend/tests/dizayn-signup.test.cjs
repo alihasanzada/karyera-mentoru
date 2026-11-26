@@ -234,7 +234,7 @@ function fakeServer(user, requests = []) {
     const ok = (data) => ({ ok: true, json: async () => data });
     if (url === "/health") return ok({ status: "ok" });
     if (url === "/api/match/fields") return ok(FIELDS);
-    if (url === "/api/history") return ok([]);
+    if (url === "/api/history?kind=evaluation") return ok([]);
     if (url === "/api/profile" && options.method === "PUT") {
       user.profile = body;
       return ok(user.profile);
@@ -248,6 +248,52 @@ function fakeServer(user, requests = []) {
 }
 
 const submitProfile = (app) => app.node("profile-form").listeners.submit[0]({ preventDefault() {} });
+
+test("history and roadmap reads coalesce, and old account data is discarded", async () => {
+  const calls = [];
+  const pending = new Map();
+  const app = await setup(async (url) => {
+    if (url === "/api/match/fields") return { ok: true, json: async () => FIELDS };
+    if (url === "/api/auth/me") return { ok: false, status: 401, json: async () => ({}) };
+    calls.push(url);
+    return new Promise((resolve) => pending.set(url, resolve));
+  });
+  const run = (source) => vm.runInContext(source, app.context);
+  run("apiUser = {id: 1};");
+  const history = run("Promise.all([loadApiHistory(), loadApiHistory()])");
+  const roadmap = run('Promise.all([loadApiRoadmap("42"), loadApiRoadmap("42")])');
+  assert.deepEqual(calls, ["/api/history?kind=evaluation", "/api/roadmap/42"]);
+  run("clearAccountState(); apiUser = {id: 1};");
+  pending.get("/api/history?kind=evaluation")({ ok: true, json: async () => [{ id: 42 }] });
+  pending.get("/api/roadmap/42")({ ok: true, json: async () => ({ generated: true }) });
+  await Promise.all([history, roadmap]);
+  assert.equal(run("apiHistory.length"), 0);
+  assert.equal(run("apiRoadmaps.size"), 0);
+});
+
+test("a duration change cannot submit a second roadmap generation and failure allows retry", async () => {
+  const requests = [];
+  let resolve;
+  const app = await setup(async (url, options = {}) => {
+    if (url === "/api/match/fields") return { ok: true, json: async () => FIELDS };
+    if (url === "/api/auth/me") return { ok: false, status: 401, json: async () => ({}) };
+    requests.push([url, options.method]);
+    return new Promise((done) => { resolve = done; });
+  });
+  const run = (source) => vm.runInContext(source, app.context);
+  run('apiUser = {id: 1}; currentAnalysis = {id: "42", planDays: 7}; apiRoadmaps.set("42", {generated: false});');
+  const first = run("generateApiPlan(currentAnalysis)");
+  run("currentAnalysis.planDays = 14; renderApiPlan(currentAnalysis);");
+  await run("generateApiPlan(currentAnalysis)");
+  assert.equal(requests.length, 1);
+  resolve({ ok: false, status: 503, json: async () => ({ detail: "Sınaq xətası" }) });
+  await first;
+  const retry = run("generateApiPlan(currentAnalysis)");
+  resolve({ ok: true, json: async () => ({ generated: true, roadmap: [], completed_task_ids: [] }) });
+  await retry;
+  assert.deepEqual(requests, [["/api/roadmap/42", "POST"], ["/api/roadmap/42", "POST"]]);
+  assert.equal(run('apiRoadmaps.get("42").generated'), true);
+});
 
 test("legacy account with empty server profile is not filled from old browser data", async () => {
   const requests = [];

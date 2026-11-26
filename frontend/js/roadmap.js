@@ -238,13 +238,14 @@ async function rmGenerate() {
     const current = rmData;
     if (!current || current.generated || rmGenerating !== null) return;
     const token = routeToken;
+    const epoch = sessionEpoch;
 
     rmGenerating = current.evaluation_id;
     rmSetButtons(true);
     const started = Date.now();
     rmSetStatus("AI plan hazırlayır...");
     const ticker = setInterval(() => {
-        if (rmBusy()) rmSetStatus(`AI plan hazırlayır... ${Math.round((Date.now() - started) / 1000)} san`);
+        if (token === routeToken && rmBusy()) rmSetStatus(`AI plan hazırlayır... ${Math.round((Date.now() - started) / 1000)} san`);
     }, 1000);
 
     try {
@@ -256,8 +257,10 @@ async function rmGenerate() {
         if (token === routeToken) rmSetStatus(e.message, true);
     } finally {
         clearInterval(ticker);
-        rmGenerating = null;
-        rmSetButtons(false);
+        if (epoch === sessionEpoch) {
+            rmGenerating = null;
+            rmSetButtons(false);
+        }
     }
 }
 

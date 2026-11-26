@@ -51,8 +51,10 @@ test("both roadmap pages read and update the same server-backed task state", asy
     planDaysEl,
     apiMode: true,
     apiUser: { id: 1 },
+    accountEpoch: 0,
     currentAnalysis: { id: "42", api: true },
     apiRoadmaps: new Map([["42", saved]]),
+    roadmapReads: new Map(),
     sendJson: async (url, body, method) => save(url, method, body),
     renderApiPlan() {},
   });
