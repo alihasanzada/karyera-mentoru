@@ -1,0 +1,50 @@
+{
+    "id": "data",
+    "role": "Data analitik",
+    "level": "Junior",
+    "description": "Data analitik vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Excel",
+        "SQL",
+        "Python",
+        "Power BI",
+        "Statistika"
+    ],
+    "preferred_skills": [
+        "Pandas",
+        "Data vizuallaşdırma",
+        "A/B testləri"
+    ],
+    "ats_keywords": [
+        "Excel",
+        "SQL",
+        "Python",
+        "Power BI",
+        "Statistika",
+        "Pandas",
+        "Data vizuallaşdırma",
+        "A/B testləri",
+        "pandas",
+        "NumPy",
+        "scikit-learn",
+        "TensorFlow",
+        "PyTorch",
+        "Matplotlib",
+        "Seaborn",
+        "Jupyter",
+        "Tableau",
+        "Statistics",
+        "Machine Learning",
+        "Deep Learning",
+        "Data Visualization",
+        "Data Cleaning",
+        "ETL",
+        "A/B Testing",
+        "Regression",
+        "Classification",
+        "Kaggle",
+        "Spark",
+        "Git",
+        "Feature Engineering"
+    ]
+}

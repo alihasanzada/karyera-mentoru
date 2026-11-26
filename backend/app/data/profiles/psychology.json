@@ -1,0 +1,28 @@
+{
+    "id": "psychology",
+    "role": "Psixoloq",
+    "level": "Junior",
+    "description": "Psixoloq vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Konsultasiya",
+        "Psixoloji testlər",
+        "SPSS",
+        "Tədqiqat metodları",
+        "Empatik ünsiyyət"
+    ],
+    "preferred_skills": [
+        "Etik qaydalar",
+        "Hesabat yazma",
+        "Qrup işi"
+    ],
+    "ats_keywords": [
+        "Konsultasiya",
+        "Psixoloji testlər",
+        "SPSS",
+        "Tədqiqat metodları",
+        "Empatik ünsiyyət",
+        "Etik qaydalar",
+        "Hesabat yazma",
+        "Qrup işi"
+    ]
+}

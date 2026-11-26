@@ -1,0 +1,28 @@
+{
+    "id": "publicHealth",
+    "role": "İctimai səhiyyə mütəxəssisi",
+    "level": "Junior",
+    "description": "İctimai səhiyyə mütəxəssisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Epidemiologiya",
+        "Biostatistika",
+        "SPSS",
+        "Sağlamlığın təşviqi",
+        "Tədqiqat metodları"
+    ],
+    "preferred_skills": [
+        "Hesabat yazma",
+        "Excel",
+        "Kommunikasiya"
+    ],
+    "ats_keywords": [
+        "Epidemiologiya",
+        "Biostatistika",
+        "SPSS",
+        "Sağlamlığın təşviqi",
+        "Tədqiqat metodları",
+        "Hesabat yazma",
+        "Excel",
+        "Kommunikasiya"
+    ]
+}

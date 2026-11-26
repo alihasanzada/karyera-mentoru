@@ -1,0 +1,28 @@
+{
+    "id": "media",
+    "role": "Media mütəxəssisi",
+    "level": "Junior",
+    "description": "Media mütəxəssisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Xəbər yazısı",
+        "Redaktə",
+        "Müsahibə",
+        "Fotojurnalistika",
+        "SMM"
+    ],
+    "preferred_skills": [
+        "Video montaj",
+        "Fakt yoxlama",
+        "Media etikası"
+    ],
+    "ats_keywords": [
+        "Xəbər yazısı",
+        "Redaktə",
+        "Müsahibə",
+        "Fotojurnalistika",
+        "SMM",
+        "Video montaj",
+        "Fakt yoxlama",
+        "Media etikası"
+    ]
+}

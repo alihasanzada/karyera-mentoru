@@ -1,0 +1,28 @@
+{
+    "id": "math",
+    "role": "Riyaziyyatçı-analitik",
+    "level": "Junior",
+    "description": "Riyaziyyatçı-analitik vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Python",
+        "Statistika",
+        "Xətti cəbr",
+        "Optimallaşdırma",
+        "MATLAB"
+    ],
+    "preferred_skills": [
+        "SQL",
+        "LaTeX",
+        "Modelləşdirmə"
+    ],
+    "ats_keywords": [
+        "Python",
+        "Statistika",
+        "Xətti cəbr",
+        "Optimallaşdırma",
+        "MATLAB",
+        "SQL",
+        "LaTeX",
+        "Modelləşdirmə"
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "id": "marketing",
+    "role": "Marketinq mütəxəssisi",
+    "level": "Junior",
+    "description": "Marketinq mütəxəssisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "SMM",
+        "Google Analytics",
+        "SEO",
+        "Kontent yazılışı",
+        "Meta Ads"
+    ],
+    "preferred_skills": [
+        "E-poçt marketinqi",
+        "Brendinq",
+        "Canva"
+    ],
+    "ats_keywords": [
+        "SMM",
+        "Google Analytics",
+        "SEO",
+        "Kontent yazılışı",
+        "Meta Ads",
+        "E-poçt marketinqi",
+        "Brendinq",
+        "Canva"
+    ]
+}

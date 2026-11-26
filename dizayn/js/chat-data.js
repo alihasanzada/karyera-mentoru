@@ -73,7 +73,7 @@ window.CHAT_DATA = {
         "Kiçik şirkətlərə və startaplara birbaşa e-poçt yaz, rəqabət azdır.",
         "Bitirdiyin hər layihəni portfolioya əlavə et. Təcrübən yoxdursa, nümunələrin danışsın.",
       ],
-      link: { href: "#qiymetler", label: "Premium-da vakansiya uyğunluğu →" },
+      link: { href: "#cv-yoxla", label: "CV Yoxla-da nümunə vakansiyalar →" },
     },
     {
       keys: ["maaş", "maas", "əmək haqqı", "emek haqqi", "salary", "danışıq"],

@@ -1,0 +1,28 @@
+{
+    "id": "logistics",
+    "role": "Logistika mütəxəssisi",
+    "level": "Junior",
+    "description": "Logistika mütəxəssisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Təchizat zənciri",
+        "Excel",
+        "SAP",
+        "Gömrük prosedurları",
+        "İnventar idarəetməsi"
+    ],
+    "preferred_skills": [
+        "İnkoterms",
+        "Danışıqlar",
+        "Power BI"
+    ],
+    "ats_keywords": [
+        "Təchizat zənciri",
+        "Excel",
+        "SAP",
+        "Gömrük prosedurları",
+        "İnventar idarəetməsi",
+        "İnkoterms",
+        "Danışıqlar",
+        "Power BI"
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "id": "science",
+    "role": "Laboratoriya mütəxəssisi",
+    "level": "Junior",
+    "description": "Laboratoriya mütəxəssisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Laborator təcrübə",
+        "Tədqiqat metodları",
+        "Statistik təhlil",
+        "Elmi yazı",
+        "Təhlükəsizlik qaydaları"
+    ],
+    "preferred_skills": [
+        "Python və ya R",
+        "Cihazlarla iş",
+        "İngilis dili"
+    ],
+    "ats_keywords": [
+        "Laborator təcrübə",
+        "Tədqiqat metodları",
+        "Statistik təhlil",
+        "Elmi yazı",
+        "Təhlükəsizlik qaydaları",
+        "Python və ya R",
+        "Cihazlarla iş",
+        "İngilis dili"
+    ]
+}

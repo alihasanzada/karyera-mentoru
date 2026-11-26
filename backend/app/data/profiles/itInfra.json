@@ -1,0 +1,28 @@
+{
+    "id": "itInfra",
+    "role": "İT mütəxəssisi",
+    "level": "Junior",
+    "description": "İT mütəxəssisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Şəbəkə əsasları",
+        "Linux",
+        "Windows Server",
+        "SQL",
+        "Bulud texnologiyaları"
+    ],
+    "preferred_skills": [
+        "Git",
+        "Skriptləşdirmə",
+        "ITIL əsasları"
+    ],
+    "ats_keywords": [
+        "Şəbəkə əsasları",
+        "Linux",
+        "Windows Server",
+        "SQL",
+        "Bulud texnologiyaları",
+        "Git",
+        "Skriptləşdirmə",
+        "ITIL əsasları"
+    ]
+}

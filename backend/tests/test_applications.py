@@ -15,8 +15,9 @@ BODY = {"company": "Acme", "position": "Junior SOC Analyst"}
 
 def _signed_in(email):
     c = TestClient(app)
-    r = c.post("/api/auth/signup", json={"email": email, "password": "long-test-password"})
-    assert r.status_code == 201
+    credentials = {"email": email, "password": "long-test-password"}
+    assert c.post("/api/auth/signup", json={**credentials, "first_name": "Tahir", "last_name": "Məmmədov", "specialty_id": "cybersecurity", "consent": True}).status_code == 201
+    assert c.post("/api/auth/login", json=credentials).status_code == 200
     return c
 
 

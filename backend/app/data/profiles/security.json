@@ -1,0 +1,51 @@
+{
+    "id": "security",
+    "role": "İnformasiya təhlükəsizliyi mütəxəssisi",
+    "level": "Junior",
+    "description": "İnformasiya təhlükəsizliyi mütəxəssisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Şəbəkə əsasları",
+        "Linux",
+        "Python",
+        "SIEM",
+        "Penetrasiya testi"
+    ],
+    "preferred_skills": [
+        "Kriptoqrafiya",
+        "Firewall",
+        "ISO 27001"
+    ],
+    "ats_keywords": [
+        "Şəbəkə əsasları",
+        "Linux",
+        "Python",
+        "SIEM",
+        "Penetrasiya testi",
+        "Kriptoqrafiya",
+        "Firewall",
+        "ISO 27001",
+        "Splunk",
+        "QRadar",
+        "Wireshark",
+        "Nmap",
+        "Burp Suite",
+        "Metasploit",
+        "Nessus",
+        "Bash",
+        "PowerShell",
+        "TCP/IP",
+        "DNS",
+        "IDS",
+        "IPS",
+        "OWASP",
+        "MITRE ATT&CK",
+        "Incident Response",
+        "Vulnerability Assessment",
+        "Penetration Testing",
+        "EDR",
+        "SOC",
+        "Active Directory",
+        "CompTIA Security+",
+        "CEH"
+    ]
+}

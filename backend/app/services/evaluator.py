@@ -27,10 +27,10 @@ PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "evaluate_cv.
 EVAL_PROMPT = PROMPT_PATH.read_text(encoding="utf-8")
 
 LABELS = {
-    "structure": "CV Strukturu və Formatlaşdırma",
-    "ats": "ATS Uyğunluğu",
-    "impact": "Təcrübə və Nailiyyətlərin Metrikası",
-    "field_fit": "Hədəf Sahə/Bazar Bacarıqlarına Uyğunluq",
+    "structure": "Struktur",
+    "ats": "ATS uyğunluğu",
+    "impact": "Nəticə və göstəricilər",
+    "field_fit": "Sahəyə uyğunluq",
 }
 
 ARTIFACT_HINTS = (

@@ -1,0 +1,28 @@
+{
+    "id": "translation",
+    "role": "Tərcüməçi",
+    "level": "Junior",
+    "description": "Tərcüməçi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Yazılı tərcümə",
+        "Şifahi tərcümə",
+        "CAT alətləri (Trados, MemoQ)",
+        "Terminologiya",
+        "Redaktə"
+    ],
+    "preferred_skills": [
+        "İkinci xarici dil",
+        "Lokalizasiya",
+        "Vaxtın idarə edilməsi"
+    ],
+    "ats_keywords": [
+        "Yazılı tərcümə",
+        "Şifahi tərcümə",
+        "CAT alətləri (Trados, MemoQ)",
+        "Terminologiya",
+        "Redaktə",
+        "İkinci xarici dil",
+        "Lokalizasiya",
+        "Vaxtın idarə edilməsi"
+    ]
+}

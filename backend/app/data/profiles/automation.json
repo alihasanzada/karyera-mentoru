@@ -1,0 +1,28 @@
+{
+    "id": "automation",
+    "role": "Avtomatika mühəndisi",
+    "level": "Junior",
+    "description": "Avtomatika mühəndisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "PLC",
+        "Elektronika sxemləri",
+        "MATLAB",
+        "SCADA",
+        "Mikrokontrollerlər"
+    ],
+    "preferred_skills": [
+        "C/C++",
+        "Şəbəkə əsasları",
+        "Texniki ingilis dili"
+    ],
+    "ats_keywords": [
+        "PLC",
+        "Elektronika sxemləri",
+        "MATLAB",
+        "SCADA",
+        "Mikrokontrollerlər",
+        "C/C++",
+        "Şəbəkə əsasları",
+        "Texniki ingilis dili"
+    ]
+}

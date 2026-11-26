@@ -1,0 +1,28 @@
+{
+    "id": "civil",
+    "role": "İnşaat mühəndisi",
+    "level": "Junior",
+    "description": "İnşaat mühəndisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "AutoCAD",
+        "Revit",
+        "ETABS",
+        "Smeta",
+        "Tikinti normaları"
+    ],
+    "preferred_skills": [
+        "Layihə oxuma",
+        "HSE",
+        "MS Project"
+    ],
+    "ats_keywords": [
+        "AutoCAD",
+        "Revit",
+        "ETABS",
+        "Smeta",
+        "Tikinti normaları",
+        "Layihə oxuma",
+        "HSE",
+        "MS Project"
+    ]
+}

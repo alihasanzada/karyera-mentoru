@@ -1,0 +1,28 @@
+{
+    "id": "teacher",
+    "role": "Müəllim",
+    "level": "Junior",
+    "description": "Müəllim vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Dərs planlaması",
+        "Sinif idarəetməsi",
+        "Qiymətləndirmə",
+        "Rəqəmsal təhsil alətləri",
+        "İnklüziv təhsil"
+    ],
+    "preferred_skills": [
+        "Kurikulum",
+        "Valideynlə ünsiyyət",
+        "Təqdimat"
+    ],
+    "ats_keywords": [
+        "Dərs planlaması",
+        "Sinif idarəetməsi",
+        "Qiymətləndirmə",
+        "Rəqəmsal təhsil alətləri",
+        "İnklüziv təhsil",
+        "Kurikulum",
+        "Valideynlə ünsiyyət",
+        "Təqdimat"
+    ]
+}

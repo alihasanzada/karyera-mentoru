@@ -55,6 +55,8 @@ class MatchLLMOutput(BaseModel):
 class FieldInfo(BaseModel):
     id: str
     name: str
+    group: str
+    role: str
     level: str
     description: str
 
