@@ -5,17 +5,21 @@ from app.db.db_models import UserProfile
 from app.models.schemas import ProfileInput
 
 
-def has_legacy_design_columns(connection: Connection | Engine) -> bool:
-    columns = {"first_name", "last_name", "specialty_id"}
-    return columns.issubset(column["name"] for column in inspect(connection).get_columns("users"))
+def has_legacy_design_columns(connection: Connection) -> bool:
+    key = "has_legacy_design_columns"
+    if key not in connection.info:
+        columns = {"first_name", "last_name", "specialty_id"}
+        connection.info[key] = columns.issubset(
+            column["name"] for column in inspect(connection).get_columns("users")
+        )
+    return connection.info[key]
 
 
 def backfill_design_profiles(engine: Engine) -> None:
     """Copy profiles from design-branch databases without changing their source rows."""
-    if not has_legacy_design_columns(engine):
-        return
-
     with engine.begin() as connection:
+        if not has_legacy_design_columns(connection):
+            return
         rows = connection.execute(text(
             "SELECT users.id, first_name, last_name, specialty_id FROM users "
             "LEFT JOIN user_profiles ON users.id = user_profiles.user_id "

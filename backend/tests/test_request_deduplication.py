@@ -12,6 +12,7 @@ from app.db.database import Base, get_db
 from app.db.db_models import AnalysisRecord, EvaluationCache, LoginSession, RoadmapRecord, User
 from app.main import app
 from app.models.schemas import EvaluationLLMOutput, MatchLLMOutput, RoadmapLLMOutput
+from app.routers import applications
 from app.services import ai_analyzer, history
 from app.services.ai_analyzer import AIAnalysisError
 from app.services.inflight import InFlight
@@ -185,5 +186,25 @@ def test_cancelling_a_waiter_keeps_shared_work_alive():
         assert await second == 42
         generate.assert_awaited_once()
         await flight.close()
+
+    asyncio.run(scenario())
+
+
+def test_concurrent_application_creates_respect_account_cap(concurrent_api, monkeypatch):
+    monkeypatch.setattr(applications, "MAX_PER_CLIENT", 1)
+
+    async def scenario():
+        async with app.router.lifespan_context(app), httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://testserver",
+        ) as client:
+            async def create(owner):
+                return (await client.post("/api/applications", headers=cookie(owner),
+                                          json={"company": "Fictional", "position": "QA"})).status_code
+
+            codes = await asyncio.gather(create(1), create(1), create(2))
+            assert sorted(codes[:2]) == [201, 400]
+            assert codes[2] == 201
+            for owner in (1, 2):
+                assert len((await client.get("/api/applications", headers=cookie(owner))).json()) == 1
 
     asyncio.run(scenario())

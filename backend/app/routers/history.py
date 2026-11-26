@@ -1,8 +1,9 @@
 import json
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 
 from app.db.database import get_db
 from app.db.db_models import AnalysisRecord
@@ -36,13 +37,19 @@ def _get_own(db: Session, client_id: str, record_id: int) -> AnalysisRecord:
 
 
 @router.get("", response_model=list[HistoryItem])
-def list_history(client_id: str = Depends(get_client_id), db: Session = Depends(get_db)):
-    rows = db.scalars(
-        select(AnalysisRecord)
-        .where(AnalysisRecord.client_id == client_id)
-        .order_by(AnalysisRecord.id.desc())
-        .limit(20)
-    ).all()
+def list_history(
+    kind: Literal["evaluation", "cv", "match"] | None = None,
+    client_id: str = Depends(get_client_id),
+    db: Session = Depends(get_db),
+):
+    query = select(AnalysisRecord).options(load_only(
+        AnalysisRecord.id, AnalysisRecord.kind, AnalysisRecord.field_id,
+        AnalysisRecord.filename, AnalysisRecord.score, AnalysisRecord.created_at,
+        raiseload=True,
+    )).where(AnalysisRecord.client_id == client_id)
+    if kind is not None:
+        query = query.where(AnalysisRecord.kind == kind)
+    rows = db.scalars(query.order_by(AnalysisRecord.id.desc()).limit(20)).all()
     return [_item(r) for r in rows]
 
 

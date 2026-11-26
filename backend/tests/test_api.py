@@ -7,7 +7,7 @@ import pytest
 from google import genai
 from google.genai import types
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, event, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from auth_helpers import verify_login
@@ -347,6 +347,39 @@ def test_delete_and_retention_remove_dependent_plans(api, evaluation, monkeypatc
         assert db.get(AnalysisRecord, keep_id) is None
         assert db.get(AnalysisRecord, newest_id) is not None
         assert [r.evaluation_id for r in db.scalars(select(RoadmapRecord))] == [other_id]
+
+
+def test_history_projects_summaries_and_filters_before_limiting(api, evaluation):
+    client, factory = api
+    first = signup(client, "first@example.com")
+    second = signup(client, "second@example.com")
+    with factory() as db:
+        own_id = history.save_record(db, "user-1", "evaluation", "fictional.pdf", evaluation)
+        other_id = history.save_record(db, "user-2", "evaluation", "other.pdf", evaluation)
+        db.add_all(AnalysisRecord(client_id="user-1", kind="match", filename=f"{n}.pdf",
+                                  result_json='{"large":"' + ("x" * 4096) + '"}')
+                   for n in range(20))
+        db.commit()
+
+    statements = []
+    engine = factory.kw["bind"]
+
+    def sql(conn, cursor, statement, parameters, context, executemany):
+        if "FROM analyses" in statement:
+            statements.append(statement)
+
+    event.listen(engine, "before_cursor_execute", sql)
+    try:
+        unfiltered = client.get("/api/history", cookies=first).json()
+        filtered = client.get("/api/history?kind=evaluation", cookies=first).json()
+        other = client.get("/api/history?kind=evaluation", cookies=second).json()
+    finally:
+        event.remove(engine, "before_cursor_execute", sql)
+    assert len(statements) == 3 and all("result_json" not in statement for statement in statements)
+    assert len(unfiltered) == 20 and all(row["kind"] == "match" for row in unfiltered)
+    assert [row["id"] for row in filtered] == [own_id]
+    assert [row["id"] for row in other] == [other_id]
+    assert client.get(f"/api/history/{own_id}", cookies=first).json()["result"] == evaluation.model_dump()
 
 
 def test_signup_rules_match_the_site(api):

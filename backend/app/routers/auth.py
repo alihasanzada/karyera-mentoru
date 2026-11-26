@@ -111,13 +111,14 @@ def _create_user(db: Session, email: str, password_hash: str) -> User:
 
 def _login(response: Response, request: Request, db: Session, user: User, *, otp_verified: bool = False):
     token = (VERIFIED_SESSION_PREFIX if otp_verified else "") + secrets.token_urlsafe(32)
+    account = _public(user, load_profile(db, user.id))
     db.add(LoginSession(token_hash=sha256(token.encode()).hexdigest(), user_id=user.id,
                         expires_at=datetime.now(timezone.utc) + timedelta(days=SESSION_DAYS)))
     db.commit()
     response.set_cookie("session", token, max_age=SESSION_DAYS * 86400,
                         httponly=True, secure=request.url.scheme == "https", samesite="strict", path="/")
     response.headers["Cache-Control"] = "no-store"
-    return _public(user, load_profile(db, user.id))
+    return account
 
 
 def _challenge_response(response: Response, request: Request, token: str) -> dict[str, int]:
@@ -133,13 +134,13 @@ def signup(data: SignupData, db: Session = Depends(get_db)):
     try:
         user = _create_user(db, data.email, _hash_password(data.password, secrets.token_bytes(16)))
         store_profile(db, user.id, profile)
+        account = _public(user, profile)
         db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="Bu e-poçt artıq qeydiyyatdan keçib.")
-    db.refresh(user)
     # No session here: the user signs in explicitly after creating the account.
-    return _public(user, profile)
+    return account
 
 
 @router.post("/login", responses={202: {"description": "Email verification required"}})

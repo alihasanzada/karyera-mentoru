@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, insert, literal, select
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -65,26 +65,30 @@ def create_application(
     client_id: str = Depends(get_client_id),
     db: Session = Depends(get_db),
 ):
-    count = db.scalar(
+    count = (
         select(func.count())
         .select_from(ApplicationRecord)
         .where(ApplicationRecord.client_id == client_id)
+        .scalar_subquery()
     )
-    if count >= MAX_PER_CLIENT:
+    data = {"client_id": client_id, **payload.model_dump()}
+    if data["applied_date"] is None:
+        data["applied_date"] = datetime.now(timezone.utc).date()
+
+    # A single SQLite write evaluates the cap and inserts the row atomically.
+    table = ApplicationRecord.__table__
+    values = select(*(literal(value, table.c[key].type) for key, value in data.items()))
+    statement = insert(ApplicationRecord).from_select(list(data), values.where(count < MAX_PER_CLIENT))
+    record = db.scalar(statement.returning(ApplicationRecord))
+    if record is None:
         raise HTTPException(
             status_code=400,
             detail=f"Maksimum müraciət sayına çatdın ({MAX_PER_CLIENT}). Köhnələrini sil.",
         )
 
-    data = payload.model_dump()
-    if data["applied_date"] is None:
-        data["applied_date"] = datetime.now(timezone.utc).date()
-
-    record = ApplicationRecord(client_id=client_id, **data)
-    db.add(record)
+    result = _out(record)
     db.commit()
-    db.refresh(record)
-    return _out(record)
+    return result
 
 
 @router.patch("/{application_id}", response_model=ApplicationOut)

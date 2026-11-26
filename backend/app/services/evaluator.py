@@ -45,10 +45,6 @@ def _is_artifact(text: str) -> bool:
     return any(h in low for h in ARTIFACT_HINTS)
 
 
-def _clean_items(items: list[str]) -> list[str]:
-    return [i for i in items if not _is_artifact(i)]
-
-
 def _clean_text(text: str) -> str:
     sentences = re.split(r"(?<=[.!?])\s+", text.strip())
     kept = [s for s in sentences if not _is_artifact(s)]

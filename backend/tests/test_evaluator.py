@@ -1,5 +1,5 @@
 from app.models.schemas import ActionStep, MatchResponse, SkillCheck
-from app.services.evaluator import compute_overall, field_fit_category, _clean_items, _clean_text
+from app.services.evaluator import _clean_text, compute_overall, field_fit_category
 
 
 def test_compute_overall():
@@ -27,7 +27,6 @@ def test_field_fit_category():
 
 
 def test_artifact_filter():
-    assert _clean_items(["Səhifə 1 / 1 qeydi", "Real problem"]) == ["Real problem"]
     assert (
         _clean_text("Yaxşı CV. Avtomatik mətn çıxarılması qarışıb. Bacarıqlar güclüdür.")
         == "Yaxşı CV. Bacarıqlar güclüdür."
