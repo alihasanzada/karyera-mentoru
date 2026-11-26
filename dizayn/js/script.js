@@ -565,7 +565,7 @@ const PROFILES = {
   general: { role: "Ofis koordinatoru", skills: ["Kommunikasiya", "Excel", "Komanda işi", "İngilis dili", "Vaxtın idarə edilməsi", "Problemin həlli", "Prezentasiya", "Kritik düşünmə"] },
 };
 
-// İxtisaslar CLAUDE.md-dəki 7 qrup üzrə: [ad, profil]
+// İxtisaslar 7 qrup üzrə: [ad, profil]
 // Əsas mənbə: Nazirlər Kabinetinin bakalavriat ixtisasları təsnifatı (qısaldılmış adlarla)
 const SPECIALTY_GROUPS = [
   {
@@ -1338,7 +1338,7 @@ planDaysEl.addEventListener("change", async (event) => {
 
   const percent = updatePlanProgress(boxes.length, doneCount);
   if (percent === 100 && event.target.checked) {
-    showToast("Təbriklər! Plan tam yerinə yetirildi 🎉", "success");
+    showToast("Plan tam yerinə yetirildi. Təbriklər!", "success");
   }
 });
 
@@ -1438,6 +1438,7 @@ function planStats(entry) {
 // Analizi CV Yoxla bölməsində (4 tabı ilə) göstər
 function presentAnalysis(entry) {
   const full = withSkills(entry);
+  document.querySelector("#result-title").textContent = entry.api ? "Analiz nəticəsi" : "Nümunə analiz nəticəsi";
   renderResult({ name: entry.file }, entry.majorName || entry.major, entry.scores, entry.date, entry.api ? entry.total : null);
   if (entry.api) {
     applyApiResult(entry);
@@ -1508,11 +1509,11 @@ async function runApiAnalysis(file, fieldId) {
   } finally {
     stopLoader();
     analyzeBtn.disabled = false;
-    analyzeBtn.textContent = "Analiz Et";
+    analyzeBtn.textContent = "Analiz et";
   }
 }
 
-// ===== 5. CV Yoxla: "Analiz Et" =====
+// ===== 5. CV Yoxla: "Analiz et" =====
 cvForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
@@ -1578,7 +1579,7 @@ cvForm.addEventListener("submit", async (event) => {
   presentAnalysis(entry);
 
   analyzeBtn.disabled = false;
-  analyzeBtn.textContent = "Analiz Et";
+  analyzeBtn.textContent = "Analiz et";
   showToast("Analiz hazırdır!", "success");
 
   result.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
@@ -1763,6 +1764,7 @@ const loginForm = document.querySelector("#login-form");
 const otpForm = document.querySelector("#otp-form");
 const authTabs = document.querySelector(".auth-tabs");
 let endOtp = null;
+let passwordPending = false;
 const registerForm = document.querySelector("#register-form");
 const regMajor = document.querySelector("#reg-major");
 const googleNote = document.querySelector("#google-note");
@@ -1790,7 +1792,7 @@ function openAuth(tabId = "tab-login") {
 }
 
 function closeAuth() {
-  if (otpForm.getAttribute("aria-busy") !== "true") authModal.close();
+  if (!passwordPending && otpForm.getAttribute("aria-busy") !== "true") authModal.close();
 }
 
 function resetOtpScreen() {
@@ -1806,13 +1808,7 @@ function showOtpScreen(challenge) {
   endOtp = startEmailOtp(otpForm, {
     challenge,
     request: sendJson,
-    onVerified: async (me) => {
-      const user = await signedInUser(me);
-      if (!endOtp) return;
-      resetOtpScreen();
-      apiUser = user;
-      signIn(`Xoş gəldin, ${userLabel(user)}!`);
-    },
+    onVerified: finishSignIn,
     onCancel: () => {
       resetOtpScreen();
       document.querySelector("#login-pass").focus();
@@ -1820,10 +1816,16 @@ function showOtpScreen(challenge) {
   });
 }
 
+async function finishSignIn(me) {
+  apiUser = await signedInUser(me);
+  resetOtpScreen();
+  signIn(`Xoş gəldin, ${userLabel(apiUser)}!`);
+}
+
 loginBtn.addEventListener("click", () => openAuth("tab-login"));
 document.querySelector("#auth-close").addEventListener("click", closeAuth);
 authModal.addEventListener("cancel", (event) => {
-  if (otpForm.getAttribute("aria-busy") === "true") event.preventDefault();
+  if (passwordPending || otpForm.getAttribute("aria-busy") === "true") event.preventDefault();
 });
 
 // Arxa fona klikləyəndə bağla
@@ -1897,7 +1899,8 @@ function renderUser() {
 }
 
 function signIn(message) {
-  closeAuth();
+  resetChat();
+  authModal.close();
   loginForm.reset();
   registerForm.reset();
   renderUser();
@@ -2010,21 +2013,23 @@ loginForm.addEventListener("submit", async (event) => {
   const submit = loginForm.querySelector('button[type="submit"]');
   if (submit.disabled) return;
   submit.disabled = true;
+  passwordPending = true;
   errorEl.textContent = "";
   try {
     const challenge = await sendJson("/api/auth/login", { email, password: pass.value });
     pass.value = "";
-    if (!authModal.open) {
-      await sendJson("/api/auth/otp/cancel");
-      return;
+    if (Number.isInteger(challenge.expires_in)) {
+      activateTab(document.querySelector("#tab-login"), false);
+      showOtpScreen(challenge);
+    } else {
+      await finishSignIn(challenge);
     }
-    activateTab(document.querySelector("#tab-login"), false);
-    showOtpScreen(challenge);
   } catch (error) {
     errorEl.textContent = error.message;
     pass.select();
   } finally {
     submit.disabled = false;
+    passwordPending = false;
   }
 });
 
@@ -2383,6 +2388,16 @@ const chatForm = document.querySelector("#chat-form");
 const chatInput = document.querySelector("#chat-input");
 let chatStarted = false;
 
+// Mövzular və hazır cavablar js/chat-data.js faylındadır
+const CHAT_DATA = window.CHAT_DATA || {};
+const CHAT_TOPICS = Array.isArray(CHAT_DATA.topics) ? CHAT_DATA.topics : [];
+const CHAT_GREETING = CHAT_DATA.greeting || "Salam{ad}! Sualını yaz.";
+const CHAT_FALLBACK = CHAT_DATA.fallback || { text: "Bu suala hələ hazır cavabım yoxdur." };
+const CHAT_TEXT_MAX = 1000;
+
+const chatSub = document.querySelector("#chat-sub");
+const chatChips = document.querySelector("#chat-chips");
+const chatSend = chatForm.querySelector(".chat-send");
 let chatHistoryLoaded = false;
 let chatHistoryRequest = null;
 let chatBusy = false;
@@ -2395,20 +2410,130 @@ function resetChat() {
   chatBusy = false;
   chatStarted = false;
   chatForm.reset();
-  chatForm.querySelector("button").disabled = false;
+  chatSend.disabled = false;
   chatLog.replaceChildren();
   toggleChat(false);
 }
 
+
+function chipTopics() {
+  return CHAT_TOPICS.filter((topic) => topic.chip);
+}
+
+function findAnswer(question) {
+  const q = question.toLocaleLowerCase("az");
+  const topic = CHAT_TOPICS.find((t) =>
+    (t.keys || []).some((key) => q.includes(String(key).toLocaleLowerCase("az")))
+  );
+  return topic || { ...CHAT_FALLBACK, options: chipTopics().map((t) => t.chip) };
+}
+
+// AI cavabı: "- " və "1." ilə başlayan sətirlər siyahı olur (HTML kimi oxunmur)
+function appendRichText(container, text) {
+  let list = null;
+  text.split(/\n+/).map((line) => line.trim()).filter(Boolean).forEach((line) => {
+    const clean = line.replace(/\*\*/g, "");
+    const item = clean.match(/^(?:[-•*]|\d+[.)])\s+(.*)$/);
+    if (item) {
+      const tag = /^\d/.test(clean) ? "OL" : "UL";
+      if (!list || list.tagName !== tag) {
+        list = document.createElement(tag);
+        container.appendChild(list);
+      }
+      const li = document.createElement("li");
+      li.textContent = item[1];
+      list.appendChild(li);
+    } else {
+      list = null;
+      const p = document.createElement("p");
+      p.textContent = clean;
+      container.appendChild(p);
+    }
+  });
+}
+
 function addMessage(from, content) {
   const msg = document.createElement("div");
-  msg.className = "msg msg-" + from;
-  const p = document.createElement("p");
-  p.textContent = content;
-  msg.append(p);
-  chatLog.append(msg);
+  msg.className = `msg msg-${from}`;
+
+  if (typeof content === "string") {
+    if (from === "bot") {
+      appendRichText(msg, content);
+    } else {
+      const p = document.createElement("p");
+      p.textContent = content;
+      msg.appendChild(p);
+    }
+  } else {
+    const p = document.createElement("p");
+    p.textContent = content.text;
+    msg.appendChild(p);
+
+    if (content.tips) {
+      const ul = document.createElement("ul");
+      content.tips.forEach((tip) => {
+        const li = document.createElement("li");
+        li.textContent = tip;
+        ul.appendChild(li);
+      });
+      msg.appendChild(ul);
+    }
+
+    if (content.options && content.options.length) {
+      const box = document.createElement("div");
+      box.className = "msg-options";
+      content.options.forEach((label) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "chat-chip";
+        btn.textContent = label;
+        btn.addEventListener("click", () => sendQuestion(label));
+        box.appendChild(btn);
+      });
+      msg.appendChild(box);
+    }
+
+    if (content.link) {
+      const a = document.createElement("a");
+      a.className = "msg-link";
+      a.href = content.link.href;
+      a.textContent = content.link.label;
+      a.addEventListener("click", () => toggleChat(false));
+      msg.appendChild(a);
+    }
+
+    if (content.note) {
+      const note = document.createElement("p");
+      note.className = "msg-note";
+      note.textContent = content.note;
+      msg.appendChild(note);
+    }
+  }
+
+  chatLog.appendChild(msg);
   chatLog.scrollTop = chatLog.scrollHeight;
   return msg;
+}
+
+function showTyping() {
+  const typing = document.createElement("div");
+  typing.className = "msg msg-bot msg-typing";
+  typing.setAttribute("aria-label", "AI Mentor yazır");
+  typing.innerHTML = "<span></span><span></span><span></span>";
+  chatLog.appendChild(typing);
+  chatLog.scrollTop = chatLog.scrollHeight;
+  return typing;
+}
+
+// Real AI yalnız backend işləyəndə və istifadəçi daxil olanda
+function chatUsesAI() {
+  return apiMode && Boolean(apiUser);
+}
+
+function updateChatMode() {
+  if (chatUsesAI()) chatSub.textContent = "Gemini · Söhbət tarixçəsi hesabında saxlanır";
+  else if (apiMode) chatSub.textContent = "Hazır cavablar · AI üçün hesaba daxil ol";
+  else chatSub.textContent = "Demo · AI deyil, hazır cavablar";
 }
 
 async function restoreMentorHistory() {
@@ -2435,27 +2560,23 @@ async function restoreMentorHistory() {
 }
 
 async function sendQuestion(text) {
-  const question = text.trim();
+  const question = text.trim().slice(0, CHAT_TEXT_MAX);
   if (!question || chatBusy) return;
-  if (!apiMode || !apiUser) {
-    if (apiMode) {
-      toggleChat(false);
-      openAuth("tab-login");
-      googleNote.textContent = "AI Mentor ilə danışmaq üçün hesabına daxil ol.";
-    } else {
-      addMessage("bot", "AI Mentor üçün saytı yerli serverdən aç.");
-    }
+  updateChatMode();
+  if (!chatUsesAI()) {
+    chatInput.value = "";
+    addMessage("user", question);
+    addMessage("bot", { ...findAnswer(question), note: "Nümunə cavab · hazır məsləhət" });
     return;
   }
   const version = chatVersion;
-  const submit = chatForm.querySelector("button");
   chatBusy = true;
-  submit.disabled = true;
+  chatSend.disabled = true;
   await restoreMentorHistory();
   if (version !== chatVersion) return;
   chatInput.value = "";
   addMessage("user", question);
-  const status = addMessage("bot", "AI Mentor cavab hazırlayır…");
+  const status = showTyping();
   try {
     const reply = await sendJson("/api/mentor", {
       question,
@@ -2466,12 +2587,13 @@ async function sendQuestion(text) {
     addMessage("bot", reply.answer);
   } catch (error) {
     if (version !== chatVersion) return;
-    status.textContent = error.message;
+    status.remove();
+    addMessage("bot", error.message);
     if (!chatInput.value) chatInput.value = question;
   } finally {
     if (version === chatVersion) {
       chatBusy = false;
-      submit.disabled = false;
+      chatSend.disabled = false;
     }
   }
 }
@@ -2483,16 +2605,30 @@ function toggleChat(open) {
   // İkon (çat / bağla) CSS ilə aria-expanded-ə görə dəyişir
 
   if (open) {
+    updateChatMode();
     if (!chatStarted) {
       chatStarted = true;
       const user = getCurrentUser();
-      addMessage("bot", "Salam" + (user ? ", " + userLabel(user) : "") +
-        "! CV, bacarıqlar, inkişaf planı və ya müsahibə hazırlığı haqqında sual ver.");
+      const greeting = CHAT_GREETING.replace("{ad}", user ? `, ${userLabel(user)}` : "");
+      // Demo rejimdə istifadəçi AI ilə danışmadığını bilsin
+      const note = chatUsesAI() ? "" : "Hazırda demo rejimdəyəm: AI ilə yox, açar sözlərə görə hazır məsləhətlərlə cavab verirəm. Yazdıqların heç yerə göndərilmir.";
+      addMessage("bot", { text: greeting, note });
     }
     restoreMentorHistory();
     chatInput.focus();
   }
 }
+
+// Tez sual düymələri chat-data.js-dəki "chip" sahəsindən
+chipTopics().forEach((topic) => {
+  const chip = document.createElement("button");
+  chip.type = "button";
+  chip.className = "chat-chip";
+  chip.textContent = topic.chip;
+  chip.addEventListener("click", () => sendQuestion(topic.chip));
+  chatChips.appendChild(chip);
+});
+chatChips.hidden = chatChips.children.length === 0;
 
 chatFab.addEventListener("click", () => toggleChat(chatPanel.hidden));
 document.querySelector("#chat-close").addEventListener("click", () => {
@@ -2505,17 +2641,98 @@ chatForm.addEventListener("submit", (event) => {
   sendQuestion(chatInput.value);
 });
 
-document.querySelectorAll(".chat-chip").forEach((chip) => {
-  chip.addEventListener("click", () => sendQuestion(chip.textContent));
+// Esc ilə: əvvəlcə tam ekrandan çıx, sonra bağla
+chatPanel.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (chatPanel.dataset.mode === "full") {
+    setChatMode("normal");
+    return;
+  }
+  toggleChat(false);
+  chatFab.focus();
 });
 
-// Esc ilə bağla
-chatPanel.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") {
-    toggleChat(false);
-    chatFab.focus();
+// ----- Çat pəncərəsinin ölçüsü: normal, böyük, tam ekran, əl ilə -----
+const chatExpand = document.querySelector("#chat-expand");
+const chatFull = document.querySelector("#chat-full");
+const chatResize = document.querySelector("#chat-resize");
+const CHAT_SIZE_KEY = "catOlcusu";
+
+function setChatMode(mode) {
+  chatPanel.dataset.mode = mode;
+  chatPanel.classList.toggle("is-large", mode === "large");
+  chatPanel.classList.toggle("is-full", mode === "full");
+  if (mode !== "normal") {
+    chatPanel.style.width = "";
+    chatPanel.style.height = "";
+  } else {
+    applySavedChatSize();
   }
+  chatExpand.setAttribute("aria-pressed", String(mode === "large"));
+  chatExpand.setAttribute("aria-label", mode === "large" ? "Çatı kiçilt" : "Çatı böyüt");
+  chatFull.setAttribute("aria-pressed", String(mode === "full"));
+  chatFull.setAttribute("aria-label", mode === "full" ? "Tam ekrandan çıx" : "Tam ekran");
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
+
+function applySavedChatSize() {
+  try {
+    const size = JSON.parse(readStorage(CHAT_SIZE_KEY));
+    if (size && window.matchMedia("(min-width: 768px)").matches) {
+      chatPanel.style.width = `${Math.min(size.w, window.innerWidth - 32)}px`;
+      chatPanel.style.height = `${Math.min(size.h, window.innerHeight - 120)}px`;
+    }
+  } catch (error) {
+    // Saxlanmış ölçü yoxdur və ya pozulub
+  }
+}
+
+chatExpand.addEventListener("click", () => {
+  setChatMode(chatPanel.dataset.mode === "large" ? "normal" : "large");
 });
+
+chatFull.addEventListener("click", () => {
+  setChatMode(chatPanel.dataset.mode === "full" ? "normal" : "full");
+});
+
+// Sol yuxarı küncdən dartıb ölçünü dəyiş (yalnız planşet və kompüterdə)
+chatResize.addEventListener("pointerdown", (event) => {
+  event.preventDefault();
+  const rect = chatPanel.getBoundingClientRect();
+  const start = { x: event.clientX, y: event.clientY, w: rect.width, h: rect.height };
+  setChatMode("normal");
+  chatPanel.classList.add("is-resizing");
+  chatResize.setPointerCapture(event.pointerId);
+
+  function onMove(moveEvent) {
+    const w = Math.min(Math.max(start.w + start.x - moveEvent.clientX, 320), window.innerWidth - 32);
+    const h = Math.min(Math.max(start.h + start.y - moveEvent.clientY, 380), window.innerHeight - 120);
+    chatPanel.style.width = `${Math.round(w)}px`;
+    chatPanel.style.height = `${Math.round(h)}px`;
+  }
+
+  function onUp() {
+    chatResize.removeEventListener("pointermove", onMove);
+    chatResize.removeEventListener("pointerup", onUp);
+    chatResize.removeEventListener("pointercancel", onUp);
+    chatPanel.classList.remove("is-resizing");
+    const rectNow = chatPanel.getBoundingClientRect();
+    writeStorage(CHAT_SIZE_KEY, JSON.stringify({ w: Math.round(rectNow.width), h: Math.round(rectNow.height) }));
+  }
+
+  chatResize.addEventListener("pointermove", onMove);
+  chatResize.addEventListener("pointerup", onUp);
+  chatResize.addEventListener("pointercancel", onUp);
+});
+
+// İki dəfə klik: əl ilə verilən ölçünü sıfırla
+chatResize.addEventListener("dblclick", () => {
+  try { localStorage.removeItem(CHAT_SIZE_KEY); } catch (error) { /* Yaddaş əlçatan deyil */ }
+  chatPanel.style.width = "";
+  chatPanel.style.height = "";
+});
+
+setChatMode("normal");
 
 // ===== 11. Footer: yuxarı qalx =====
 document.querySelector("#to-top").addEventListener("click", () => {
@@ -2558,4 +2775,118 @@ document.querySelector("#to-top").addEventListener("click", () => {
   renderUser();
   updateView();
   if (location.hash === "#ai-mentor") toggleChat(true);
+})();
+
+// ===== Tech qatı: animasiyalar və hover effektləri =====
+(function () {
+  const root = document.documentElement;
+  const motionOK = !reduceMotion;
+  if (motionOK) root.classList.add("motion");
+
+  // Səhifənin oxunma zolağı və header kölgəsi
+  const progressBar = document.querySelector(".scroll-progress");
+  const header = document.querySelector(".site-header");
+  let ticking = false;
+
+  function onScroll() {
+    const max = root.scrollHeight - window.innerHeight;
+    progressBar.style.setProperty("--progress", max > 0 ? (window.scrollY / max).toFixed(4) : 0);
+    header.classList.toggle("is-scrolled", window.scrollY > 8);
+    ticking = false;
+  }
+
+  window.addEventListener("scroll", () => {
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(onScroll);
+    }
+  }, { passive: true });
+  onScroll();
+
+  // Bölmə başlıqları və addım xətti ekrana girəndə
+  const animated = document.querySelectorAll(".section-head, [data-animate]");
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("in-view");
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.3 });
+    animated.forEach((el) => io.observe(el));
+  } else {
+    animated.forEach((el) => el.classList.add("in-view"));
+  }
+
+  // Kartlarda kursoru izləyən işıq
+  document.querySelectorAll(".why-card, .price-card, .rewrite-col").forEach((el) => {
+    el.classList.add("spot");
+    el.addEventListener("pointermove", (event) => {
+      const rect = el.getBoundingClientRect();
+      el.style.setProperty("--x", `${event.clientX - rect.left}px`);
+      el.style.setProperty("--y", `${event.clientY - rect.top}px`);
+    });
+  });
+
+  if (!motionOK) return;
+
+  // Hero: işıq kursorun ardınca gedir, vizual yüngülcə əyilir
+  const hero = document.querySelector(".hero");
+  const visual = document.querySelector(".hero-visual");
+  const wide = window.matchMedia("(min-width: 1200px)");
+
+  hero.addEventListener("pointermove", (event) => {
+    const rect = hero.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width;
+    const y = (event.clientY - rect.top) / rect.height;
+    hero.style.setProperty("--mx", `${(x * 100).toFixed(1)}%`);
+    hero.style.setProperty("--my", `${(y * 100).toFixed(1)}%`);
+    if (wide.matches) {
+      visual.style.setProperty("--ry", `${((x - 0.5) * 10).toFixed(2)}deg`);
+      visual.style.setProperty("--rx", `${((0.5 - y) * 7).toFixed(2)}deg`);
+    }
+  });
+
+  hero.addEventListener("pointerleave", () => {
+    visual.style.setProperty("--rx", "0deg");
+    visual.style.setProperty("--ry", "0deg");
+  });
+
+  // Etiketdə yazı makinası effekti
+  const kicker = document.querySelector("#kicker-text");
+  const phrases = [
+    "Tələbələr və yeni məzunlar üçün",
+    "PDF yüklə, CV nəticəni gör",
+    "120-dən çox ixtisas üzrə bacarıq xəritəsi",
+    "7, 14 və ya 21 günlük fərdi plan",
+  ];
+  // Bir taymer: hər 40 ms-də bir hərf silinir və ya yazılır, aralarda fasilə
+  const TICK = 40;
+  const PAUSE_TICKS = 70; // ~2.8 saniyə
+  let index = 0;
+  let length = phrases[0].length;
+  let deleting = true;
+  let pause = 75; // ilk dəfə ~3 saniyə gözlə
+
+  setInterval(() => {
+    if (pause > 0) {
+      pause--;
+      return;
+    }
+    if (deleting) {
+      length = Math.max(0, length - 2);
+      if (length === 0) {
+        deleting = false;
+        index = (index + 1) % phrases.length;
+      }
+    } else {
+      length++;
+      if (length >= phrases[index].length) {
+        deleting = true;
+        pause = PAUSE_TICKS;
+      }
+    }
+    kicker.textContent = phrases[index].slice(0, length);
+  }, TICK);
 })();

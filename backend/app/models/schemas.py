@@ -248,13 +248,16 @@ class ProfileInput(BaseModel):
     skills: list[SkillName] = Field(default_factory=list, max_length=24)
 
 
+MentorQuestion = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
+
+
 class MentorTurn(BaseModel):
-    question: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=600)]
+    question: MentorQuestion
     answer: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2400)]
 
 
 class MentorRequest(BaseModel):
-    question: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=600)]
+    question: MentorQuestion
     evaluation_id: int | None = Field(default=None, gt=0)
     # Older clients may send history. The mentor uses the account's saved turns.
     history: list[MentorTurn] = Field(default_factory=list, max_length=3)
@@ -313,3 +316,25 @@ class ApplicationOut(BaseModel):
     next_step_date: date | None = None
     created_at: str
     updated_at: str
+
+
+# --- AI Mentor çatı ---
+
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    text: MentorQuestion
+
+
+class ChatRequest(BaseModel):
+    # Son mesajlar; sonuncu istifadəçinin sualı olmalıdır
+    messages: list[ChatMessage] = Field(min_length=1, max_length=20)
+
+    @model_validator(mode="after")
+    def _last_is_user(self):
+        if self.messages[-1].role != "user":
+            raise ValueError("the last message must come from the user")
+        return self
+
+
+class ChatResponse(BaseModel):
+    reply: str

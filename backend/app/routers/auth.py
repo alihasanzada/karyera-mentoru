@@ -13,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.config import settings
 from app.db.db_models import LoginSession, User
 from app.db.profile_migration import has_legacy_design_columns
 from app.deps import VERIFIED_SESSION_PREFIX, current_user
@@ -108,13 +109,14 @@ def _create_user(db: Session, email: str, password_hash: str) -> User:
     return user
 
 
-def _login(response: Response, request: Request, db: Session, user: User):
-    token = VERIFIED_SESSION_PREFIX + secrets.token_urlsafe(32)
+def _login(response: Response, request: Request, db: Session, user: User, *, otp_verified: bool = False):
+    token = (VERIFIED_SESSION_PREFIX if otp_verified else "") + secrets.token_urlsafe(32)
     db.add(LoginSession(token_hash=sha256(token.encode()).hexdigest(), user_id=user.id,
                         expires_at=datetime.now(timezone.utc) + timedelta(days=SESSION_DAYS)))
     db.commit()
     response.set_cookie("session", token, max_age=SESSION_DAYS * 86400,
                         httponly=True, secure=request.url.scheme == "https", samesite="strict", path="/")
+    response.headers["Cache-Control"] = "no-store"
     return _public(user, load_profile(db, user.id))
 
 
@@ -140,7 +142,7 @@ def signup(data: SignupData, db: Session = Depends(get_db)):
     return _public(user, profile)
 
 
-@router.post("/login", status_code=202)
+@router.post("/login", responses={202: {"description": "Email verification required"}})
 def login(data: Credentials, response: Response, request: Request, db: Session = Depends(get_db)):
     user = db.scalar(select(User).where(User.email == data.email))
     if not user:
@@ -149,26 +151,35 @@ def login(data: Credentials, response: Response, request: Request, db: Session =
     salt = bytes.fromhex(user.password_hash.split(":")[0])
     if not secrets.compare_digest(_hash_password(data.password, salt), user.password_hash):
         raise HTTPException(status_code=401, detail="E-poçt və ya parol yanlışdır.")
-    return _challenge_response(response, request, login_otp.issue(db, user))
+    if settings.auth_mode == "email-otp":
+        token = login_otp.issue(db, user)
+        response.status_code = 202
+        return _challenge_response(response, request, token)
+    return _login(response, request, db, user)
 
 
-@router.post("/otp/resend", status_code=202)
+def require_email_otp() -> None:
+    if settings.auth_mode != "email-otp":
+        raise HTTPException(404, "E-poçtla təsdiqləmə aktiv deyil.")
+
+
+@router.post("/otp/resend", status_code=202, dependencies=[Depends(require_email_otp)])
 def resend_otp(response: Response, request: Request,
                login_challenge: str | None = Cookie(default=None), db: Session = Depends(get_db)):
     return _challenge_response(response, request, login_otp.resend(db, login_challenge))
 
 
-@router.post("/otp/verify")
+@router.post("/otp/verify", dependencies=[Depends(require_email_otp)])
 def verify_otp(data: OTPCode, response: Response, request: Request,
                login_challenge: str | None = Cookie(default=None), db: Session = Depends(get_db)):
     user = login_otp.consume(db, login_challenge, data.code.get_secret_value())
-    result = _login(response, request, db, user)
+    result = _login(response, request, db, user, otp_verified=True)
     response.delete_cookie(login_otp.OTP_COOKIE, path="/api/auth")
     response.headers["Cache-Control"] = "no-store"
     return result
 
 
-@router.post("/otp/cancel")
+@router.post("/otp/cancel", dependencies=[Depends(require_email_otp)])
 def cancel_otp(response: Response, login_challenge: str | None = Cookie(default=None),
                db: Session = Depends(get_db)):
     login_otp.invalidate(db, login_challenge)

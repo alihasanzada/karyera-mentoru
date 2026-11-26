@@ -1,15 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 48" width="260" height="48" role="img" aria-label="Karyera Mentoru">
-  <!-- Hədəf ikonu -->
-  <g fill="none" stroke="#0369A1" stroke-width="3.5">
-    <circle cx="22" cy="26" r="18"/>
-    <circle cx="22" cy="26" r="10"/>
-  </g>
-  <circle cx="22" cy="26" r="3.5" fill="#0369A1"/>
-  <!-- Ox -->
-  <g stroke="#0369A1" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
-    <line x1="22" y1="26" x2="40" y2="8"/>
-    <polyline points="31,6 40,8 42,17"/>
-  </g>
+  <!-- "K" monoqramı -->
+  <rect width="48" height="48" rx="11" fill="#24406B"/>
+  <path d="M16 13v22M16 25.5 29 13M21 21l9 14" fill="none" stroke="#fff" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="36.5" cy="34.6" r="2.9" fill="#E3A62F"/>
   <!-- Yazı -->
-  <text x="54" y="33" fill="#0369A1" font-family="Manrope, 'Segoe UI', Arial, sans-serif" font-size="22" font-weight="800">Karyera Mentoru</text>
+  <text x="60" y="32" fill="#1A1D21" font-family="'IBM Plex Sans', 'Segoe UI', Arial, sans-serif" font-size="21" font-weight="600">Karyera Mentoru</text>
 </svg>

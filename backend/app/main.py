@@ -7,7 +7,7 @@ from app.config import BASE_DIR, settings
 from app.db import db_models  # noqa: F401  (registers ORM tables on Base.metadata)
 from app.db.database import Base, engine
 from app.db.profile_migration import backfill_design_profiles
-from app.routers import applications, auth, cv, evaluate, history, match, mentor, profile, roadmap
+from app.routers import applications, auth, chat, cv, evaluate, history, match, mentor, profile, roadmap
 from app.services.request_limits import BetaRequestLimits
 
 Base.metadata.create_all(bind=engine)
@@ -37,6 +37,7 @@ app.include_router(roadmap.router)
 app.include_router(applications.router)
 app.include_router(profile.router)
 app.include_router(mentor.router)
+app.include_router(chat.router)
 
 
 @app.get("/health")

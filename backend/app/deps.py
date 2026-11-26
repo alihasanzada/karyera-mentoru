@@ -3,6 +3,7 @@ from hashlib import sha256
 
 from fastapi import Cookie, Depends, HTTPException
 from sqlalchemy.orm import Session
+from app.config import settings
 
 from app.db.database import get_db
 from app.db.db_models import LoginSession, User
@@ -13,7 +14,7 @@ VERIFIED_SESSION_PREFIX = "otp1."
 
 
 def current_user(session: str | None = Cookie(default=None), db: Session = Depends(get_db)) -> User:
-    if not session or not session.startswith(VERIFIED_SESSION_PREFIX):
+    if not session or (settings.auth_mode == "email-otp" and not session.startswith(VERIFIED_SESSION_PREFIX)):
         raise HTTPException(status_code=401, detail="Hesabına daxil ol.")
     login = db.get(LoginSession, sha256(session.encode()).hexdigest())
     if not login or login.expires_at.replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):

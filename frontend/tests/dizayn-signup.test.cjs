@@ -391,7 +391,7 @@ test("pricing card and FAQ match what the code really does", () => {
   assert.match(faq, /funksional fərq yoxdur/);
   assert.match(faq, /vakansiyalar nümunədir/i);
   assert.match(section("panel-jobs"), /real elan deyil/);
-  assert.match(PAGE, /AI Mentor üçün saytı yerli serverdən aç/);
+  assert.match(PAGE, /Hazır cavablar · Nümunə/);
 });
 
 test("Premium preview opens and closes without collecting data or changing account state", async () => {

@@ -219,3 +219,24 @@ def test_account_and_owned_data_survive_logout_and_reopen(tmp_path, evaluation, 
         assert client.get(roadmap).json()["completed_task_ids"] == ["foundation-0"]
         assert client.get("/api/applications").json()[0]["id"] == created.json()["id"]
         assert client.get("/api/mentor/history").json() == [{"question": "Haradan başlayım?", "answer": "Python ilə başla."}]
+
+
+def test_password_mode_preserves_beta_sign_in_and_otp_activation_rejects_existing_sessions(
+    otp_client, delivered_mail, monkeypatch,
+):
+    client, _ = otp_client
+    monkeypatch.setattr(login_otp.settings, "auth_mode", "password")
+    password_login = client.post("/api/auth/login", json=CREDENTIALS)
+    assert password_login.status_code == 200
+    assert "session" in password_login.cookies
+    assert client.get("/api/profile").status_code == 200
+    assert client.post("/api/auth/otp/resend").status_code == 404
+    assert client.post("/api/auth/otp/verify", json={"code": "000000"}).status_code == 404
+    delivered_mail.assert_not_called()
+
+    monkeypatch.setattr(login_otp.settings, "auth_mode", "email-otp")
+    assert client.get("/api/profile").status_code == 401
+    _, code = request_challenge(client, delivered_mail)
+    assert client.get("/api/profile").status_code == 401
+    assert client.post("/api/auth/otp/verify", json={"code": code}).status_code == 200
+    assert client.get("/api/profile").status_code == 200

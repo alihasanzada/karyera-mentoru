@@ -258,6 +258,8 @@ function renderAuth(signup = false, notice = "") {
       return;
     }
     button.disabled = true;
+    const switchButton = $("auth-switch");
+    switchButton.disabled = true;
     try {
       const email = f.email.value;
       const body = signup
@@ -268,7 +270,7 @@ function renderAuth(signup = false, notice = "") {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
       });
       if (form.isConnected === false) {
-        if (!signup) await api("/api/auth/otp/cancel", { method: "POST" });
+        if (!signup && Number.isInteger(result.expires_in)) await api("/api/auth/otp/cancel", { method: "POST" });
         return;
       }
       if (signup) {
@@ -278,12 +280,22 @@ function renderAuth(signup = false, notice = "") {
         return;
       }
       f.password.value = "";
-      renderOtp(result, email);
+      if (Number.isInteger(result.expires_in)) renderOtp(result, email);
+      else completeSignIn(result);
     } catch (e) {
       if (form.isConnected !== false) $("auth-error").textContent = e.message;
       button.disabled = false;
+      switchButton.disabled = false;
     }
   });
+}
+
+function completeSignIn(user) {
+  otpActive = false;
+  state.user = user;
+  state.history = []; state.latest = null; state.current = null;
+  showApp();
+  route();
 }
 
 function renderOtp(challenge, email) {
@@ -308,13 +320,7 @@ function renderOtp(challenge, email) {
     request: (path, body) => api(path, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
     }),
-    onVerified: (user) => {
-      otpActive = false;
-      state.user = user;
-      state.history = []; state.latest = null; state.current = null;
-      showApp();
-      route();
-    },
+    onVerified: completeSignIn,
     onCancel: () => {
       otpActive = false;
       renderAuth();

@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-flash-lite-latest"
     gemini_models: str = ""  # comma-separated fallback chain
 
+    auth_mode: Literal["password", "email-otp"] = "password"
     otp_secret: SecretStr = SecretStr("")
     smtp_host: str = ""
     smtp_port: int | None = Field(default=None, ge=1, le=65535)

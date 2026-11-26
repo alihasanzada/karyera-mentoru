@@ -17,11 +17,11 @@ Open [the canonical beta](http://127.0.0.1:8679/dizayn/). Use `/dizayn/` for bro
 
 In VS Code, press **Ctrl+Shift+B** or select **Tasks: Run Task → Start Karyera Mentoru Beta**. The workspace task uses `.venv`, starts FastAPI on port 8679 and opens `/dizayn/`. If a matching beta is already running, it opens that server. If a different service occupies the port, the task reports the conflict. Use **Tasks: Terminate Task** to stop a server started by the task.
 
-For live AI features, set the existing approved `GEMINI_API_KEY` and `GEMINI_MODEL` in the ignored `.env` file. If setting `GEMINI_MODELS`, its list takes precedence over `GEMINI_MODEL`. Use a fictional text PDF for the demonstration. Profiles and saved history work independently of Gemini after email verification. An optional `DATABASE_PATH` points to a separate SQLite file for a clean demo. The default database is `karyera.db` at the repository root. Reuse the same database path on restarts to keep the same accounts and data.
+For live AI features, set the existing approved `GEMINI_API_KEY` and `GEMINI_MODEL` in the ignored `.env` file. If setting `GEMINI_MODELS`, its list takes precedence over `GEMINI_MODEL`. Use a fictional text PDF for the demonstration. Profiles and saved history work independently of Gemini after sign-in. An optional `DATABASE_PATH` points to a separate SQLite file for a clean demo. The default database is `karyera.db` at the repository root. Reuse the same database path on restarts to keep the same accounts and data.
 
 ### Email verification
 
-Both `/` and `/dizayn/` require an email code after the password check. Set these variables in the backend's Git-ignored `.env` and restart the server.
+Both `/` and `/dizayn/` use the backend's `AUTH_MODE`. The default `password` mode preserves existing beta sign-in. Configure the following variables for a separate test instance, set `AUTH_MODE=email-otp`, and verify delivery and sign-in with an authorized inbox. After validation, set `AUTH_MODE=email-otp` in the intended deployment and restart the server. In that mode, missing configuration or failed delivery blocks sign-in.
 
 | Variable | Value |
 | --- | --- |
@@ -31,7 +31,7 @@ Both `/` and `/dizayn/` require an email code after the password check. Set thes
 | `SMTP_FROM` | The sender's email address authorized by the provider. |
 | `SMTP_USERNAME` and `SMTP_PASSWORD` | Provider SMTP credentials. For Gmail use the full email address and an eligible Google App Password after enabling 2-Step Verification. Some organizational accounts restrict App Passwords. A trusted SMTP relay can leave both variables empty. |
 
-Codes expire after 5 minutes, can be tried 5 times, and can be resent after 60 seconds. A successful resend replaces the earlier code. Login requires successful delivery and verification. Users with older password-only sessions sign in again after upgrading. Serve production deployments over HTTPS for secure cookies. The file-opened design preview supports anonymous demo analysis only.
+Codes expire after 5 minutes, can be tried 5 times, and can be resent after 60 seconds. A successful resend replaces the earlier code. Selecting email OTP requires users with older password-only sessions to sign in again. Serve production deployments over HTTPS for secure cookies. The file-opened design preview supports anonymous demo analysis only.
 
 [Google App Passwords](https://support.google.com/accounts/answer/185833)
 
