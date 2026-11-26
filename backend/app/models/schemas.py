@@ -257,3 +257,32 @@ class ApplicationOut(BaseModel):
     next_step_date: date | None = None
     created_at: str
     updated_at: str
+
+
+# --- AI Mentor çatı ---
+
+ChatText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
+
+
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    text: ChatText
+
+
+class ChatRequest(BaseModel):
+    # Son mesajlar; sonuncu istifadəçinin sualı olmalıdır
+    messages: list[ChatMessage] = Field(min_length=1, max_length=20)
+
+    @model_validator(mode="after")
+    def _last_is_user(self):
+        if self.messages[-1].role != "user":
+            raise ValueError("the last message must come from the user")
+        return self
+
+
+class ChatLLMOutput(BaseModel):
+    reply: str
+
+
+class ChatResponse(BaseModel):
+    reply: str
