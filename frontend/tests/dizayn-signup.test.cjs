@@ -381,7 +381,7 @@ test("pricing card and FAQ match what the code really does", () => {
   assert.match(pricing, /limit tətbiq edilmir/);
   assert.match(pricing, /Premium heç bir bölməni kilidləmir/);
   assert.match(pricing, /Planlaşdırılır: canlı vakansiya uyğunluğu/);
-  assert.match(pricing, /Planlaşdırılır: real AI Mentor söhbəti/);
+  assert.match(pricing, /AI Mentor sayt serverlə açılanda və hesaba daxil olanda real AI ilə cavab verir/);
   assert.doesNotMatch(PAGE + SOURCE, /Ayda 1 CV analizi|Limitsiz CV analizi|İlk 30 tələbə|Ən Populyar|Premium-a keç|ilk pilot pulsuzdur/i);
   const faq = /Pulsuz və Premium arasında fərq nədir[\s\S]*?<\/p>/.exec(PAGE)[0];
   assert.match(faq, /funksional fərq yoxdur/);
