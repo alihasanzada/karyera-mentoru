@@ -23,17 +23,18 @@ def get_cached(db: Session, key: str, filename: str, pages: int) -> EvaluationRe
         result = EvaluationResponse.model_validate_json(row.result_json)
     except ValueError:
         return None
+    return for_upload(result, filename, pages)
+
+
+def for_upload(result: EvaluationResponse, filename: str, pages: int) -> EvaluationResponse:
     match = result.match.model_copy(update={"filename": filename, "pages": pages})
     return result.model_copy(update={"evaluation_id": None, "filename": filename, "pages": pages, "match": match})
 
 
 def put_cached(db: Session, key: str, result: EvaluationResponse) -> None:
-    anonymous = result.model_copy(
-        update={"evaluation_id": None, "filename": "", "match": result.match.model_copy(update={"filename": ""})}
-    )
+    anonymous = for_upload(result, "", result.pages)
     data = anonymous.model_dump_json()
     statement = insert(EvaluationCache).values(key=key, result_json=data)
     db.execute(statement.on_conflict_do_update(
         index_elements=[EvaluationCache.key], set_={"result_json": statement.excluded.result_json},
     ))
-    db.commit()

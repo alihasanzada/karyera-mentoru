@@ -9,7 +9,9 @@ from app.config import BASE_DIR, settings
 from app.db import db_models  # noqa: F401  (registers ORM tables on Base.metadata)
 from app.db.database import Base, engine
 from app.db.profile_migration import backfill_design_profiles
+from app.models.schemas import EvaluationResponse, RoadmapResponse
 from app.routers import applications, auth, chat, cv, evaluate, history, match, mentor, profile, roadmap
+from app.services.inflight import InFlight
 from app.services.request_limits import BetaRequestLimits
 
 @asynccontextmanager
@@ -17,7 +19,13 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     backfill_design_profiles(engine)
     app.state.request_limits = BetaRequestLimits()
-    yield
+    app.state.evaluations = InFlight[EvaluationResponse]()
+    app.state.roadmaps = InFlight[RoadmapResponse]()
+    try:
+        yield
+    finally:
+        await app.state.evaluations.close()
+        await app.state.roadmaps.close()
 
 
 app = FastAPI(title=settings.app_name, version="0.7.0", lifespan=lifespan)

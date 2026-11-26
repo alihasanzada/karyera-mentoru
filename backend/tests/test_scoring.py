@@ -139,6 +139,7 @@ def test_cache_roundtrip_without_filename():
 
     result = assemble_evaluation(SAMPLE, "cybersecurity", "private-name.pdf", 1, _llm("Reduced false positives by 35%"), _match())
     put_cached(db, "k" * 64, result)
+    db.commit()
     assert "private-name" not in db.get(EvaluationCache, "k" * 64).result_json
 
     again = get_cached(db, "k" * 64, "other.pdf", 2)

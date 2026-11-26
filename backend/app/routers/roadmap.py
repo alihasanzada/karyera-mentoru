@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import Session
@@ -64,9 +64,21 @@ def get_roadmap(
 @router.post("/{evaluation_id}", response_model=RoadmapResponse)
 async def create_roadmap(
     evaluation_id: int,
+    request: Request,
     client_id: str = Depends(get_client_id),
     db: Session = Depends(get_db),
 ):
+    bind = db.get_bind()
+    db.rollback()
+
+    async def generate() -> RoadmapResponse:
+        with Session(bind=bind) as writer:
+            return await _generate_roadmap(writer, client_id, evaluation_id)
+
+    return await request.app.state.roadmaps.run((bind, client_id, evaluation_id), generate)
+
+
+async def _generate_roadmap(db: Session, client_id: str, evaluation_id: int) -> RoadmapResponse:
     evaluation = _load_evaluation(db, client_id, evaluation_id)
     existing = saved_response(db, evaluation_id, evaluation, _find_record(db, client_id, evaluation_id))
     if existing.generated:
