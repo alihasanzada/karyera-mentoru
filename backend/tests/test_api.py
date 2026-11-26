@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+from auth_helpers import verify_login
 
 from app.db.database import Base, get_db
 from app.db.db_models import AnalysisRecord, RoadmapCompletion, RoadmapRecord, UserProfile
@@ -24,8 +25,7 @@ def signup(client, email):
     response = client.post("/api/auth/signup", json={**credentials, "first_name": "Tahir", "last_name": "Məmmədov", "specialty_id": "cybersecurity", "consent": True})
     assert response.status_code == 201
     assert "session" not in response.cookies
-    response = client.post("/api/auth/login", json=credentials)
-    assert response.status_code == 200
+    response = verify_login(client, credentials)
     client.cookies.clear()
     return {"session": response.cookies["session"]}
 
@@ -96,7 +96,7 @@ def test_profile_signup_update_and_isolation(api):
     })
     assert result.status_code == 201
     assert "session" not in result.cookies
-    login = client.post("/api/auth/login", json={"email": "first@example.com", "password": "long-test-password"})
+    login = verify_login(client, {"email": "first@example.com", "password": "long-test-password"})
     first = {"session": login.cookies["session"]}
     profile = client.get("/api/profile", cookies=first).json()
     assert profile["name"] == "Samir" and profile["field_id"] == "frontend"
@@ -142,7 +142,7 @@ def test_plan_progress_isolation_and_legacy_preservation(api, evaluation, monkey
     for _ in range(2):
         assert client.put(task, cookies=first, json={"completed": True}).json()["completed_task_ids"] == ["foundation-0"]
     client.post("/api/auth/logout", cookies=first)
-    login = client.post("/api/auth/login", json={"email": "first@example.com", "password": "long-test-password"})
+    login = verify_login(client, {"email": "first@example.com", "password": "long-test-password"})
     first = {"session": login.cookies["session"]}
     assert client.get(base, cookies=first).json()["completed_task_ids"] == ["foundation-0"]
     assert client.post(base, cookies=first).json()["completed_task_ids"] == ["foundation-0"]
@@ -220,10 +220,17 @@ def test_mentor_minimizes_context_and_handles_provider_errors(api, evaluation, m
     assert context["context"]["profile"]["interests"] == "Python"
     assert context["context"]["evaluation"]["field"] == evaluation.field_name
     assert context["context"]["plan"]["phases"][0]["next_period"] == 1
-    assert context["history"] == query["history"]
+    assert context["history"] == []
+    assert client.get("/api/mentor/history", cookies=first).json() == [
+        {"question": query["question"], "answer": "Python ilə başla."},
+    ]
+    assert client.get("/api/mentor/history", cookies=second).json() == []
     assert all(value not in raw for value in ("private quotation", "private roadmap text", "private.pdf", "first@example.com"))
     generate.side_effect = ai_analyzer.AIAnalysisError("AI əlçatan deyil.", 503)
     assert client.post("/api/mentor", cookies=first, json=query).status_code == 503
+    assert json.loads(generate.call_args.args[1])["history"] == [
+        {"question": query["question"], "answer": "Python ilə başla."},
+    ]
     assert client.post("/api/mentor", cookies=first, json={"question": " "}).status_code == 422
 
 
@@ -270,7 +277,7 @@ def test_authentication_and_logout(api):
     assert client.post("/api/auth/logout", cookies=cookies).status_code == 200
     client.cookies.clear()
     assert client.get("/api/auth/me", cookies=cookies).status_code == 401
-    assert client.post("/api/auth/login", json={"email": "FIRST@example.com", "password": "long-test-password"}).status_code == 200
+    verify_login(client, {"email": "FIRST@example.com", "password": "long-test-password"})
 
 
 def test_pdf_read_is_bounded(monkeypatch):

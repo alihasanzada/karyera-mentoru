@@ -1,11 +1,13 @@
 from datetime import datetime, timedelta, timezone
+from email.errors import HeaderParseError
+from email.headerregistry import Address
 from hashlib import scrypt, sha256
 import re
 import secrets
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from pydantic import BaseModel, Field, StringConstraints, field_validator
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
+from pydantic import BaseModel, Field, SecretStr, StringConstraints, field_validator
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -13,9 +15,10 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.db.db_models import LoginSession, User
 from app.db.profile_migration import has_legacy_design_columns
-from app.deps import current_user
+from app.deps import VERIFIED_SESSION_PREFIX, current_user
 from app.models.schemas import ProfileInput
 from app.routers.profile import load_profile, store_profile
+from app.services import login_otp
 from app.services.matcher import ROLES
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
@@ -52,6 +55,21 @@ class SignupData(Credentials):
     consent: Literal[True]
 
     _specialty = field_validator("specialty_id")(_known_specialty)
+
+    @field_validator("email")
+    @classmethod
+    def deliverable_address(cls, value: str) -> str:
+        try:
+            address = Address(addr_spec=value)
+        except (ValueError, HeaderParseError):
+            raise ValueError("Düzgün e-poçt daxil et.") from None
+        if not address.domain:
+            raise ValueError("Düzgün e-poçt daxil et.")
+        return value
+
+
+class OTPCode(BaseModel):
+    code: SecretStr
 
 
 class ProfileUpdate(BaseModel):
@@ -91,13 +109,20 @@ def _create_user(db: Session, email: str, password_hash: str) -> User:
 
 
 def _login(response: Response, request: Request, db: Session, user: User):
-    token = secrets.token_urlsafe(32)
+    token = VERIFIED_SESSION_PREFIX + secrets.token_urlsafe(32)
     db.add(LoginSession(token_hash=sha256(token.encode()).hexdigest(), user_id=user.id,
                         expires_at=datetime.now(timezone.utc) + timedelta(days=SESSION_DAYS)))
     db.commit()
     response.set_cookie("session", token, max_age=SESSION_DAYS * 86400,
                         httponly=True, secure=request.url.scheme == "https", samesite="strict", path="/")
     return _public(user, load_profile(db, user.id))
+
+
+def _challenge_response(response: Response, request: Request, token: str) -> dict[str, int]:
+    response.set_cookie(login_otp.OTP_COOKIE, token, max_age=login_otp.OTP_AGE,
+                        httponly=True, secure=request.url.scheme == "https", samesite="strict", path="/api/auth")
+    response.headers["Cache-Control"] = "no-store"
+    return {"expires_in": login_otp.OTP_AGE, "resend_after": login_otp.RESEND_WAIT}
 
 
 @router.post("/signup", status_code=201)
@@ -115,7 +140,7 @@ def signup(data: SignupData, db: Session = Depends(get_db)):
     return _public(user, profile)
 
 
-@router.post("/login")
+@router.post("/login", status_code=202)
 def login(data: Credentials, response: Response, request: Request, db: Session = Depends(get_db)):
     user = db.scalar(select(User).where(User.email == data.email))
     if not user:
@@ -124,7 +149,32 @@ def login(data: Credentials, response: Response, request: Request, db: Session =
     salt = bytes.fromhex(user.password_hash.split(":")[0])
     if not secrets.compare_digest(_hash_password(data.password, salt), user.password_hash):
         raise HTTPException(status_code=401, detail="E-poçt və ya parol yanlışdır.")
-    return _login(response, request, db, user)
+    return _challenge_response(response, request, login_otp.issue(db, user))
+
+
+@router.post("/otp/resend", status_code=202)
+def resend_otp(response: Response, request: Request,
+               login_challenge: str | None = Cookie(default=None), db: Session = Depends(get_db)):
+    return _challenge_response(response, request, login_otp.resend(db, login_challenge))
+
+
+@router.post("/otp/verify")
+def verify_otp(data: OTPCode, response: Response, request: Request,
+               login_challenge: str | None = Cookie(default=None), db: Session = Depends(get_db)):
+    user = login_otp.consume(db, login_challenge, data.code.get_secret_value())
+    result = _login(response, request, db, user)
+    response.delete_cookie(login_otp.OTP_COOKIE, path="/api/auth")
+    response.headers["Cache-Control"] = "no-store"
+    return result
+
+
+@router.post("/otp/cancel")
+def cancel_otp(response: Response, login_challenge: str | None = Cookie(default=None),
+               db: Session = Depends(get_db)):
+    login_otp.invalidate(db, login_challenge)
+    db.commit()
+    response.delete_cookie(login_otp.OTP_COOKIE, path="/api/auth")
+    return {"ok": True}
 
 
 @router.get("/me")
@@ -145,11 +195,13 @@ def update_me(data: ProfileUpdate, user: User = Depends(current_user), db: Sessi
 
 @router.post("/logout")
 def logout(response: Response, request: Request, db: Session = Depends(get_db)):
+    login_otp.invalidate(db, request.cookies.get(login_otp.OTP_COOKIE))
     session = request.cookies.get("session")
     if session:
         login = db.get(LoginSession, sha256(session.encode()).hexdigest())
         if login:
             db.delete(login)
-            db.commit()
+    db.commit()
     response.delete_cookie("session", path="/")
+    response.delete_cookie(login_otp.OTP_COOKIE, path="/api/auth")
     return {"ok": True}

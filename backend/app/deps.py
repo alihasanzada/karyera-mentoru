@@ -8,8 +8,12 @@ from app.db.database import get_db
 from app.db.db_models import LoginSession, User
 
 
+# Earlier password-only sessions use URL-safe tokens without this prefix.
+VERIFIED_SESSION_PREFIX = "otp1."
+
+
 def current_user(session: str | None = Cookie(default=None), db: Session = Depends(get_db)) -> User:
-    if not session:
+    if not session or not session.startswith(VERIFIED_SESSION_PREFIX):
         raise HTTPException(status_code=401, detail="Hesabına daxil ol.")
     login = db.get(LoginSession, sha256(session.encode()).hexdigest())
     if not login or login.expires_at.replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):

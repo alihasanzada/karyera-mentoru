@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+from auth_helpers import verify_login
 
 from app.db.database import Base, get_db
 from app.main import app
@@ -17,7 +18,7 @@ def _signed_in(email):
     c = TestClient(app)
     credentials = {"email": email, "password": "long-test-password"}
     assert c.post("/api/auth/signup", json={**credentials, "first_name": "Tahir", "last_name": "Məmmədov", "specialty_id": "cybersecurity", "consent": True}).status_code == 201
-    assert c.post("/api/auth/login", json=credentials).status_code == 200
+    verify_login(c, credentials)
     return c
 
 

@@ -5,6 +5,7 @@ const CV_PRIVACY_NOTE =
 
 const state = { fields: [], history: [], latest: null, current: null, evaluating: false, user: null };
 let routeToken = 0;
+let otpActive = false;
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g,
@@ -42,7 +43,9 @@ async function api(path, options = {}, timeoutMs = 60000) {
         routeToken++;
         renderAuth();
       }
-      throw new Error(msg);
+      throw Object.assign(new Error(msg), {
+        status: res.status, retryAfter: Number(res.headers?.get("Retry-After")),
+      });
     }
 
     return await res.json();
@@ -261,23 +264,63 @@ function renderAuth(signup = false, notice = "") {
         ? { email, password: f.password.value, first_name: f.first_name.value, last_name: f.last_name.value,
             specialty_id: f.specialty_id.value, consent: f.consent.checked }
         : { email, password: f.password.value };
-      const user = await api(`/api/auth/${signup ? "signup" : "login"}`, {
+      const result = await api(`/api/auth/${signup ? "signup" : "login"}`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
       });
+      if (form.isConnected === false) {
+        if (!signup) await api("/api/auth/otp/cancel", { method: "POST" });
+        return;
+      }
       if (signup) {
         renderAuth(false, "Hesab yaradıldı. İndi daxil ol.");
         $("auth-form").elements.email.value = email;
         $("auth-form").elements.password.focus();
         return;
       }
+      f.password.value = "";
+      renderOtp(result, email);
+    } catch (e) {
+      if (form.isConnected !== false) $("auth-error").textContent = e.message;
+      button.disabled = false;
+    }
+  });
+}
+
+function renderOtp(challenge, email) {
+  otpActive = true;
+  $("view").innerHTML = `<div class="max-w-md mx-auto mt-12 ${CARD} p-8">
+    <h1 id="otp-title" class="text-2xl font-bold mb-2">E-poçt təsdiqi</h1>
+    <p id="otp-hint" class="text-sm text-slate-500 mb-6">E-poçtuna göndərilən altı rəqəmli kodu daxil et. Kod 5 dəqiqə qüvvədədir.</p>
+    <form id="otp-form" class="space-y-4" novalidate aria-labelledby="otp-title">
+      <label class="block text-sm" for="otp-code">Giriş kodu
+        <input id="otp-code" name="code" inputmode="numeric" autocomplete="one-time-code"
+          maxlength="6" aria-describedby="otp-hint otp-error" required class="${INPUT_CLS}">
+      </label>
+      <p id="otp-error" data-otp-error role="alert" class="text-sm text-red-600"></p>
+      <button type="submit" class="w-full bg-indigo-600 text-white p-2.5 rounded-lg disabled:opacity-50">Kodu təsdiqlə</button>
+      <button type="button" data-otp-resend class="block text-sm text-indigo-600 disabled:opacity-50">Kodu yenidən göndər</button>
+      <button type="button" data-otp-back class="block text-sm text-indigo-600">Şifrə ilə girişə qayıt</button>
+      <p data-otp-notice role="status" class="text-sm text-emerald-600"></p>
+    </form>
+  </div>`;
+  startEmailOtp($("otp-form"), {
+    challenge,
+    request: (path, body) => api(path, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    }),
+    onVerified: (user) => {
+      otpActive = false;
       state.user = user;
       state.history = []; state.latest = null; state.current = null;
       showApp();
       route();
-    } catch (e) {
-      $("auth-error").textContent = e.message;
-      button.disabled = false;
-    }
+    },
+    onCancel: () => {
+      otpActive = false;
+      renderAuth();
+      $("auth-form").elements.email.value = email;
+      $("auth-form").elements.password.focus();
+    },
   });
 }
 
@@ -638,7 +681,10 @@ function closeMenu() {
 }
 
 async function route() {
-  if (!state.user) return renderAuth();
+  if (!state.user) {
+    if (!otpActive) renderAuth();
+    return;
+  }
   routeToken++;
   renderNav();
   closeMenu();
@@ -660,12 +706,14 @@ $("backdrop").addEventListener("click", closeMenu);
 document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") closeMenu(); });
 $("logout-btn").addEventListener("click", async () => {
   try { await api("/api/auth/logout", { method: "POST" }); }
-  finally {
-    state.user = null; state.latest = null; state.current = null; state.history = [];
-    state.fields = [];
-    routeToken++;
-    renderAuth();
+  catch (error) {
+    notify(error.message, true);
+    return;
   }
+  state.user = null; state.latest = null; state.current = null; state.history = [];
+  state.fields = [];
+  routeToken++;
+  renderAuth();
 });
 window.addEventListener("hashchange", route);
 

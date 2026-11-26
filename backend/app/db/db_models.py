@@ -56,11 +56,31 @@ class LoginSession(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime)
 
 
+class LoginChallenge(Base):
+    __tablename__ = "login_challenges"
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    code_mac: Mapped[str] = mapped_column(String(64))
+    issued_at: Mapped[datetime] = mapped_column(DateTime)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    attempts_left: Mapped[int]
+    delivered: Mapped[bool]
+
+
 class UserProfile(Base):
     __tablename__ = "user_profiles"
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
     profile_json: Mapped[str] = mapped_column(Text)
+
+
+class MentorMessage(Base):
+    __tablename__ = "mentor_messages"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    question: Mapped[str] = mapped_column(Text)
+    answer: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
 
 class RoadmapCompletion(Base):

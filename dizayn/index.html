@@ -834,7 +834,7 @@
             </h3>
             <div class="faq-a" id="faq-a7" role="region" aria-labelledby="faq-q7">
               <div class="faq-a-inner">
-                <p id="faq-privacy-answer">Demo rejimdə (sayt fayl kimi açılanda) CV faylın serverə və AI-yə göndərilmir, analiz nümayiş üçündür. Fayl adı, nəticə və hesab məlumatı yalnız bu brauzerin yaddaşında (localStorage) qalır və brauzer məlumatını təmizləməklə silinir. Server rejimində (sayt backend tərəfindən açılanda) CV analiz üçün serverə və Gemini-yə göndərilir; bu rejimin qaydaları sayt backend ilə açılanda göstərilir.</p>
+                <p id="faq-privacy-answer">Demo rejimdə (sayt fayl kimi açılanda) CV faylın serverə və AI-yə göndərilmir, analiz nümayiş üçündür. Fayl adı və nəticə yalnız bu brauzerin yaddaşında (localStorage) qalır və brauzer məlumatını təmizləməklə silinir. Server rejimində CV analiz üçün serverə və Gemini-yə göndərilir.</p>
               </div>
             </div>
           </div>
@@ -967,6 +967,20 @@
         <button type="submit" class="btn btn-primary btn-block">Daxil ol</button>
         <p class="auth-switch">Hesabın yoxdur? <button type="button" class="link-btn auth-switch-btn" data-tab="tab-register">Qeydiyyatdan keç</button></p>
       </form>
+      <form class="auth-form" id="otp-form" hidden novalidate aria-labelledby="otp-title">
+        <h3 id="otp-title">E-poçt təsdiqi</h3>
+        <p class="form-note" id="otp-hint">E-poçtuna göndərilən altı rəqəmli kodu daxil et. Kod 5 dəqiqə qüvvədədir.</p>
+        <div class="field">
+          <label class="field-label" for="otp-code">Giriş kodu</label>
+          <input id="otp-code" name="code" class="input" inputmode="numeric" autocomplete="one-time-code"
+                 maxlength="6" aria-describedby="otp-hint otp-error" required>
+          <p id="otp-error" class="form-error" data-otp-error role="alert"></p>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Kodu təsdiqlə</button>
+        <button type="button" class="btn btn-ghost btn-block" data-otp-resend>Kodu yenidən göndər</button>
+        <button type="button" class="link-btn" data-otp-back>Şifrə ilə girişə qayıt</button>
+        <p class="form-notice" data-otp-notice role="status"></p>
+      </form>
     </div>
 
     <!-- Qeydiyyat -->
@@ -1026,7 +1040,7 @@
     </button>
     <p class="form-note auth-note" id="google-note" role="status"></p>
 
-    <p class="auth-demo prototype-only"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> DEMO: hesab yalnız bu brauzerdə saxlanılır. Real şifrəni istifadə etmə.</p>
+    <p class="auth-demo prototype-only">Hesab yaratmaq və daxil olmaq üçün saytı serverdən aç.</p>
   </dialog>
 
   <dialog class="modal applications-modal" id="applications-modal" aria-labelledby="applications-title">
@@ -1088,7 +1102,7 @@
       <span class="chat-avatar" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="12" rx="3"/><path d="M12 4v4M9 14h.01M15 14h.01"/></svg></span>
       <div class="chat-head-text">
         <h2 class="chat-title" id="chat-title">AI Mentor</h2>
-        <p class="chat-sub beta-only">Gemini · Profil, CV nəticəsi və inkişaf planı</p>
+        <p class="chat-sub beta-only">Gemini · Söhbət tarixçəsi hesabında saxlanır.</p>
         <p class="chat-sub prototype-only">AI Mentor üçün saytı yerli serverdən aç.</p>
       </div>
       <button type="button" class="modal-close chat-close" id="chat-close" aria-label="Çatı bağla"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
@@ -1116,6 +1130,7 @@
 
   <!-- İnteraktivlik -->
   <script src="js/specialty-search.js"></script>
+  <script src="js/email-otp.js"></script>
   <script src="js/script.js"></script>
   <script src="js/applications.js"></script>
 </body>

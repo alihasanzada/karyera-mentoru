@@ -256,6 +256,7 @@ class MentorTurn(BaseModel):
 class MentorRequest(BaseModel):
     question: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=600)]
     evaluation_id: int | None = Field(default=None, gt=0)
+    # Older clients may send history. The mentor uses the account's saved turns.
     history: list[MentorTurn] = Field(default_factory=list, max_length=3)
 
 

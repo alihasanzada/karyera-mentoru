@@ -241,7 +241,9 @@ async function api(path, options = {}, timeoutMs = 60000) {
         renderUser();
         updateView();
       }
-      throw new ApiError(message, res.status, detail);
+      const error = new ApiError(message, res.status, detail);
+      error.retryAfter = Number(res.headers?.get("Retry-After"));
+      throw error;
     }
     return await res.json();
   } catch (error) {
@@ -1758,6 +1760,9 @@ const userMenu = document.querySelector("#user-menu");
 const userBtn = document.querySelector("#user-btn");
 const userDropdown = document.querySelector("#user-dropdown");
 const loginForm = document.querySelector("#login-form");
+const otpForm = document.querySelector("#otp-form");
+const authTabs = document.querySelector(".auth-tabs");
+let endOtp = null;
 const registerForm = document.querySelector("#register-form");
 const regMajor = document.querySelector("#reg-major");
 const googleNote = document.querySelector("#google-note");
@@ -1765,60 +1770,12 @@ const googleNote = document.querySelector("#google-note");
 // İxtisas siyahısını CV Yoxla bölməsindən köçür
 regMajor.innerHTML = majorSelect.innerHTML;
 
-// İstifadəçilər və aktiv sessiya (localStorage)
-function readUsers() {
-  try {
-    const users = JSON.parse(readStorage("istifadeciler"));
-    return Array.isArray(users) ? users : [];
-  } catch (error) {
-    return [];
-  }
-}
-
-function saveUsers(users) {
-  writeStorage("istifadeciler", JSON.stringify(users));
-}
-
 function getCurrentUser() {
-  if (apiMode) return apiUser;
-  const email = readStorage("aktivIstifadeci");
-  return readUsers().find((u) => u.email === email) || null;
+  return apiUser;
 }
 
-// Fayl kimi açılan prototipdə profil dəyişiklikləri brauzerdə saxlanır.
-function updateCurrentUser(changes) {
-  if (apiMode) return null;
-  const users = readUsers();
-  const user = users.find((u) => u.email === readStorage("aktivIstifadeci"));
-  if (!user) return null;
-  Object.assign(user, changes);
-  saveUsers(users);
-  return user;
-}
-
-// Backend və sayt parolun ən azı 8 simvol olmasını tələb edir
 function minPasswordLength() {
   return 8;
-}
-
-function removeStorage(key) {
-  try {
-    localStorage.removeItem(key);
-  } catch (error) {
-    // Yaddaş əlçatan deyil
-  }
-}
-
-// Şifrə açıq mətn kimi saxlanmasın: SHA-256 ilə "hash" edilir
-async function hashPassword(email, password) {
-  const text = `${email}:${password}`;
-  if (window.crypto && crypto.subtle) {
-    const data = new TextEncoder().encode(text);
-    const buffer = await crypto.subtle.digest("SHA-256", data);
-    return [...new Uint8Array(buffer)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  }
-  // Ehtiyat variant (köhnə brauzerlər üçün)
-  return `x${makeSeed(text).toString(16)}`;
 }
 
 // Pəncərəni aç / bağla
@@ -1833,11 +1790,41 @@ function openAuth(tabId = "tab-login") {
 }
 
 function closeAuth() {
-  authModal.close();
+  if (otpForm.getAttribute("aria-busy") !== "true") authModal.close();
+}
+
+function resetOtpScreen() {
+  endOtp?.();
+  endOtp = null;
+  otpForm.hidden = true;
+  authTabs.hidden = loginForm.hidden = false;
+}
+
+function showOtpScreen(challenge) {
+  authTabs.hidden = loginForm.hidden = true;
+  otpForm.hidden = false;
+  endOtp = startEmailOtp(otpForm, {
+    challenge,
+    request: sendJson,
+    onVerified: async (me) => {
+      const user = await signedInUser(me);
+      if (!endOtp) return;
+      resetOtpScreen();
+      apiUser = user;
+      signIn(`Xoş gəldin, ${userLabel(user)}!`);
+    },
+    onCancel: () => {
+      resetOtpScreen();
+      document.querySelector("#login-pass").focus();
+    },
+  });
 }
 
 loginBtn.addEventListener("click", () => openAuth("tab-login"));
 document.querySelector("#auth-close").addEventListener("click", closeAuth);
+authModal.addEventListener("cancel", (event) => {
+  if (otpForm.getAttribute("aria-busy") === "true") event.preventDefault();
+});
 
 // Arxa fona klikləyəndə bağla
 authModal.addEventListener("click", (event) => {
@@ -1909,20 +1896,7 @@ function renderUser() {
   if (!majorSelect.value) majorSelect.value = user.major;
 }
 
-function signIn(user, message) {
-  if (!apiMode) writeStorage("aktivIstifadeci", user.email);
-
-  // Daxil olmadan əvvəl bu brauzerdə edilən demo analizləri hesaba bağla
-  const history = apiMode ? [] : readHistory();
-  const claimed = history.filter((entry) => !entry.user).length;
-  if (claimed) {
-    history.forEach((entry) => {
-      if (!entry.user) entry.user = user.email;
-    });
-    writeStorage("analizTarixcesi", JSON.stringify(history));
-    if (currentAnalysis && !currentAnalysis.user) currentAnalysis.user = user.email;
-  }
-
+function signIn(message) {
   closeAuth();
   loginForm.reset();
   registerForm.reset();
@@ -1930,15 +1904,12 @@ function signIn(user, message) {
   if (currentAnalysis) renderHistory(currentAnalysis.id);
   showToast(message, "success");
 
-  // API rejimi: istifadəçinin tarixçəsini serverdən yüklə
-  if (apiMode) {
-    loadApiHistory()
-      .then(() => {
-        if (currentAnalysis) renderHistory(currentAnalysis.id);
-        if (!cabinet.hidden && apiUser) renderCabinet(apiUser);
-      })
-      .catch(() => {});
-  }
+  loadApiHistory()
+    .then(() => {
+      if (currentAnalysis) renderHistory(currentAnalysis.id);
+      if (!cabinet.hidden && apiUser) renderCabinet(apiUser);
+    })
+    .catch(() => {});
 
   // Kabinetə girmək istəyirdisə, ora apar
   if (pendingCabinet) {
@@ -1952,6 +1923,10 @@ function signIn(user, message) {
 // Qeydiyyat
 registerForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!apiMode) {
+    document.querySelector("#register-error").textContent = "Hesab yaratmaq üçün saytı serverdən aç.";
+    return;
+  }
 
   const name = document.querySelector("#reg-name").value.trim();
   const surname = document.querySelector("#reg-surname").value.trim();
@@ -1960,14 +1935,12 @@ registerForm.addEventListener("submit", async (event) => {
   const pass2 = document.querySelector("#reg-pass2").value;
   const major = regMajor.value;
   const consent = document.querySelector("#reg-consent").checked;
-  const exists = !apiMode && readUsers().some((u) => u.email === email);
   const minPass = minPasswordLength();
 
   const checks = [
     fieldError("reg-name", name.length >= 2 ? "" : "Adını yaz."),
     fieldError("reg-surname", surname.length >= 2 ? "" : "Soyadını yaz."),
-    fieldError("reg-email", !isValidEmail(email) ? "Düzgün e-poçt ünvanı yaz."
-      : exists ? "Bu e-poçt ilə hesab artıq var — Giriş tabından daxil ol." : ""),
+    fieldError("reg-email", isValidEmail(email) ? "" : "Düzgün e-poçt ünvanı yaz."),
     fieldError("reg-pass", pass.length >= minPass ? "" : `Şifrə ən azı ${minPass} simvol olmalıdır.`),
     fieldError("reg-pass2", pass2 && pass2 === pass ? "" : "Şifrələr eyni deyil."),
     fieldError("reg-major", major ? "" : "İxtisasını seç."),
@@ -1980,99 +1953,79 @@ registerForm.addEventListener("submit", async (event) => {
   }
 
   // API rejimi: hesab serverdə yaradılır; sessiya yalnız sonrakı /api/auth/login ilə açılır
-  if (apiMode) {
-    const submit = registerForm.querySelector('button[type="submit"]');
-    submit.disabled = true;
-    try {
-      const me = await sendJson("/api/auth/signup", {
-        email, password: pass, first_name: name, last_name: surname, specialty_id: major, consent,
-      });
-      registerForm.reset();
-      activateTab(document.getElementById("tab-login"), false);
-      document.querySelector("#login-email").value = me.email;
-      document.querySelector("#login-notice").textContent = "Hesab yaradıldı. İndi daxil ol.";
-      document.querySelector("#login-pass").focus();
-    } catch (error) {
-      if (error.status === 409) {
-        fieldError("reg-email", error.message);
-        document.querySelector("#reg-email").focus();
-      } else if (error.status === 422 && Array.isArray(error.detail)) {
-        const shown = new Set();
-        error.detail.forEach((item) => {
-          const key = Array.isArray(item.loc) ? item.loc[item.loc.length - 1] : "";
-          const id = SIGNUP_FIELD_IDS[key];
-          if (id && !shown.has(id)) {
-            shown.add(id);
-            fieldError(id, validationMessage(item));
-          }
-        });
-        if (shown.size) {
-          registerForm.querySelector(".is-invalid input, input.is-invalid, select.is-invalid")?.focus();
-        } else {
-          document.querySelector("#register-error").textContent = error.message;
+  const submit = registerForm.querySelector('button[type="submit"]');
+  submit.disabled = true;
+  try {
+    const me = await sendJson("/api/auth/signup", {
+      email, password: pass, first_name: name, last_name: surname, specialty_id: major, consent,
+    });
+    registerForm.reset();
+    activateTab(document.getElementById("tab-login"), false);
+    document.querySelector("#login-email").value = me.email;
+    document.querySelector("#login-notice").textContent = "Hesab yaradıldı. İndi daxil ol.";
+    document.querySelector("#login-pass").focus();
+  } catch (error) {
+    if (error.status === 409) {
+      fieldError("reg-email", error.message);
+      document.querySelector("#reg-email").focus();
+    } else if (error.status === 422 && Array.isArray(error.detail)) {
+      const shown = new Set();
+      error.detail.forEach((item) => {
+        const key = Array.isArray(item.loc) ? item.loc[item.loc.length - 1] : "";
+        const id = SIGNUP_FIELD_IDS[key];
+        if (id && !shown.has(id)) {
+          shown.add(id);
+          fieldError(id, validationMessage(item));
         }
+      });
+      if (shown.size) {
+        registerForm.querySelector(".is-invalid input, input.is-invalid, select.is-invalid")?.focus();
       } else {
         document.querySelector("#register-error").textContent = error.message;
       }
-    } finally {
-      submit.disabled = false;
+    } else {
+      document.querySelector("#register-error").textContent = error.message;
     }
-    return;
+  } finally {
+    submit.disabled = false;
   }
-
-  const user = {
-    name,
-    surname,
-    email,
-    major,
-    passHash: await hashPassword(email, pass),
-    created: new Date().toISOString(),
-  };
-  const users = readUsers();
-  users.push(user);
-  saveUsers(users);
-
-  signIn(user, `Xoş gəldin, ${name}! Hesabın yaradıldı.`);
 });
 
 // Giriş
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  const errorEl = document.querySelector("#login-error");
+  if (!apiMode) {
+    errorEl.textContent = "Hesabına daxil olmaq üçün saytı serverdən aç.";
+    return;
+  }
 
   const email = document.querySelector("#login-email").value.trim().toLowerCase();
-  const pass = document.querySelector("#login-pass").value;
-
+  const pass = document.querySelector("#login-pass");
   const ok = [
     fieldError("login-email", isValidEmail(email) ? "" : "Düzgün e-poçt ünvanı yaz."),
-    fieldError("login-pass", pass ? "" : "Şifrəni yaz."),
+    fieldError("login-pass", pass.value ? "" : "Şifrəni yaz."),
   ];
   if (ok.includes(false)) return;
-
-  // API rejimi: giriş serverdə yoxlanılır (sessiya cookie-si ilə)
-  if (apiMode) {
-    const submit = loginForm.querySelector('button[type="submit"]');
-    submit.disabled = true;
-    try {
-      const me = await sendJson("/api/auth/login", { email, password: pass });
-      apiUser = await signedInUser(me);
-      signIn(apiUser, `Xoş gəldin, ${userLabel(apiUser)}!`);
-    } catch (error) {
-      document.querySelector("#login-error").textContent = error.message;
-      document.querySelector("#login-pass").select();
-    } finally {
-      submit.disabled = false;
+  const submit = loginForm.querySelector('button[type="submit"]');
+  if (submit.disabled) return;
+  submit.disabled = true;
+  errorEl.textContent = "";
+  try {
+    const challenge = await sendJson("/api/auth/login", { email, password: pass.value });
+    pass.value = "";
+    if (!authModal.open) {
+      await sendJson("/api/auth/otp/cancel");
+      return;
     }
-    return;
+    activateTab(document.querySelector("#tab-login"), false);
+    showOtpScreen(challenge);
+  } catch (error) {
+    errorEl.textContent = error.message;
+    pass.select();
+  } finally {
+    submit.disabled = false;
   }
-
-  const user = readUsers().find((u) => u.email === email);
-  if (!user || user.passHash !== (await hashPassword(email, pass))) {
-    document.querySelector("#login-error").textContent = "E-poçt və ya şifrə yanlışdır.";
-    document.querySelector("#login-pass").select();
-    return;
-  }
-
-  signIn(user, `Xoş gəldin, ${user.name}!`);
 });
 
 // İstifadəçi menyusu və çıxış
@@ -2114,7 +2067,6 @@ async function logout() {
     }
     clearAccountState();
   }
-  removeStorage("aktivIstifadeci");
   setMenu(false);
   renderUser();
 
@@ -2335,40 +2287,37 @@ profileForm.addEventListener("submit", async (event) => {
   if (ok.includes(false)) return;
   ["profile-education", "profile-interests", "profile-skills"].forEach((id) => fieldError(id, ""));
 
+  if (!apiUser) return;
   let user;
-  if (apiMode) {
-    const owner = apiUser;
-    const button = profileForm.querySelector('button[type="submit"]');
-    button.disabled = true;
-    try {
-      const profile = await sendJson("/api/profile", {
-        name, surname, field_id: major,
-        education: document.querySelector("#profile-education").value.trim(),
-        interests: document.querySelector("#profile-interests").value.trim(),
-        skills: [...new Set(document.querySelector("#profile-skills").value.split(",").map((v) => v.trim()).filter(Boolean))],
-      }, "PUT");
-      if (apiUser?.id !== owner?.id) return;
-      user = apiUser = makeApiUser(owner, profile);
-    } catch (error) {
-      const fields = {
-        name: "profile-name", surname: "profile-surname", field_id: "profile-major",
-        education: "profile-education", interests: "profile-interests", skills: "profile-skills",
-      };
-      if (error.status === 422 && Array.isArray(error.detail)) {
-        const fieldErrors = error.detail.filter((item) => Object.hasOwn(fields, item.loc?.[1]));
-        for (const item of fieldErrors) fieldError(fields[item.loc[1]], validationMessage(item));
-        if (fieldErrors.length) {
-          document.getElementById(fields[fieldErrors[0].loc[1]]).focus();
-          return;
-        }
+  const owner = apiUser;
+  const button = profileForm.querySelector('button[type="submit"]');
+  button.disabled = true;
+  try {
+    const profile = await sendJson("/api/profile", {
+      name, surname, field_id: major,
+      education: document.querySelector("#profile-education").value.trim(),
+      interests: document.querySelector("#profile-interests").value.trim(),
+      skills: [...new Set(document.querySelector("#profile-skills").value.split(",").map((v) => v.trim()).filter(Boolean))],
+    }, "PUT");
+    if (apiUser?.id !== owner?.id) return;
+    user = apiUser = makeApiUser(owner, profile);
+  } catch (error) {
+    const fields = {
+      name: "profile-name", surname: "profile-surname", field_id: "profile-major",
+      education: "profile-education", interests: "profile-interests", skills: "profile-skills",
+    };
+    if (error.status === 422 && Array.isArray(error.detail)) {
+      const fieldErrors = error.detail.filter((item) => Object.hasOwn(fields, item.loc?.[1]));
+      for (const item of fieldErrors) fieldError(fields[item.loc[1]], validationMessage(item));
+      if (fieldErrors.length) {
+        document.getElementById(fields[fieldErrors[0].loc[1]]).focus();
+        return;
       }
-      showToast(error.message, "error");
-      return;
-    } finally {
-      button.disabled = false;
     }
-  } else {
-    user = updateCurrentUser({ name, surname, major });
+    showToast(error.message, "error");
+    return;
+  } finally {
+    button.disabled = false;
   }
   if (!user) return;
 
@@ -2406,6 +2355,10 @@ document.querySelector("#cabinet-logout").addEventListener("click", logout);
 
 // Giriş pəncərəsi kabinetə keçmədən bağlanarsa, gözləməni ləğv et
 authModal.addEventListener("close", () => {
+  if (endOtp) {
+    resetOtpScreen();
+    sendJson("/api/auth/otp/cancel").catch(() => {});
+  }
   if (!getCurrentUser()) pendingCabinet = false;
 });
 
@@ -2430,13 +2383,15 @@ const chatForm = document.querySelector("#chat-form");
 const chatInput = document.querySelector("#chat-input");
 let chatStarted = false;
 
-let chatHistory = [];
+let chatHistoryLoaded = false;
+let chatHistoryRequest = null;
 let chatBusy = false;
 let chatVersion = 0;
 
 function resetChat() {
   chatVersion += 1;
-  chatHistory = [];
+  chatHistoryLoaded = false;
+  chatHistoryRequest = null;
   chatBusy = false;
   chatStarted = false;
   chatForm.reset();
@@ -2456,6 +2411,29 @@ function addMessage(from, content) {
   return msg;
 }
 
+async function restoreMentorHistory() {
+  if (!apiUser || chatHistoryLoaded) return;
+  if (chatHistoryRequest) return chatHistoryRequest;
+
+  const version = chatVersion;
+  chatHistoryRequest = (async () => {
+    try {
+      const history = await api("/api/mentor/history");
+      if (version !== chatVersion) return;
+      history.forEach((turn) => {
+        addMessage("user", turn.question);
+        addMessage("bot", turn.answer);
+      });
+      chatHistoryLoaded = true;
+    } catch (err) {
+      if (version === chatVersion) showToast(err.message, "error");
+    } finally {
+      if (version === chatVersion) chatHistoryRequest = null;
+    }
+  })();
+  return chatHistoryRequest;
+}
+
 async function sendQuestion(text) {
   const question = text.trim();
   if (!question || chatBusy) return;
@@ -2473,6 +2451,8 @@ async function sendQuestion(text) {
   const submit = chatForm.querySelector("button");
   chatBusy = true;
   submit.disabled = true;
+  await restoreMentorHistory();
+  if (version !== chatVersion) return;
   chatInput.value = "";
   addMessage("user", question);
   const status = addMessage("bot", "AI Mentor cavab hazırlayır…");
@@ -2480,11 +2460,9 @@ async function sendQuestion(text) {
     const reply = await sendJson("/api/mentor", {
       question,
       evaluation_id: currentAnalysis ? Number(currentAnalysis.id) : null,
-      history: chatHistory,
     }, "POST", 180000);
     if (version !== chatVersion) return;
     status.remove();
-    chatHistory = [...chatHistory, { question, answer: reply.answer }].slice(-3);
     addMessage("bot", reply.answer);
   } catch (error) {
     if (version !== chatVersion) return;
@@ -2511,6 +2489,7 @@ function toggleChat(open) {
       addMessage("bot", "Salam" + (user ? ", " + userLabel(user) : "") +
         "! CV, bacarıqlar, inkişaf planı və ya müsahibə hazırlığı haqqında sual ver.");
     }
+    restoreMentorHistory();
     chatInput.focus();
   }
 }

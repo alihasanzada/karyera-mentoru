@@ -1,14 +1,14 @@
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.db_models import AnalysisRecord, User
+from app.db.db_models import AnalysisRecord, MentorMessage, User
 from app.deps import current_user
-from app.models.schemas import MentorReply, MentorRequest
+from app.models.schemas import MentorReply, MentorRequest, MentorTurn
 from app.routers.profile import load_profile
 from app.routers.roadmap import _find_record, _load_evaluation, saved_response
 from app.services.ai_analyzer import AIAnalysisError, generate_structured
@@ -18,10 +18,23 @@ router = APIRouter(prefix="/api/mentor", tags=["Mentor"])
 PROMPT = (Path(__file__).resolve().parents[1] / "prompts" / "mentor.txt").read_text(encoding="utf-8")
 
 
+def _history(db: Session, user_id: int, limit: int) -> list[MentorTurn]:
+    recent = db.scalars(select(MentorMessage).where(MentorMessage.user_id == user_id)
+                        .order_by(MentorMessage.id.desc()).limit(limit)).all()
+    return [MentorTurn(question=row.question, answer=row.answer) for row in reversed(recent)]
+
+
+@router.get("/history", response_model=list[MentorTurn])
+def mentor_history(response: Response, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    response.headers["Cache-Control"] = "no-store"
+    return _history(db, user.id, 50)
+
+
 @router.post("", response_model=MentorReply)
 async def ask_mentor(payload: MentorRequest, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    profile = load_profile(db, user.id)
-    client_id = f"user-{user.id}"
+    user_id = user.id
+    profile = load_profile(db, user_id)
+    client_id = f"user-{user_id}"
     evaluation_id = payload.evaluation_id
     if evaluation_id is None:
         query = select(AnalysisRecord.id).where(
@@ -68,12 +81,16 @@ async def ask_mentor(payload: MentorRequest, user: User = Depends(current_user),
             "format": plan.format,
             "phases": phases,
         }
+    history = _history(db, user_id, 3)
     db.rollback()
     contents = json.dumps({
-        "context": context, "history": [turn.model_dump() for turn in payload.history],
+        "context": context, "history": [turn.model_dump() for turn in history],
         "question": payload.question,
     }, ensure_ascii=False)
     try:
-        return await generate_structured(PROMPT, contents, MentorReply)
+        reply = await generate_structured(PROMPT, contents, MentorReply)
     except AIAnalysisError as error:
         raise HTTPException(error.status_code, str(error)) from error
+    db.add(MentorMessage(user_id=user_id, question=payload.question, answer=reply.answer))
+    db.commit()
+    return reply

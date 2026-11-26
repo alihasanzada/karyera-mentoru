@@ -4,7 +4,9 @@ from time import monotonic
 from fastapi import Request
 from starlette.responses import JSONResponse
 
-AUTH_PATHS = {"/api/auth/login", "/api/auth/signup"}
+AUTH_PATHS = {
+    "/api/auth/login", "/api/auth/signup", "/api/auth/otp/verify", "/api/auth/otp/resend", "/api/auth/otp/cancel",
+}
 AI_PATHS = {"/api/evaluate", "/api/cv/analyze", "/api/match/analyze", "/api/mentor"}
 
 

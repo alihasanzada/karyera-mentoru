@@ -10,7 +10,9 @@ function setup(fetch) {
     if (!nodes.has(id)) nodes.set(id, {
       innerHTML: "", textContent: "", disabled: false, checked: true, value: "cybersecurity",
       files: [{ name: "cv.pdf", size: 100 }],
-      classList: { add() {}, remove() {} }, addEventListener() {}, scrollIntoView() {},
+      classList: { add() {}, remove() {} }, listeners: {},
+      addEventListener(type, callback) { (this.listeners[type] ||= []).push(callback); },
+      scrollIntoView() {},
       elements: { email: { value: "first@example.com" }, password: { value: "long-test-password" } },
       querySelector: () => ({ disabled: false }),
     });
@@ -204,4 +206,43 @@ test("signup form asks for at least 8 password characters", () => {
   vm.runInContext("renderAuth(true)", app.context);
   assert.match(app.node("view").innerHTML, /minlength="8"/);
   assert.match(app.node("view").innerHTML, /Ən azı 8 simvol/);
+});
+
+test("legacy login shows verification and waits to set the signed-in user", async () => {
+  const requests = [];
+  const app = setup(async (url, options) => {
+    requests.push({ url, body: JSON.parse(options.body) });
+    const data = url.endsWith("/login")
+      ? { expires_in: 300, resend_after: 60 }
+      : { id: 1, email: "first@example.com", first_name: "Tahir" };
+    return { ok: true, json: async () => data };
+  });
+  let bindOptions;
+  app.context.startEmailOtp = (form, options) => { bindOptions = options; };
+  let submit;
+  const login = app.node("auth-form");
+  login.addEventListener = (type, callback) => { if (type === "submit") submit = callback; };
+  vm.runInContext("renderAuth(); route = () => {};", app.context);
+  await submit({ preventDefault() {}, currentTarget: login });
+  assert.match(app.node("view").innerHTML, /E-poçt təsdiqi/);
+  assert.equal(vm.runInContext("state.user", app.context), null);
+  assert.equal(login.elements.password.value, "");
+  assert.equal(requests.length, 1);
+
+  const verified = await bindOptions.request("/api/auth/otp/verify", { code: "123456" });
+  bindOptions.onVerified(verified);
+  assert.equal(vm.runInContext("state.user.id", app.context), 1);
+  assert.equal(requests[1].url, "/api/auth/otp/verify");
+});
+
+test("legacy logout reports a failed request without pretending the session ended", async () => {
+  const app = setup(async () => ({
+    ok: false, status: 503, json: async () => ({ detail: "Server əlçatan deyil." }),
+  }));
+  const messages = [];
+  app.context.recordNotice = (message, isError) => messages.push({ message, isError });
+  vm.runInContext("state.user = {id: 1}; notify = recordNotice;", app.context);
+  await app.node("logout-btn").listeners.click[0]();
+  assert.equal(vm.runInContext("state.user.id", app.context), 1);
+  assert.deepEqual(messages, [{ message: "Server əlçatan deyil.", isError: true }]);
 });

@@ -4,7 +4,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const SOURCE = fs.readFileSync(path.join(__dirname, "../../dizayn/js/script.js"), "utf8");
+const SOURCE = ["email-otp.js", "script.js"]
+  .map((file) => fs.readFileSync(path.join(__dirname, "../../dizayn/js", file), "utf8")).join("\n");
 const FIELDS = [{ id: "frontend", name: "Frontend", group: "IT" }, { id: "cybersecurity", name: "Kibertəhlükəsizlik", group: "IT" }];
 const SIGNUP_VALUES = {
   "reg-name": "Tahir", "reg-surname": "Məmmədov", "reg-email": "  New@Example.com ",
@@ -23,7 +24,8 @@ function makeDom() {
       getAttribute(name) { return this.attrs[name] ?? null; },
       addEventListener(type, fn) { (this.listeners[type] ||= []).push(fn); },
       focus() { this.focused++; }, select() {}, reset() {},
-      querySelectorAll: () => [], querySelector: () => stub(), appendChild() {},
+      querySelectorAll: () => [], querySelector: (selector) => node(key + " " + selector), appendChild() {},
+      open: false, showModal() { this.open = true; }, close() { this.open = false; },
       classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
       closest: () => stub(),
       style: { setProperty() {}, removeProperty() {} }, dataset: {}, options: [], children: [], childNodes: [], files: [],
@@ -122,22 +124,43 @@ test("dizayn signup sends the full profile and opens the login tab after 201", a
   assert.equal(app.node("login-btn").hidden, false);
 });
 
-test("dizayn login after signup is what starts the session", async () => {
+test("dizayn password starts a challenge and only verified OTP signs in", async () => {
   const requests = [];
   const fetch = backend({ ok: true, status: 201, json: async () => ({ id: 1, email: "new@example.com" }) }, requests);
   const app = await setup(async (url, options) => {
     if (url === "/api/auth/login") {
       requests.push({ url, body: JSON.parse(options.body) });
+      return { ok: true, status: 202, json: async () => ({ expires_in: 300, resend_after: 60 }) };
+    }
+    if (url === "/api/auth/otp/verify") {
+      requests.push({ url });
+      if (JSON.parse(options.body).code === "000000") {
+        return { ok: false, status: 400, json: async () => ({ detail: "Giriş kodu yanlışdır." }) };
+      }
       return { ok: true, json: async () => ({ id: 1, email: "new@example.com" }) };
     }
     if (url === "/api/profile") return { ok: true, json: async () => ({ name: "Tahir" }) };
     return fetch(url, options);
   });
+  app.node("auth-modal").open = true;
   app.node("login-email").value = "new@example.com";
   app.node("login-pass").value = "12345678";
   await app.node("login-form").listeners.submit[0]({ preventDefault() {} });
   assert.equal(requests.filter((r) => r.url === "/api/auth/login").length, 1);
+  assert.equal(vm.runInContext("apiUser", app.context), null);
+  const form = app.node("otp-form");
+  assert.equal(form.hidden, false);
+  assert.equal(app.node("login-pass").value, "");
+  assert.equal(form.querySelector("[data-otp-resend]").disabled, true);
+
+  form.querySelector("[name=code]").value = "000000";
+  await form.onsubmit({ preventDefault() {} });
+  assert.match(form.querySelector("[data-otp-error]").textContent, /yanlışdır/);
+  assert.equal(vm.runInContext("apiUser", app.context), null);
+  form.querySelector("[name=code]").value = "123456";
+  await form.onsubmit({ preventDefault() {} });
   assert.equal(vm.runInContext("apiUser.email", app.context), "new@example.com");
+  assert.equal(form.hidden, true);
 });
 
 test("dizayn signup shows backend 422 errors next to the matching fields", async () => {
@@ -171,7 +194,7 @@ test("dizayn signup shows a 409 on the email field", async () => {
   assert.equal(app.node("register-error").textContent, "");
 });
 
-test("dizayn demo mode (file://) keeps the local signup flow", async () => {
+test("dizayn file preview cannot create an account or sign in", async () => {
   const requests = [];
   const dom = makeDom();
   const storage = new Map();
@@ -193,8 +216,12 @@ test("dizayn demo mode (file://) keeps the local signup flow", async () => {
   dom.node("reg-consent").checked = true;
   await dom.node("register-form").listeners.submit[0]({ preventDefault() {} });
   assert.deepEqual(requests, []);
-  assert.equal(JSON.parse(storage.get("istifadeciler"))[0].email, "new@example.com");
-  assert.equal(storage.get("aktivIstifadeci"), "new@example.com");
+  assert.equal(storage.has("istifadeciler"), false);
+  assert.match(dom.node("register-error").textContent, /serverdən aç/);
+  storage.set("aktivIstifadeci", "new@example.com");
+  await dom.node("login-form").listeners.submit[0]({ preventDefault() {} });
+  assert.match(dom.node("login-error").textContent, /serverdən aç/);
+  assert.equal(vm.runInContext("getCurrentUser()", context), null);
 });
 
 // ----- Profile in server mode -----
@@ -284,33 +311,6 @@ test("server validation errors appear on the profile fields", async () => {
   await submitProfile(app);
   assert.equal(app.node("profile-major-error").textContent, "İxtisasını siyahıdan seç.");
   assert.equal(app.node("profile-skills-error").textContent, "Ən çox 24 bacarıq əlavə et.");
-});
-
-test("file:// demo profile edits stay in localStorage", async () => {
-  const storage = new Map();
-  const dom = makeDom();
-  const context = vm.createContext({
-    fetch: async () => { throw new Error("no network"); },
-    AbortController, setTimeout, clearTimeout, setInterval: () => 0, clearInterval() {}, console,
-    crypto: require("node:crypto").webcrypto, TextEncoder,
-    localStorage: { getItem: (k) => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, v), removeItem: (k) => storage.delete(k) },
-    document: dom.document,
-    window: { addEventListener() {}, matchMedia: () => ({ matches: false, addEventListener() {} }), scrollTo() {} },
-    location: { protocol: "file:", hash: "", pathname: "/dizayn/index.html" },
-    Option: class { constructor(text, value) { this.text = text; this.value = value; } },
-    IntersectionObserver: class { observe() {} disconnect() {} },
-    requestAnimationFrame: (fn) => fn(), matchMedia: () => ({ matches: false, addEventListener() {} }),
-  });
-  vm.runInContext(SOURCE, context);
-  assert.equal(vm.runInContext("apiChecked", context), true);
-  storage.set("istifadeciler", JSON.stringify([{ name: "Ali", surname: "Vəli", email: "demo@example.com", major: "frontend", passHash: "x" }]));
-  storage.set("aktivIstifadeci", "demo@example.com");
-  dom.node("profile-name").value = "Əli";
-  dom.node("profile-surname").value = "Vəliyev";
-  dom.node("profile-major").value = "cybersecurity";
-  await dom.node("profile-form").listeners.submit[0]({ preventDefault() {} });
-  const user = JSON.parse(storage.get("istifadeciler"))[0];
-  assert.deepEqual({ name: user.name, surname: user.surname, major: user.major }, { name: "Əli", surname: "Vəliyev", major: "cybersecurity" });
 });
 
 // ----- CV privacy wording -----
