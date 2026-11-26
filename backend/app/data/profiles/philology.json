@@ -1,0 +1,28 @@
+{
+    "id": "philology",
+    "role": "Filoloq",
+    "level": "Junior",
+    "description": "Filoloq vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Mətn redaktəsi",
+        "Ədəbi təhlil",
+        "Xarici dil (B2+)",
+        "CAT alətləri",
+        "Akademik yazı"
+    ],
+    "preferred_skills": [
+        "İctimai çıxış",
+        "Korrektura",
+        "Tədqiqat"
+    ],
+    "ats_keywords": [
+        "Mətn redaktəsi",
+        "Ədəbi təhlil",
+        "Xarici dil (B2+)",
+        "CAT alətləri",
+        "Akademik yazı",
+        "İctimai çıxış",
+        "Korrektura",
+        "Tədqiqat"
+    ]
+}

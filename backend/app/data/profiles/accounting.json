@@ -1,0 +1,28 @@
+{
+    "id": "accounting",
+    "role": "Mühasib",
+    "level": "Junior",
+    "description": "Mühasib vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Excel",
+        "1C",
+        "MHBS (IFRS)",
+        "Audit əsasları",
+        "Vergi qanunvericiliyi"
+    ],
+    "preferred_skills": [
+        "Maliyyə hesabatları",
+        "Power BI",
+        "ACCA əsasları"
+    ],
+    "ats_keywords": [
+        "Excel",
+        "1C",
+        "MHBS (IFRS)",
+        "Audit əsasları",
+        "Vergi qanunvericiliyi",
+        "Maliyyə hesabatları",
+        "Power BI",
+        "ACCA əsasları"
+    ]
+}

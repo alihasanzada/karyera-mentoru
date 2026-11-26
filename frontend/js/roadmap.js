@@ -1,6 +1,9 @@
 /* Roadmap tab: career gap comparison and 7/14/21 day plan */
 let rmData = null;
 let rmBound = false;
+let rmGenerating = null; // evaluation_id whose plan is being generated
+
+const rmBusy = () => rmGenerating !== null && rmData && rmGenerating === rmData.evaluation_id;
 
 const RM_STATUS = {
     has: { label: "Var", cls: "bg-green-100 text-green-800", color: "#16a34a", path: "M5 13l4 4L19 7" },
@@ -27,7 +30,6 @@ function rmStatusIcon(status) {
 }
 
 function rmResource(r) {
-    // Links are search URLs built from the model's query, never model-written URLs
     const q = encodeURIComponent(r.search_query || r.title);
     const url = r.kind === "video"
         ? `https://www.youtube.com/results?search_query=${q}`
@@ -95,8 +97,8 @@ function rmCareerGap(d) {
         : `<p class="text-xs text-slate-400 mt-4">İzahlar və resurs tövsiyələri yol xəritəsi yaradıldıqdan sonra görünəcək.</p>`;
 
     return `<section class="${CARD} p-6">
-    <h2 class="text-lg font-semibold">Career Gap</h2>
-    <p class="text-sm text-slate-500 mb-5">${esc(d.field_name)} sahəsində izlənilən ${g.skills.length} bacarıq: ${have.length} mövcud, ${gaps.length} boşluq.</p>
+    <h2 class="text-lg font-semibold">Bacarıq boşluğu</h2>
+    <p class="text-sm text-slate-500 mb-5">${esc(d.field_name)} ixtisası üzrə izlənilən ${g.skills.length} bacarıq: ${have.length} mövcud, ${gaps.length} boşluq.</p>
     <div class="grid gap-4 sm:grid-cols-2 mb-6">
       ${coverage("Tələb olunan bacarıqların örtülməsi", g.required_coverage)}
       ${coverage("Arzuolunan bacarıqların örtülməsi", g.preferred_coverage)}
@@ -115,20 +117,115 @@ function rmCareerGap(d) {
   </section>`;
 }
 
-/* Task progress is kept in the browser only */
-const rmProgressKey = (id) => `karyera_progress_${id}`;
+// ===== Ortaq irəliləyiş formatı =====
+// frontend/js/roadmap.js və dizayn/js/script.js bu blokun eyni nüsxəsini saxlayır
+// (frontend/tests/shared-progress.test.cjs ikisinin eyni olduğunu yoxlayır).
+// Açar: karyera_progress_<evaluation_id>. Dəyər: {"version":2,"done":{"<faza>-<i>":"<imza>"}}.
+// İmza tapşırığın məzmunundan (faza, gün, başlıq) çıxarılır: plan yenidən yaradılanda
+// köhnə işarələr yeni tapşırığa keçmir. Köhnə formatlar (imzasız):
+//   / səhifəsi: karyera_progress_<id> = {"foundation-0": true}
+//   /dizayn/:   plan_api_<id>         = ["foundation-0"]
+const SharedProgress = (() => {
+  const VERSION = 2;
+  const key = (id) => `karyera_progress_${id}`;
+  const dizaynKey = (id) => `plan_api_${id}`;
+  const isObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 
-function rmLoadProgress(id) {
-    try { return JSON.parse(localStorage.getItem(rmProgressKey(id)) || "{}"); }
-    catch { return {}; }
-}
+  function parse(raw) {
+    if (raw === null || raw === undefined) return { ok: true, value: null };
+    try { return { ok: true, value: JSON.parse(raw) }; } catch (e) { return { ok: false, value: null }; }
+  }
 
-function rmSaveProgress(id, progress) {
-    try { localStorage.setItem(rmProgressKey(id), JSON.stringify(progress)); } catch { }
-}
+  function signature(phaseKey, task) {
+    const text = `${phaseKey}|${task.day}|${task.title}`;
+    let h = 2166136261;
+    for (let i = 0; i < text.length; i++) {
+      h ^= text.charCodeAt(i);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+    return h.toString(16);
+  }
+
+  // Plandakı bütün tapşırıqlar: id -> imza
+  function signatures(roadmap) {
+    const out = new Map();
+    if (!roadmap || !roadmap.generated) return out;
+    roadmap.roadmap.forEach((p) => p.tasks.forEach((t, i) => out.set(`${p.key}-${i}`, signature(p.key, t))));
+    return out;
+  }
+
+  function save(roadmap, done, io) {
+    return io.write(key(roadmap.evaluation_id), JSON.stringify({ version: VERSION, done }));
+  }
+
+  // Cari plana uyğun təsdiqlənmiş tamamlanmış tapşırıqlar (id -> imza); lazım olsa köhnə formatı köçürür.
+  // io: { read(key), write(key, value) -> bool, remove(key) }
+  function load(roadmap, io) {
+    const id = roadmap.evaluation_id;
+    const sigs = signatures(roadmap);
+    const shared = parse(io.read(key(id)));
+    if (!shared.ok) return {}; // zədəli qeyd: təxmin etmirik, növbəti yazıda üzərinə yazılır
+    const doc = shared.value;
+
+    if (isObject(doc) && doc.version === VERSION && isObject(doc.done)) {
+      io.remove(dizaynKey(id)); // yeni qeyd varsa, köhnə /dizayn/ qeydi artıq etibarsızdır
+      const verified = {};
+      Object.keys(doc.done).forEach((task) => { if (sigs.get(task) === doc.done[task]) verified[task] = doc.done[task]; });
+      return verified;
+    }
+    if (!sigs.size) return {}; // plan yoxdur: tapşırığı eyniləşdirmək olmaz
+
+    // Köhnə formatlar. Tapşırıq yalnız plandakı mövcud ID ilə eyniləşdirilir.
+    // / səhifəsi planı yenidən yaradanda öz qeydini sıfırlayır, ona görə onun qeydi etibarlıdır.
+    // /dizayn/ qeydi, / qeydi də varsa, yoxlanıla bilməz (plan arada dəyişmiş ola bilər): atılır.
+    let ids = [];
+    if (isObject(doc)) {
+      ids = Object.keys(doc).filter((k) => doc[k] === true);
+    } else if (doc === null) {
+      const old = parse(io.read(dizaynKey(id)));
+      if (!old.ok) return {};
+      if (!Array.isArray(old.value)) return {};
+      ids = old.value.filter((k) => typeof k === "string");
+    } else {
+      return {};
+    }
+    const migrated = {};
+    ids.forEach((task) => { if (sigs.has(task)) migrated[task] = sigs.get(task); });
+    if (save(roadmap, migrated, io)) io.remove(dizaynKey(id));
+    return migrated;
+  }
+
+  // Bir tapşırığı işarələ/götür. Digər tapşırıqların vəziyyəti cari plana görə yenidən yoxlanılır.
+  function setTasks(roadmap, changes, io) {
+    const sigs = signatures(roadmap);
+    const done = load(roadmap, io);
+    Object.keys(changes).forEach((task) => {
+      if (changes[task] && sigs.has(task)) done[task] = sigs.get(task);
+      else delete done[task];
+    });
+    save(roadmap, done, io);
+    return done;
+  }
+
+  // Plan yenidən yaradılanda: bütün irəliləyişi sıfırla
+  function reset(evaluationId, io) {
+    io.remove(dizaynKey(evaluationId));
+    return io.write(key(evaluationId), JSON.stringify({ version: VERSION, done: {} }));
+  }
+
+  return { key, signature, signatures, load, setTasks, reset };
+})();
+
+const rmIo = {
+    read(key) { try { return localStorage.getItem(key); } catch { return null; } },
+    write(key, value) { try { localStorage.setItem(key, value); return true; } catch { return false; } },
+    remove(key) { try { localStorage.removeItem(key); } catch { } },
+};
+
+const rmLoadProgress = (d) => SharedProgress.load(d, rmIo);
 
 function rmStats(d) {
-    const done = rmLoadProgress(d.evaluation_id);
+    const done = rmLoadProgress(d);
     const phases = d.roadmap.map((p) => {
         const total = p.tasks.length;
         const n = p.tasks.filter((_, i) => done[`${p.key}-${i}`]).length;
@@ -141,7 +238,7 @@ function rmStats(d) {
 
 function rmPhase(p, d, stats) {
     const ps = stats.phases.find((x) => x.key === p.key);
-    const done = rmLoadProgress(d.evaluation_id);
+    const done = rmLoadProgress(d);
 
     const byDay = {};
     p.tasks.forEach((t, i) => { (byDay[t.day] = byDay[t.day] || []).push({ t, i }); });
@@ -183,8 +280,8 @@ function rmPlan(d) {
     if (!d.generated) {
         return `<section class="${CARD} p-8 text-center">
       <h2 class="text-lg font-semibold">7/14/21 günlük plan</h2>
-      <p class="text-sm text-slate-500 mt-1 mb-5">AI Career Gap nəticəsinə əsasən fərdi plan və resurs tövsiyələri hazırlayacaq.</p>
-      <button data-rm-generate class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-medium">Yol xəritəsi yarat</button>
+      <p class="text-sm text-slate-500 mt-1 mb-5">AI bacarıq boşluğu nəticəsinə əsasən fərdi plan və resurs tövsiyələri hazırlayacaq.</p>
+      <button data-rm-generate ${rmBusy() ? "disabled" : ""} class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-medium">Yol xəritəsi yarat</button>
       <p id="rm-status" class="text-sm mt-3"></p>
     </section>`;
     }
@@ -196,7 +293,7 @@ function rmPlan(d) {
           <h2 class="text-lg font-semibold">7/14/21 günlük plan</h2>
           <p class="text-sm text-slate-600 mt-1">${esc(d.summary)}</p>
         </div>
-        <button data-rm-generate class="text-sm text-indigo-600 hover:text-indigo-800 disabled:opacity-50 font-medium whitespace-nowrap">Yenidən yarat</button>
+        <button data-rm-generate ${rmBusy() ? "disabled" : ""} class="text-sm text-indigo-600 hover:text-indigo-800 disabled:opacity-50 font-medium whitespace-nowrap">Yenidən yarat</button>
       </div>
       <div>
         <div class="flex justify-between text-sm mb-1">
@@ -212,7 +309,7 @@ function rmPlan(d) {
 
 function rmPaint() {
     $("view").innerHTML =
-        pageHeader("Yol Xəritəsi", "Career Gap təhlili və 7/14/21 günlük fərdi inkişaf planı") +
+        pageHeader("Yol Xəritəsi", "Bacarıq boşluğu təhlili və 7/14/21 günlük fərdi inkişaf planı") +
         `<div class="space-y-6">${rmCareerGap(rmData)}${rmPlan(rmData)}</div>`;
 }
 
@@ -238,29 +335,36 @@ function rmSetStatus(msg, isError = false) {
     el.className = "text-sm mt-3 " + (isError ? "text-red-600" : "text-slate-600");
 }
 
+const rmSetButtons = (disabled) =>
+    document.querySelectorAll("[data-rm-generate]").forEach((b) => { b.disabled = disabled; });
+
 async function rmGenerate() {
     const current = rmData;
-    if (!current) return;
+    if (!current || rmGenerating !== null) return;
     if (current.generated && !confirm("Plan yenidən yaradılsın? Tapşırıqlar üzrə irəliləyiş sıfırlanacaq.")) return;
 
-    const buttons = document.querySelectorAll("[data-rm-generate]");
-    buttons.forEach((b) => { b.disabled = true; });
+    rmGenerating = current.evaluation_id;
+    rmSetButtons(true);
     const started = Date.now();
     rmSetStatus("AI plan hazırlayır...");
     const ticker = setInterval(() => {
-        rmSetStatus(`AI plan hazırlayır... ${Math.round((Date.now() - started) / 1000)} san`);
+        if (rmBusy()) rmSetStatus(`AI plan hazırlayır... ${Math.round((Date.now() - started) / 1000)} san`);
     }, 1000);
 
     try {
         const fresh = await api("/api/roadmap/" + current.evaluation_id, { method: "POST" }, 180000);
-        rmSaveProgress(current.evaluation_id, {});
-        rmData = fresh;
-        if (currentRoute() === "roadmap") rmPaint();
+        SharedProgress.reset(current.evaluation_id, rmIo);
+        // Ignore the answer if the user has since opened another evaluation's roadmap.
+        if (rmData && rmData.evaluation_id === current.evaluation_id) {
+            rmData = fresh;
+            if (currentRoute() === "roadmap") rmPaint();
+        }
     } catch (e) {
         rmSetStatus(e.message, true);
-        buttons.forEach((b) => { b.disabled = false; });
     } finally {
         clearInterval(ticker);
+        rmGenerating = null;
+        rmSetButtons(false);
     }
 }
 
@@ -276,30 +380,32 @@ function rmBind() {
     view.addEventListener("change", (ev) => {
         const box = ev.target.closest("input[data-task]");
         if (!box || !rmData) return;
-        const progress = rmLoadProgress(rmData.evaluation_id);
-        if (box.checked) progress[box.dataset.task] = true;
-        else delete progress[box.dataset.task];
-        rmSaveProgress(rmData.evaluation_id, progress);
+        SharedProgress.setTasks(rmData, { [box.dataset.task]: box.checked }, rmIo);
         rmUpdateProgress();
     });
 }
 
 async function renderRoadmap() {
     const t = routeToken;
-    const header = pageHeader("Yol Xəritəsi", "Career Gap təhlili və 7/14/21 günlük fərdi inkişaf planı");
+    const header = pageHeader("Yol Xəritəsi", "Bacarıq boşluğu təhlili və 7/14/21 günlük fərdi inkişaf planı");
     rmBind();
     $("view").innerHTML = header + loadingHtml();
 
-    let latest;
-    try {
-        latest = await loadLatest();
-    } catch (e) {
-        if (t === routeToken) showError(e.message);
-        return;
+    // #/roadmap/<id> opens a specific evaluation; plain #/roadmap uses the latest one.
+    let evaluationId = routeParam();
+    if (!evaluationId) {
+        let latest;
+        try {
+            latest = await loadLatest();
+        } catch (e) {
+            if (t === routeToken) showError(e.message);
+            return;
+        }
+        if (t !== routeToken) return;
+        evaluationId = latest && latest._id;
     }
-    if (t !== routeToken) return;
 
-    if (!latest) {
+    if (!evaluationId) {
         $("view").innerHTML = header + `
       <div class="${CARD} p-10 text-center">
         <h2 class="text-lg font-semibold">Əvvəl CV analiz et</h2>
@@ -310,7 +416,7 @@ async function renderRoadmap() {
     }
 
     try {
-        rmData = await api("/api/roadmap/" + latest._id);
+        rmData = await api("/api/roadmap/" + encodeURIComponent(evaluationId));
     } catch (e) {
         if (t === routeToken) showError(e.message);
         return;

@@ -210,9 +210,10 @@ let apiHistory = []; // /api/history (yalnız qiymətləndirmələr)
 const apiRoadmaps = new Map(); // evaluation_id → /api/roadmap cavabı
 
 class ApiError extends Error {
-  constructor(message, status) {
+  constructor(message, status, detail) {
     super(message);
     this.status = status;
+    this.detail = detail; // 422-də sahə xətalarının siyahısı
   }
 }
 
@@ -223,13 +224,16 @@ async function api(path, options = {}, timeoutMs = 60000) {
     const res = await fetch(path, { credentials: "same-origin", ...options, signal: controller.signal });
     if (!res.ok) {
       let message = "Xəta baş verdi. Yenidən cəhd et.";
+      let detail;
       try {
         const data = await res.json();
-        if (typeof data.detail === "string") message = data.detail;
+        detail = data.detail;
+        if (typeof detail === "string") message = detail;
+        else if (Array.isArray(detail) && detail.length) message = validationMessage(detail[0]);
       } catch (error) {
         // Cavab JSON deyil — ümumi mesaj qalır
       }
-      throw new ApiError(message, res.status);
+      throw new ApiError(message, res.status, detail);
     }
     return await res.json();
   } catch (error) {
@@ -241,6 +245,31 @@ async function api(path, options = {}, timeoutMs = 60000) {
   }
 }
 
+// FastAPI 422: sahə xətaları Azərbaycan dilində
+const SIGNUP_FIELD_IDS = {
+  first_name: "reg-name",
+  last_name: "reg-surname",
+  email: "reg-email",
+  password: "reg-pass",
+  specialty_id: "reg-major",
+  consent: "reg-consent",
+};
+const SIGNUP_FIELD_NAMES = {
+  first_name: "Ad", last_name: "Soyad", email: "E-poçt", password: "Şifrə", specialty_id: "İxtisas",
+};
+
+function validationMessage(err) {
+  const field = Array.isArray(err.loc) ? err.loc[err.loc.length - 1] : "";
+  const name = SIGNUP_FIELD_NAMES[field] || "Sahə";
+  if (err.type === "string_too_short") return `${name} çox qısadır (minimum ${err.ctx?.min_length ?? ""} simvol).`;
+  if (err.type === "string_too_long") return `${name} çox uzundur (maksimum ${err.ctx?.max_length ?? ""} simvol).`;
+  if (field === "email") return "Düzgün e-poçt ünvanı yaz.";
+  if (field === "consent") return "Davam etmək üçün razılığını təsdiqlə.";
+  if (field === "specialty_id") return "İxtisasını siyahıdan seç.";
+  if (err.type === "missing") return `${name} boş ola bilməz.`;
+  return `${name} düzgün doldurulmayıb.`;
+}
+
 function postJson(path, body) {
   return api(path, {
     method: "POST",
@@ -248,6 +277,14 @@ function postJson(path, body) {
     body: JSON.stringify(body),
   });
 }
+
+// Server rejimində CV məxfilik mətnləri (backend davranışına uyğun; kök səhifədəki mətnlə eyni)
+// Demo rejim mətnləri index.html-də qalır.
+const CV_PRIVACY_NOTE =
+  "Analiz üçün PDF serverə göndərilir. PDF-in özü daimi saxlanmır, lakin ondan çıxarılan mətnin ilk 15 000 simvolu analiz üçün Gemini-yə ötürülə bilər. Analiz nəticəsi, fayl adı və CV-dən götürülən sitatlar tarixçədə (ən son 50 nəticə), fayl adı olmadan isə analiz keşində qala bilər. Saytda silmə düyməsi yoxdur; ətraflı məlumat FAQ-dadır.";
+const CV_FILE_HINT = "Yalnız PDF, maksimum 5 MB. Analiz üçün serverə göndərilir — aşağıdakı məxfilik qeydinə bax.";
+const CV_PRIVACY_FAQ =
+  "Server rejimində CV-nin PDF faylı analiz üçün serverə göndərilir. PDF-in özü daimi saxlanmır və çıxarılan mətnin tam surəti bazaya yazılmır. Çıxarılan mətnin ilk 15 000 simvolu analiz üçün Gemini-yə ötürülə bilər. Analiz nəticəsi, fayl adı və CV-dən götürülən sitatlar hesabının tarixçəsində (ən son 50 nəticə) saxlanır. Eyni nəticə fayl adı olmadan analiz keşində də qala bilər. Saytda tarixçəni və ya hesabı silmə düyməsi yoxdur: tarixçə qeydi yalnız serverə göndərilən silmə sorğusu ilə silinir və onunla birlikdə yol xəritəsi də silinir, analiz keşindəki nüsxə isə silinmir. Real şəxsi məlumatları yükləməzdən əvvəl bunu nəzərə al.";
 
 // Backend varmı? (/health)
 const apiReady = (async () => {
@@ -263,7 +300,8 @@ const apiReady = (async () => {
   apiChecked = true;
 });
 
-// Backend-də istifadəçinin yalnız e-poçtu var — ad, soyad, ixtisas və Premium bu brauzerdə saxlanır
+// API rejimində ad, soyad və ixtisas serverdədir (/api/auth/me). Brauzerdə yalnız demo Premium
+// qeydi saxlanır; köhnə brauzer profil məlumatı serverə heç vaxt avtomatik yazılmır.
 function readProfile(email) {
   try {
     return JSON.parse(readStorage(`profil:${email}`)) || {};
@@ -276,16 +314,26 @@ function writeProfile(email, changes) {
   writeStorage(`profil:${email}`, JSON.stringify({ ...readProfile(email), ...changes }));
 }
 
+// Köhnə hesabda server profil sahələri boş ola bilər — istifadəçi onları profildən doldurur
 function makeApiUser(me) {
   const profile = readProfile(me.email);
   return {
     id: me.id,
     email: me.email,
-    name: profile.name || me.email.split("@")[0],
-    surname: profile.surname || "",
-    major: profile.major || "",
+    name: me.first_name || "",
+    surname: me.last_name || "",
+    major: me.specialty_id || "",
     premium: Boolean(profile.premium),
   };
+}
+
+// Başlıqda göstərmək üçün: ad boşdursa e-poçtun ilk hissəsi (yalnız göstərmək üçün, yadda saxlanmır)
+function userLabel(user) {
+  return user.name || user.email.split("@")[0];
+}
+
+function userFullLabel(user) {
+  return [user.name, user.surname].filter(Boolean).join(" ") || userLabel(user);
 }
 
 function fieldName(id) {
@@ -1044,17 +1092,128 @@ const PHASES_BY_DAYS = {
   21: ["foundation", "practice", "interview"],
 };
 
-function apiPlanKey(analysis) {
-  return `plan_api_${analysis.id}`;
-}
+// ===== Ortaq irəliləyiş formatı =====
+// frontend/js/roadmap.js və dizayn/js/script.js bu blokun eyni nüsxəsini saxlayır
+// (frontend/tests/shared-progress.test.cjs ikisinin eyni olduğunu yoxlayır).
+// Açar: karyera_progress_<evaluation_id>. Dəyər: {"version":2,"done":{"<faza>-<i>":"<imza>"}}.
+// İmza tapşırığın məzmunundan (faza, gün, başlıq) çıxarılır: plan yenidən yaradılanda
+// köhnə işarələr yeni tapşırığa keçmir. Köhnə formatlar (imzasız):
+//   / səhifəsi: karyera_progress_<id> = {"foundation-0": true}
+//   /dizayn/:   plan_api_<id>         = ["foundation-0"]
+const SharedProgress = (() => {
+  const VERSION = 2;
+  const key = (id) => `karyera_progress_${id}`;
+  const dizaynKey = (id) => `plan_api_${id}`;
+  const isObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 
-function readApiPlanState(analysis) {
-  try {
-    const saved = JSON.parse(readStorage(apiPlanKey(analysis)));
-    return Array.isArray(saved) ? saved : [];
-  } catch (error) {
-    return [];
+  function parse(raw) {
+    if (raw === null || raw === undefined) return { ok: true, value: null };
+    try { return { ok: true, value: JSON.parse(raw) }; } catch (e) { return { ok: false, value: null }; }
   }
+
+  function signature(phaseKey, task) {
+    const text = `${phaseKey}|${task.day}|${task.title}`;
+    let h = 2166136261;
+    for (let i = 0; i < text.length; i++) {
+      h ^= text.charCodeAt(i);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+    return h.toString(16);
+  }
+
+  // Plandakı bütün tapşırıqlar: id -> imza
+  function signatures(roadmap) {
+    const out = new Map();
+    if (!roadmap || !roadmap.generated) return out;
+    roadmap.roadmap.forEach((p) => p.tasks.forEach((t, i) => out.set(`${p.key}-${i}`, signature(p.key, t))));
+    return out;
+  }
+
+  function save(roadmap, done, io) {
+    return io.write(key(roadmap.evaluation_id), JSON.stringify({ version: VERSION, done }));
+  }
+
+  // Cari plana uyğun təsdiqlənmiş tamamlanmış tapşırıqlar (id -> imza); lazım olsa köhnə formatı köçürür.
+  // io: { read(key), write(key, value) -> bool, remove(key) }
+  function load(roadmap, io) {
+    const id = roadmap.evaluation_id;
+    const sigs = signatures(roadmap);
+    const shared = parse(io.read(key(id)));
+    if (!shared.ok) return {}; // zədəli qeyd: təxmin etmirik, növbəti yazıda üzərinə yazılır
+    const doc = shared.value;
+
+    if (isObject(doc) && doc.version === VERSION && isObject(doc.done)) {
+      io.remove(dizaynKey(id)); // yeni qeyd varsa, köhnə /dizayn/ qeydi artıq etibarsızdır
+      const verified = {};
+      Object.keys(doc.done).forEach((task) => { if (sigs.get(task) === doc.done[task]) verified[task] = doc.done[task]; });
+      return verified;
+    }
+    if (!sigs.size) return {}; // plan yoxdur: tapşırığı eyniləşdirmək olmaz
+
+    // Köhnə formatlar. Tapşırıq yalnız plandakı mövcud ID ilə eyniləşdirilir.
+    // / səhifəsi planı yenidən yaradanda öz qeydini sıfırlayır, ona görə onun qeydi etibarlıdır.
+    // /dizayn/ qeydi, / qeydi də varsa, yoxlanıla bilməz (plan arada dəyişmiş ola bilər): atılır.
+    let ids = [];
+    if (isObject(doc)) {
+      ids = Object.keys(doc).filter((k) => doc[k] === true);
+    } else if (doc === null) {
+      const old = parse(io.read(dizaynKey(id)));
+      if (!old.ok) return {};
+      if (!Array.isArray(old.value)) return {};
+      ids = old.value.filter((k) => typeof k === "string");
+    } else {
+      return {};
+    }
+    const migrated = {};
+    ids.forEach((task) => { if (sigs.has(task)) migrated[task] = sigs.get(task); });
+    if (save(roadmap, migrated, io)) io.remove(dizaynKey(id));
+    return migrated;
+  }
+
+  // Bir tapşırığı işarələ/götür. Digər tapşırıqların vəziyyəti cari plana görə yenidən yoxlanılır.
+  function setTasks(roadmap, changes, io) {
+    const sigs = signatures(roadmap);
+    const done = load(roadmap, io);
+    Object.keys(changes).forEach((task) => {
+      if (changes[task] && sigs.has(task)) done[task] = sigs.get(task);
+      else delete done[task];
+    });
+    save(roadmap, done, io);
+    return done;
+  }
+
+  // Plan yenidən yaradılanda: bütün irəliləyişi sıfırla
+  function reset(evaluationId, io) {
+    io.remove(dizaynKey(evaluationId));
+    return io.write(key(evaluationId), JSON.stringify({ version: VERSION, done: {} }));
+  }
+
+  return { key, signature, signatures, load, setTasks, reset };
+})();
+
+const planIo = {
+  read: readStorage,
+  write(key, value) {
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  },
+  remove(key) {
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      // Yaddaş əlçatan deyil — sadəcə keçirik
+    }
+  },
+};
+
+// Cari plana uyğun tamamlanmış tapşırıq ID-ləri (roadmap hələ yüklənməyibsə boş)
+function readApiPlanState(analysis) {
+  const roadmap = apiRoadmaps.get(analysis.id);
+  return roadmap && roadmap.generated ? Object.keys(SharedProgress.load(roadmap, planIo)) : [];
 }
 
 function planMessage(text) {
@@ -1072,6 +1231,7 @@ async function generateApiPlan(analysis, button) {
   try {
     const roadmap = await api(`/api/roadmap/${analysis.id}`, { method: "POST" }, 180000);
     apiRoadmaps.set(analysis.id, roadmap);
+    SharedProgress.reset(analysis.id, planIo); // yeni plan — köhnə işarələr keçməsin
     showToast("21 günlük plan hazırdır!", "success");
   } catch (error) {
     showToast(error.message, "error");
@@ -1229,9 +1389,11 @@ planDaysEl.addEventListener("change", (event) => {
 
   if (currentAnalysis.api) {
     // Bütün 21 günlük planın vəziyyəti bir yerdə saxlanır (7/14/21 görünüşü dəyişsə də itmir)
-    const state = new Set(readApiPlanState(currentAnalysis));
-    boxes.forEach((b) => (b.checked ? state.add(b.dataset.task) : state.delete(b.dataset.task)));
-    writeStorage(apiPlanKey(currentAnalysis), JSON.stringify([...state]));
+    // və / səhifəsi ilə ortaqdır
+    const roadmap = apiRoadmaps.get(currentAnalysis.id);
+    const changes = {};
+    boxes.forEach((b) => { changes[b.dataset.task] = b.checked; });
+    if (roadmap) SharedProgress.setTasks(roadmap, changes, planIo);
   } else {
     const done = boxes.filter((b) => b.checked).map((b) => Number(b.dataset.index));
     writeStorage(planKey(currentAnalysis, currentAnalysis.planDays), JSON.stringify(done));
@@ -1622,56 +1784,20 @@ function setFieldError(input, errorEl, message) {
 }
 
 // ===== 10. Tərəfdaşlıq forması =====
+// Forma heç yerə göndərilmir (backend və əlaqə kanalı yoxdur): sahələr və düymə index.html-də
+// söndürülüb, qəbul/abunə mesajı göstərilmir. Enter ilə göndərmə cəhdi də yalnız bunu bildirir.
 const partnerForm = document.querySelector("#partner-form");
-const partnerName = document.querySelector("#partner-name");
-const partnerEmail = document.querySelector("#partner-email");
-const partnerNameError = document.querySelector("#partner-name-error");
-const partnerEmailError = document.querySelector("#partner-email-error");
-
 partnerForm.addEventListener("submit", (event) => {
   event.preventDefault();
-
-  const nameOk = partnerName.value.trim().length >= 2;
-  const emailOk = isValidEmail(partnerEmail.value);
-
-  setFieldError(partnerName, partnerNameError, nameOk ? "" : "Ad və ya təşkilat adını yaz.");
-  setFieldError(partnerEmail, partnerEmailError, emailOk ? "" : "Düzgün e-poçt ünvanı yaz, məsələn ad@mail.az.");
-
-  if (!nameOk || !emailOk) {
-    showToast("Zəhmət olmasa formu düzgün doldurun.", "error");
-    (nameOk ? partnerEmail : partnerName).focus();
-    return;
-  }
-
-  showToast("Müraciətiniz qəbul edildi! Tezliklə əlaqə saxlayacağıq.", "success");
-  partnerForm.reset();
+  showToast("Tərəfdaşlıq forması hələ işləmir — heç nə göndərilmədi.", "error");
 });
 
-[partnerName, partnerEmail].forEach((input) => {
-  input.addEventListener("input", () => {
-    const errorEl = input === partnerName ? partnerNameError : partnerEmailError;
-    setFieldError(input, errorEl, "");
-  });
-});
-
-// ===== 11. Footer: bülleten =====
+// ===== 11. Footer: bülleten (hələ işləmir) =====
 const newsletterForm = document.querySelector("#newsletter-form");
-const newsletterEmail = document.querySelector("#newsletter-email");
-
 newsletterForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  if (!isValidEmail(newsletterEmail.value)) {
-    setFieldError(newsletterEmail, null, "error");
-    showToast("Düzgün e-poçt ünvanı yaz.", "error");
-    newsletterEmail.focus();
-    return;
-  }
-  setFieldError(newsletterEmail, null, "");
-  showToast("Bülletenə abunə oldun.", "success");
-  newsletterForm.reset();
+  showToast("Bülleten hələ işləmir — abunə yaranmadı.", "error");
 });
-
-newsletterEmail.addEventListener("input", () => setFieldError(newsletterEmail, null, ""));
 
 // ===== 11. Footer: hələ hazır olmayan linklər =====
 document.querySelectorAll("[data-soon]").forEach((btn) => {
@@ -1717,8 +1843,10 @@ function getCurrentUser() {
 // Ad, soyad, ixtisas, Premium kimi dəyişiklikləri cari istifadəçiyə yaz
 function updateCurrentUser(changes) {
   if (apiMode) {
+    // Yalnız demo Premium brauzerdə saxlanır; profil sahələri serverə PATCH ilə yazılır
     if (!apiUser) return null;
-    writeProfile(apiUser.email, changes);
+    const { premium, premiumSince } = changes;
+    if (premium !== undefined) writeProfile(apiUser.email, { premium, premiumSince });
     apiUser = { ...apiUser, ...changes };
     return apiUser;
   }
@@ -1730,9 +1858,9 @@ function updateCurrentUser(changes) {
   return user;
 }
 
-// Backend parolun ən azı 12 simvol olmasını tələb edir
+// Backend və sayt parolun ən azı 8 simvol olmasını tələb edir
 function minPasswordLength() {
-  return apiMode ? 12 : 6;
+  return 8;
 }
 
 function removeStorage(key) {
@@ -1759,6 +1887,7 @@ async function hashPassword(email, password) {
 function openAuth(tabId = "tab-login") {
   setMenu(false);
   googleNote.textContent = "";
+  document.querySelector("#login-notice").textContent = "";
   activateTab(document.getElementById(tabId), false);
   authModal.showModal();
   const firstInput = document.querySelector(`#${document.getElementById(tabId).getAttribute("aria-controls")} input`);
@@ -1828,7 +1957,7 @@ function renderUser() {
 
   // Qiymət kartındakı düymə premium istifadəçidə dəyişsin
   document.querySelectorAll('[data-plan="premium"]').forEach((btn) => {
-    btn.textContent = user && user.premium ? "✓ Premium aktivdir" : "Premium-a keç";
+    btn.textContent = user && user.premium ? "✓ Demo Premium qeyd olunub" : "Demo ödənişi sına";
   });
 
   loginBtn.hidden = Boolean(user);
@@ -1837,11 +1966,11 @@ function renderUser() {
   userBtn.setAttribute("aria-expanded", "false");
   if (!user) return;
 
-  document.querySelector("#user-avatar").textContent = user.name.charAt(0).toUpperCase();
-  document.querySelector("#user-name").textContent = user.name;
-  document.querySelector("#user-full-name").textContent = `${user.name} ${user.surname}`;
+  document.querySelector("#user-avatar").textContent = userLabel(user).charAt(0).toUpperCase();
+  document.querySelector("#user-name").textContent = userLabel(user);
+  document.querySelector("#user-full-name").textContent = userFullLabel(user);
   document.querySelector("#user-email").textContent = user.email;
-  document.querySelector("#user-plan").textContent = user.premium ? "Premium Tələbə" : "Pulsuz plan";
+  document.querySelector("#user-plan").textContent = user.premium ? "Demo Premium (imkan açmır)" : "Pulsuz plan";
 
   // CV Yoxla-da ixtisas boşdursa, istifadəçinin ixtisasını seç
   if (!majorSelect.value) majorSelect.value = user.major;
@@ -1925,19 +2054,38 @@ registerForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  // API rejimi: hesab serverdə yaradılır (backend dərhal daxil edir)
+  // API rejimi: hesab serverdə yaradılır; sessiya yalnız sonrakı /api/auth/login ilə açılır
   if (apiMode) {
     const submit = registerForm.querySelector('button[type="submit"]');
     submit.disabled = true;
     try {
-      const me = await postJson("/api/auth/signup", { email, password: pass });
-      writeProfile(me.email, { name, surname, major });
-      apiUser = makeApiUser(me);
-      signIn(apiUser, `Xoş gəldin, ${name}! Hesabın yaradıldı.`);
+      const me = await postJson("/api/auth/signup", {
+        email, password: pass, first_name: name, last_name: surname, specialty_id: major, consent,
+      });
+      registerForm.reset();
+      activateTab(document.getElementById("tab-login"), false);
+      document.querySelector("#login-email").value = me.email;
+      document.querySelector("#login-notice").textContent = "Hesab yaradıldı. İndi daxil ol.";
+      document.querySelector("#login-pass").focus();
     } catch (error) {
       if (error.status === 409) {
         fieldError("reg-email", error.message);
         document.querySelector("#reg-email").focus();
+      } else if (error.status === 422 && Array.isArray(error.detail)) {
+        const shown = new Set();
+        error.detail.forEach((item) => {
+          const key = Array.isArray(item.loc) ? item.loc[item.loc.length - 1] : "";
+          const id = SIGNUP_FIELD_IDS[key];
+          if (id && !shown.has(id)) {
+            shown.add(id);
+            fieldError(id, validationMessage(item));
+          }
+        });
+        if (shown.size) {
+          registerForm.querySelector(".is-invalid input, input.is-invalid, select.is-invalid")?.focus();
+        } else {
+          document.querySelector("#register-error").textContent = error.message;
+        }
       } else {
         document.querySelector("#register-error").textContent = error.message;
       }
@@ -1982,7 +2130,7 @@ loginForm.addEventListener("submit", async (event) => {
     try {
       const me = await postJson("/api/auth/login", { email, password: pass });
       apiUser = makeApiUser(me);
-      signIn(apiUser, `Xoş gəldin, ${apiUser.name}!`);
+      signIn(apiUser, `Xoş gəldin, ${userLabel(apiUser)}!`);
     } catch (error) {
       document.querySelector("#login-error").textContent = error.message;
       document.querySelector("#login-pass").select();
@@ -2117,10 +2265,10 @@ function renderCabinet(user) {
   const previous = entries[1];
 
   const hello = document.querySelector("#cabinet-hello");
-  hello.textContent = `Salam, ${user.name}! Burada bütün CV analizlərin və irəliləyişin var. `;
+  hello.textContent = `Salam, ${userLabel(user)}! Burada bütün CV analizlərin və irəliləyişin var. `;
   const badge = document.createElement("span");
   badge.className = user.premium ? "premium-badge" : "pill pill-accent";
-  badge.textContent = user.premium ? "Premium" : "Pulsuz plan";
+  badge.textContent = user.premium ? "Demo Premium" : "Pulsuz plan";
   hello.appendChild(badge);
 
   // Son CV skoru
@@ -2222,7 +2370,7 @@ profileForm.addEventListener("input", (event) => {
   if (document.getElementById(`${event.target.id}-error`)) fieldError(event.target.id, "");
 });
 
-profileForm.addEventListener("submit", (event) => {
+profileForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const name = document.querySelector("#profile-name").value.trim();
   const surname = document.querySelector("#profile-surname").value.trim();
@@ -2235,7 +2383,36 @@ profileForm.addEventListener("submit", (event) => {
   ];
   if (ok.includes(false)) return;
 
-  const user = updateCurrentUser({ name, surname, major });
+  let user;
+  if (apiMode) {
+    // Server rejimi: profil serverdə saxlanır, səhifə yenilənəndə /api/auth/me ilə qayıdır
+    if (!apiUser) return;
+    const submit = profileForm.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    try {
+      const me = await api("/api/auth/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ first_name: name, last_name: surname, specialty_id: major }),
+      });
+      user = apiUser = makeApiUser(me);
+    } catch (error) {
+      if (error.status === 422 && Array.isArray(error.detail)) {
+        const ids = { first_name: "profile-name", last_name: "profile-surname", specialty_id: "profile-major" };
+        error.detail.forEach((item) => {
+          const id = ids[Array.isArray(item.loc) ? item.loc[item.loc.length - 1] : ""];
+          if (id) fieldError(id, validationMessage(item));
+        });
+      } else {
+        showToast(error.message, "error");
+      }
+      return;
+    } finally {
+      submit.disabled = false;
+    }
+  } else {
+    user = updateCurrentUser({ name, surname, major });
+  }
   if (!user) return;
 
   renderUser();
@@ -2255,15 +2432,12 @@ window.addEventListener("hashchange", updateView);
 updateView();
 
 // ===== Ödəniş pəncərəsi (DEMO) =====
-// Kart məlumatı heç yerdə saxlanmır və heç yerə göndərilmir
+// Kart məlumatı sahəsi yoxdur: yalnız test kartı nümunəsi göstərilir
 const payModal = document.querySelector("#pay-modal");
 const payForm = document.querySelector("#pay-form");
 const payStepForm = document.querySelector("#pay-step-form");
 const payStepProcessing = document.querySelector("#pay-step-processing");
 const payStepSuccess = document.querySelector("#pay-step-success");
-const payNumber = document.querySelector("#pay-number");
-const payExp = document.querySelector("#pay-exp");
-const payCvv = document.querySelector("#pay-cvv");
 const premiumButtons = document.querySelectorAll('[data-plan="premium"]');
 let pendingPayment = false;
 
@@ -2278,27 +2452,24 @@ function openPayment() {
   if (!user) {
     pendingPayment = true;
     openAuth("tab-register");
-    googleNote.textContent = "Premium almaq üçün əvvəlcə hesab yarat və ya daxil ol.";
+    googleNote.textContent = "Demo ödənişi sınamaq üçün əvvəlcə hesab yarat və ya daxil ol.";
     return;
   }
   if (user.premium) {
-    showToast("Premium artıq aktivdir.", "success");
+    showToast("Demo Premium bu brauzerdə artıq qeyd olunub.", "success");
     return;
   }
-  payForm.reset();
-  ["pay-name", "pay-number", "pay-exp", "pay-cvv"].forEach((id) => fieldError(id, ""));
   showPayStep("form");
   payModal.showModal();
-  document.querySelector("#pay-name").focus();
+  document.querySelector("#pay-submit").focus();
 }
 
 function closePayment() {
   payModal.close();
 }
 
-// Bağlananda formu təmizlə — kart məlumatı yaddaşda qalmasın
+// Bağlananda başlanğıc addıma qayıt (kart sahəsi yoxdur, yalnız test kartı nümunəsi göstərilir)
 payModal.addEventListener("close", () => {
-  payForm.reset();
   showPayStep("form");
 });
 
@@ -2314,91 +2485,18 @@ authModal.addEventListener("close", () => {
   if (!getCurrentUser()) pendingPayment = false;
 });
 
-// Yazarkən formatla: "4242 4242 4242 4242", "12/28", yalnız rəqəm
-payNumber.addEventListener("input", () => {
-  const digits = payNumber.value.replace(/\D/g, "").slice(0, 16);
-  payNumber.value = digits.replace(/(\d{4})(?=\d)/g, "$1 ");
-});
-
-payExp.addEventListener("input", (event) => {
-  let digits = payExp.value.replace(/\D/g, "").slice(0, 4);
-  if (digits.length >= 3 || (digits.length === 2 && event.inputType !== "deleteContentBackward")) {
-    digits = `${digits.slice(0, 2)}/${digits.slice(2)}`;
-  }
-  payExp.value = digits;
-});
-
-payCvv.addEventListener("input", () => {
-  payCvv.value = payCvv.value.replace(/\D/g, "").slice(0, 3);
-});
-
-payForm.addEventListener("input", (event) => {
-  if (document.getElementById(`${event.target.id}-error`)) fieldError(event.target.id, "");
-});
-
-// Rəsmi test kartı nömrəsi (real kart deyil)
-document.querySelector("#pay-test").addEventListener("click", () => {
-  const user = getCurrentUser();
-  const next = new Date();
-  document.querySelector("#pay-name").value = user ? `${user.name} ${user.surname}`.toLocaleUpperCase("az") : "TEST İSTİFADƏÇİ";
-  payNumber.value = "4242 4242 4242 4242";
-  payExp.value = `12/${String(next.getFullYear() + 2).slice(2)}`;
-  payCvv.value = "123";
-  ["pay-name", "pay-number", "pay-exp", "pay-cvv"].forEach((id) => fieldError(id, ""));
-});
-
-// Kart nömrəsinin düzgünlüyü (Luhn alqoritmi)
-function luhnValid(digits) {
-  let sum = 0;
-  [...digits].reverse().forEach((char, i) => {
-    let n = Number(char);
-    if (i % 2 === 1) {
-      n *= 2;
-      if (n > 9) n -= 9;
-    }
-    sum += n;
-  });
-  return digits.length === 16 && sum % 10 === 0;
-}
-
-function expiryValid(value) {
-  const match = /^(\d{2})\/(\d{2})$/.exec(value);
-  if (!match) return false;
-  const month = Number(match[1]);
-  const year = 2000 + Number(match[2]);
-  if (month < 1 || month > 12) return false;
-  const now = new Date();
-  return year > now.getFullYear() || (year === now.getFullYear() && month >= now.getMonth() + 1);
-}
-
 payForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  const name = document.querySelector("#pay-name").value.trim();
-  const digits = payNumber.value.replace(/\s/g, "");
-
-  const ok = [
-    fieldError("pay-name", name.length >= 3 ? "" : "Kart sahibinin adını yaz."),
-    fieldError("pay-number", luhnValid(digits) ? "" : "Kart nömrəsi düzgün deyil (16 rəqəm)."),
-    fieldError("pay-exp", expiryValid(payExp.value) ? "" : "Tarixi AA/İİ formatında yaz, məsələn 12/28."),
-    fieldError("pay-cvv", /^\d{3}$/.test(payCvv.value) ? "" : "CVV 3 rəqəmdir."),
-  ];
-  if (ok.includes(false)) {
-    payForm.querySelector(".is-invalid")?.focus();
-    return;
-  }
-
-  // Kart məlumatını dərhal sil — yalnız "ödəniş oldu" qeydi saxlanır
-  payForm.reset();
   showPayStep("processing");
 
   setTimeout(() => {
-    // Backend-də ödəniş yoxdur — Premium qeydi bu brauzerdə saxlanır (DEMO)
+    // Backend-də ödəniş yoxdur — demo qeyd yalnız bu brauzerdə saxlanır və heç bir imkan açmır
     const user = updateCurrentUser({ premium: true, premiumSince: new Date().toISOString() });
     showPayStep("success");
     document.querySelector("#pay-done").focus();
     renderUser();
     if (!cabinet.hidden && user) renderCabinet(user);
-    showToast("Premium aktivləşdi! (DEMO ödəniş)", "success");
+    showToast("Demo ödəniş nümunəsi tamamlandı. Pul çıxılmadı.", "success");
   }, 1500);
 });
 
@@ -2551,7 +2649,7 @@ function chatUsesAI() {
 function updateChatMode() {
   if (chatUsesAI()) chatSub.textContent = "AI ilə cavab verir";
   else if (apiMode) chatSub.textContent = "Hazır cavablar · AI üçün hesaba daxil ol";
-  else chatSub.textContent = "Hazır cavablar (demo)";
+  else chatSub.textContent = "Demo · AI deyil, hazır cavablar";
 }
 
 async function botReply(question) {
@@ -2612,8 +2710,10 @@ function toggleChat(open) {
     if (!chatStarted) {
       chatStarted = true;
       const user = getCurrentUser();
-      const greeting = CHAT_GREETING.replace("{ad}", user ? `, ${user.name}` : "");
-      addMessage("bot", { text: greeting });
+      const greeting = CHAT_GREETING.replace("{ad}", user ? `, ${userLabel(user)}` : "");
+      // Demo rejimdə istifadəçi AI ilə danışmadığını bilsin
+      const note = chatUsesAI() ? "" : "Hazırda demo rejimdəyəm: AI ilə yox, açar sözlərə görə hazır məsləhətlərlə cavab verirəm. Yazdıqların heç yerə göndərilmir.";
+      addMessage("bot", { text: greeting, note });
       remember("assistant", greeting);
     }
     chatInput.focus();
@@ -2765,8 +2865,9 @@ apiReady.then(async (enabled) => {
   }
 
   // Mətnlər real rejimə uyğun
-  document.querySelector("#cv-privacy-note").textContent =
-    "CV mətni AI analizi üçün serverə göndərilir; PDF faylın özü saxlanmır. Analiz üçün hesaba daxil ol.";
+  document.querySelector("#cv-privacy-note").textContent = `${CV_PRIVACY_NOTE} Analiz üçün hesaba daxil ol.`;
+  document.querySelector("#cv-file-hint").textContent = CV_FILE_HINT;
+  document.querySelector("#faq-privacy-answer").textContent = CV_PRIVACY_FAQ;
   document.querySelector("#reg-pass-hint").textContent = `(min. ${minPasswordLength()} simvol)`;
 
   // Artıq daxil olubsa (sessiya cookie-si), istifadəçini və tarixçəni yüklə
@@ -2865,26 +2966,32 @@ apiReady.then(async (enabled) => {
     "120-dən çox ixtisas üzrə bacarıq xəritəsi",
     "7, 14 və ya 21 günlük fərdi plan",
   ];
-  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  // Bir taymer: hər 40 ms-də bir hərf silinir və ya yazılır, aralarda fasilə
+  const TICK = 40;
+  const PAUSE_TICKS = 70; // ~2.8 saniyə
+  let index = 0;
+  let length = phrases[0].length;
+  let deleting = true;
+  let pause = 75; // ilk dəfə ~3 saniyə gözlə
 
-  async function typeLoop() {
-    let index = 0;
-    await wait(3000);
-    for (;;) {
-      const current = phrases[index];
-      for (let i = current.length; i >= 0; i--) {
-        kicker.textContent = current.slice(0, i);
-        await wait(18);
-      }
-      index = (index + 1) % phrases.length;
-      const next = phrases[index];
-      for (let i = 1; i <= next.length; i++) {
-        kicker.textContent = next.slice(0, i);
-        await wait(42);
-      }
-      await wait(2800);
+  setInterval(() => {
+    if (pause > 0) {
+      pause--;
+      return;
     }
-  }
-
-  typeLoop();
+    if (deleting) {
+      length = Math.max(0, length - 2);
+      if (length === 0) {
+        deleting = false;
+        index = (index + 1) % phrases.length;
+      }
+    } else {
+      length++;
+      if (length >= phrases[index].length) {
+        deleting = true;
+        pause = PAUSE_TICKS;
+      }
+    }
+    kicker.textContent = phrases[index].slice(0, length);
+  }, TICK);
 })();

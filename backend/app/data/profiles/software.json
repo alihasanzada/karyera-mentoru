@@ -1,0 +1,28 @@
+{
+    "id": "software",
+    "role": "Proqram təminatı mütəxəssisi",
+    "level": "Junior",
+    "description": "Proqram təminatı mütəxəssisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Python",
+        "Java və ya C#",
+        "SQL",
+        "Git",
+        "Alqoritmlər"
+    ],
+    "preferred_skills": [
+        "OOP",
+        "REST API",
+        "Linux"
+    ],
+    "ats_keywords": [
+        "Python",
+        "Java və ya C#",
+        "SQL",
+        "Git",
+        "Alqoritmlər",
+        "OOP",
+        "REST API",
+        "Linux"
+    ]
+}

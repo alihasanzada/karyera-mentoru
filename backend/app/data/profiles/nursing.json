@@ -1,0 +1,28 @@
+{
+    "id": "nursing",
+    "role": "Tibb bacısı",
+    "level": "Junior",
+    "description": "Tibb bacısı vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Pasiyentə qulluq",
+        "İlk yardım",
+        "İnyeksiya texnikası",
+        "Tibbi sənədləşmə",
+        "İnfeksiya nəzarəti"
+    ],
+    "preferred_skills": [
+        "Pasiyentlə ünsiyyət",
+        "Tibbi etika",
+        "Komanda işi"
+    ],
+    "ats_keywords": [
+        "Pasiyentə qulluq",
+        "İlk yardım",
+        "İnyeksiya texnikası",
+        "Tibbi sənədləşmə",
+        "İnfeksiya nəzarəti",
+        "Pasiyentlə ünsiyyət",
+        "Tibbi etika",
+        "Komanda işi"
+    ]
+}

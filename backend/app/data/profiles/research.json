@@ -1,0 +1,28 @@
+{
+    "id": "research",
+    "role": "Tədqiqatçı-analitik",
+    "level": "Junior",
+    "description": "Tədqiqatçı-analitik vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Tədqiqat metodları",
+        "Analitik yazı",
+        "SPSS",
+        "Arxiv işi",
+        "Xarici dillər"
+    ],
+    "preferred_skills": [
+        "İctimai çıxış",
+        "Hesabat hazırlama",
+        "Excel"
+    ],
+    "ats_keywords": [
+        "Tədqiqat metodları",
+        "Analitik yazı",
+        "SPSS",
+        "Arxiv işi",
+        "Xarici dillər",
+        "İctimai çıxış",
+        "Hesabat hazırlama",
+        "Excel"
+    ]
+}

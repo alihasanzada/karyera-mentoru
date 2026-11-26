@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.db.database import Base, get_db
-from app.db.db_models import AnalysisRecord, RoadmapRecord
+from app.db.db_models import AnalysisRecord, RoadmapRecord, User
 from app.main import app
 from app.models.schemas import EvaluationLLMOutput, MatchResponse
 from app.routers import cv, evaluate
@@ -16,8 +16,13 @@ from app.services import ai_analyzer, history
 from app.services.evaluator import assemble_evaluation
 
 def signup(client, email):
-    response = client.post("/api/auth/signup", json={"email": email, "password": "long-test-password"})
+    credentials = {"email": email, "password": "long-test-password"}
+    response = client.post("/api/auth/signup", json={**credentials, "first_name": "Tahir", "last_name": "Məmmədov", "specialty_id": "cybersecurity", "consent": True})
     assert response.status_code == 201
+    assert "session" not in response.cookies
+    response = client.post("/api/auth/login", json=credentials)
+    assert response.status_code == 200
+    client.cookies.clear()
     return {"session": response.cookies["session"]}
 
 
@@ -75,7 +80,7 @@ def test_health_frontend_and_fields(api):
     client, _ = api
     assert client.get("/health").json() == {"status": "ok"}
     assert "Karyera Mentoru" in client.get("/").text
-    assert len(client.get("/api/match/fields").json()) == 3
+    assert len(client.get("/api/match/fields").json()) == 122
 
 
 def test_dizayn_site_is_served(api):
@@ -103,7 +108,7 @@ def test_authentication_and_logout(api):
     assert client.get("/api/auth/me").status_code == 401
     cookies = signup(client, "first@example.com")
     assert client.get("/api/auth/me", cookies=cookies).json()["email"] == "first@example.com"
-    assert client.post("/api/auth/signup", json={"email": "first@example.com", "password": "long-test-password"}).status_code == 409
+    assert client.post("/api/auth/signup", json={"email": "first@example.com", "password": "long-test-password", "first_name": "Tahir", "last_name": "Məmmədov", "specialty_id": "cybersecurity", "consent": True}).status_code == 409
     assert client.post("/api/auth/login", json={"email": "first@example.com", "password": "incorrect-pass"}).status_code == 401
     assert client.post("/api/auth/logout", cookies=cookies).status_code == 200
     client.cookies.clear()
@@ -176,3 +181,54 @@ def test_delete_and_retention_remove_dependent_plans(api, evaluation, monkeypatc
         assert db.get(AnalysisRecord, keep_id) is None
         assert db.get(AnalysisRecord, newest_id) is not None
         assert [r.evaluation_id for r in db.scalars(select(RoadmapRecord))] == [other_id]
+
+
+def test_signup_rules_match_the_site(api):
+    client, _ = api
+    base = {"email": "rules@example.com", "first_name": "Tahir", "last_name": "Məmmədov", "specialty_id": "cybersecurity", "consent": True}
+    short = client.post("/api/auth/signup", json={**base, "password": "1234567"})
+    assert short.status_code == 422
+    assert client.post("/api/auth/signup", json={**base, "password": "12345678", "consent": False}).status_code == 422
+    assert client.post("/api/auth/signup", json={**base, "password": "12345678", "specialty_id": "nope"}).status_code == 422
+    assert client.post("/api/auth/signup", json={**base, "password": "12345678", "first_name": "T"}).status_code == 422
+    created = client.post("/api/auth/signup", json={**base, "password": "12345678"})
+    assert created.status_code == 201
+    assert created.json()["first_name"] == "Tahir" and created.json()["specialty_id"] == "cybersecurity"
+
+
+def test_profile_update(api):
+    client, _ = api
+    cookies = signup(client, "profile@example.com")
+    updated = client.patch("/api/auth/me", cookies=cookies, json={"first_name": "Aysel", "specialty_id": "maliyye"})
+    assert updated.status_code == 200
+    assert updated.json()["first_name"] == "Aysel" and updated.json()["last_name"] == "Məmmədov"
+    assert client.patch("/api/auth/me", cookies=cookies, json={"specialty_id": "nope"}).status_code == 422
+
+
+def test_legacy_account_with_empty_profile_can_fill_it_and_keeps_it(api):
+    client, factory = api
+    cookies = signup(client, "legacy@example.com")
+    with factory() as db:
+        user = db.scalar(select(User).where(User.email == "legacy@example.com"))
+        user.first_name = user.last_name = user.specialty_id = ""
+        db.commit()
+    assert client.get("/api/auth/me", cookies=cookies).json() == {
+        "id": 1, "email": "legacy@example.com", "first_name": "", "last_name": "", "specialty_id": ""}
+    filled = client.patch("/api/auth/me", cookies=cookies,
+                          json={"first_name": "Tahir", "last_name": "Məmmədov", "specialty_id": "frontend"})
+    assert filled.status_code == 200
+    # A later request (a page reload in either frontend) reads the same values
+    assert client.get("/api/auth/me", cookies=cookies).json() == filled.json()
+    assert filled.json()["specialty_id"] == "frontend"
+
+
+def test_specialties_match_the_site(api):
+    client, _ = api
+    fields = client.get("/api/match/fields").json()
+    assert len(fields) == 122
+    assert len({f["group"] for f in fields}) == 7
+    by_id = {f["id"]: f for f in fields}
+    assert by_id["frontend"]["name"] == "Frontend proqramlaşdırma"
+    assert by_id["cybersecurity"]["name"] == "İnformasiya təhlükəsizliyi"
+    assert by_id["data_science"]["name"] == "Data analitika"
+    assert by_id["fizika_muellimliyi"]["role"] == "Fizika müəllimi"

@@ -1,0 +1,28 @@
+{
+    "id": "veterinary",
+    "role": "Baytar",
+    "level": "Junior",
+    "description": "Baytar vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Heyvan anatomiyası",
+        "Diaqnostika",
+        "Cərrahiyyə əsasları",
+        "Farmakologiya",
+        "Epizootologiya"
+    ],
+    "preferred_skills": [
+        "Sanitariya-gigiyena",
+        "Laborator analiz",
+        "Müştəri ilə ünsiyyət"
+    ],
+    "ats_keywords": [
+        "Heyvan anatomiyası",
+        "Diaqnostika",
+        "Cərrahiyyə əsasları",
+        "Farmakologiya",
+        "Epizootologiya",
+        "Sanitariya-gigiyena",
+        "Laborator analiz",
+        "Müştəri ilə ünsiyyət"
+    ]
+}

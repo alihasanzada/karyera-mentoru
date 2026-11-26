@@ -1,0 +1,28 @@
+{
+    "id": "oilGas",
+    "role": "Neft-qaz mühəndisi",
+    "level": "Junior",
+    "description": "Neft-qaz mühəndisi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "AutoCAD",
+        "HSE",
+        "Qazma texnologiyası",
+        "MATLAB",
+        "Petrel"
+    ],
+    "preferred_skills": [
+        "Hasilat mühəndisliyi",
+        "Texniki ingilis dili",
+        "Excel"
+    ],
+    "ats_keywords": [
+        "AutoCAD",
+        "HSE",
+        "Qazma texnologiyası",
+        "MATLAB",
+        "Petrel",
+        "Hasilat mühəndisliyi",
+        "Texniki ingilis dili",
+        "Excel"
+    ]
+}

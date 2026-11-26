@@ -1,0 +1,28 @@
+{
+    "id": "food",
+    "role": "Qida texnoloqu",
+    "level": "Junior",
+    "description": "Qida texnoloqu vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Qida təhlükəsizliyi (HACCP)",
+        "Laborator analiz",
+        "Texnoloji proseslər",
+        "ISO 22000",
+        "Keyfiyyətə nəzarət"
+    ],
+    "preferred_skills": [
+        "Excel",
+        "Sanitariya normaları",
+        "Komanda işi"
+    ],
+    "ats_keywords": [
+        "Qida təhlükəsizliyi (HACCP)",
+        "Laborator analiz",
+        "Texnoloji proseslər",
+        "ISO 22000",
+        "Keyfiyyətə nəzarət",
+        "Excel",
+        "Sanitariya normaları",
+        "Komanda işi"
+    ]
+}

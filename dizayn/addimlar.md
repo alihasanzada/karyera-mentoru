@@ -61,7 +61,7 @@ CSS dəyişənləri (`:root`) ilə tətbiq et, rəngləri birbaşa yazma.
 11. **Footer (4 sütun):** loqo və bülleten abunəsi; Sürətli keçidlər; Hüquqi (Məxfilik Siyasəti, İstifadə Şərtləri); Sosial şəbəkələr və "↑ Yuxarı qalx"; © 2026 Karyera Mentoru.
 
 ## Əlavə ekranlar (pəncərələr və kabinet)
-- **Giriş / Qeydiyyat pəncərəsi:** iki tab. Giriş: e-poçt, şifrə. Qeydiyyat: ad, soyad, e-poçt, şifrə (min. 6 simvol), şifrə təkrarı, ixtisas, razılıq çekboksu. "Google ilə davam et" düyməsi (demo).
+- **Giriş / Qeydiyyat pəncərəsi:** iki tab. Giriş: e-poçt, şifrə. Qeydiyyat: ad, soyad, e-poçt, şifrə (min. 8 simvol), şifrə təkrarı, ixtisas, razılıq çekboksu. "Google ilə davam et" düyməsi (demo).
 - **Şəxsi kabinet** (`#kabinet`): son CV skoru, analiz sayı, plan tamamlanma %, analiz tarixçəsi cədvəli, profil forması, "Çıxış".
 - **Ödəniş pəncərəsi (DEMO):** Premium 15 AZN/ay, kart sahəsi, aydın DEMO xəbərdarlığı.
 - **AI Mentor çatı:** sağ aşağıda üzən 💬 düyməsi; açar sözlərə görə hazır cavablar (CV, müsahibə, LinkedIn, staj, maaş).

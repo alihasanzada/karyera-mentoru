@@ -1,0 +1,28 @@
+{
+    "id": "music",
+    "role": "Musiqiçi",
+    "level": "Junior",
+    "description": "Musiqiçi vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "İfaçılıq texnikası",
+        "Musiqi nəzəriyyəsi",
+        "Not oxuma",
+        "Ansambl işi",
+        "Səs yazısı (DAW)"
+    ],
+    "preferred_skills": [
+        "Səhnə təcrübəsi",
+        "Musiqi tarixi",
+        "Pedaqoji təcrübə"
+    ],
+    "ats_keywords": [
+        "İfaçılıq texnikası",
+        "Musiqi nəzəriyyəsi",
+        "Not oxuma",
+        "Ansambl işi",
+        "Səs yazısı (DAW)",
+        "Səhnə təcrübəsi",
+        "Musiqi tarixi",
+        "Pedaqoji təcrübə"
+    ]
+}

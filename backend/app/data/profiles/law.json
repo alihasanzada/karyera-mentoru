@@ -1,0 +1,28 @@
+{
+    "id": "law",
+    "role": "Hüquqşünas",
+    "level": "Junior",
+    "description": "Hüquqşünas vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Mülki hüquq",
+        "Hüquqi yazı",
+        "Müqavilə hazırlığı",
+        "Məhkəmə təcrübəsi",
+        "Hüquqi ingilis dili"
+    ],
+    "preferred_skills": [
+        "Normativ aktlar bazası",
+        "Danışıqlar",
+        "Korporativ hüquq"
+    ],
+    "ats_keywords": [
+        "Mülki hüquq",
+        "Hüquqi yazı",
+        "Müqavilə hazırlığı",
+        "Məhkəmə təcrübəsi",
+        "Hüquqi ingilis dili",
+        "Normativ aktlar bazası",
+        "Danışıqlar",
+        "Korporativ hüquq"
+    ]
+}

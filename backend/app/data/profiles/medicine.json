@@ -1,0 +1,28 @@
+{
+    "id": "medicine",
+    "role": "Həkim-rezident",
+    "level": "Junior",
+    "description": "Həkim-rezident vəzifəsi üçün başlanğıc səviyyəli bacarıq profili.",
+    "required_skills": [
+        "Klinik bacarıqlar",
+        "Tibbi ingilis dili",
+        "Diaqnostika",
+        "İlk yardım",
+        "Tibbi etika"
+    ],
+    "preferred_skills": [
+        "Elektron tibbi qeydlər",
+        "Pasiyentlə ünsiyyət",
+        "Laborator analizlər"
+    ],
+    "ats_keywords": [
+        "Klinik bacarıqlar",
+        "Tibbi ingilis dili",
+        "Diaqnostika",
+        "İlk yardım",
+        "Tibbi etika",
+        "Elektron tibbi qeydlər",
+        "Pasiyentlə ünsiyyət",
+        "Laborator analizlər"
+    ]
+}
