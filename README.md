@@ -43,7 +43,7 @@ Frontend request-flow tests (Node.js 22 or newer, from the repository root):
 ```bash
 node --test frontend/tests/*.test.cjs
 ```
-Tests mock SMTP and Gemini. To avoid opening your normal SQLite file during app setup, set `DATABASE_PATH=:memory:` before running pytest (`$env:DATABASE_PATH=':memory:'` in PowerShell).
+Backend tests isolate SQLite during collection, overriding any configured database path, and use mocked SMTP and Gemini.
 
 ## Add a specialty
 Specialties live in `backend/app/data/specialties.json` (group → specialty `id`, `name`, `profile`). Each specialty points to a skill profile in `backend/app/data/profiles/<profile>.json` (`role`, `required_skills`, `preferred_skills`, `ats_keywords`). Both lists mirror `PROFILES` and `SPECIALTY_GROUPS` in `dizayn/js/script.js`; change them together, then restart the server. The ids `frontend`, `cybersecurity` and `data_science` are kept for earlier history entries.

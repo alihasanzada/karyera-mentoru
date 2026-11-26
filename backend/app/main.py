@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import BASE_DIR, settings
@@ -10,17 +12,32 @@ from app.db.profile_migration import backfill_design_profiles
 from app.routers import applications, auth, chat, cv, evaluate, history, match, mentor, profile, roadmap
 from app.services.request_limits import BetaRequestLimits
 
-Base.metadata.create_all(bind=engine)
-backfill_design_profiles(engine)
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    backfill_design_profiles(engine)
     app.state.request_limits = BetaRequestLimits()
     yield
 
 
 app = FastAPI(title=settings.app_name, version="0.7.0", lifespan=lifespan)
 app.state.request_limits = BetaRequestLimits()
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+    # An error's input may be the entire submitted body, even for a missing field.
+    details = []
+    for error in exc.errors():
+        detail = {key: error[key] for key in ("loc", "msg", "type")}
+        bounds = {key: value for key, value in (error.get("ctx") or {}).items()
+                  if key in {"min_length", "max_length", "ge", "gt", "le", "lt"}
+                  and isinstance(value, (int, float))}
+        if bounds:
+            detail["ctx"] = bounds
+        details.append(detail)
+    headers = {"Cache-Control": "no-store"} if request.url.path.startswith("/api/auth/") else None
+    return JSONResponse({"detail": details}, status_code=422, headers=headers)
 
 
 @app.middleware("http")
