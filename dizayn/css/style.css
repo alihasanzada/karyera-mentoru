@@ -2325,6 +2325,25 @@ body:has(.modal[open]) {
   display: none;
 }
 
+.form-notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #DCFCE7;
+  color: #166534;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.form-notice:empty {
+  display: none;
+}
+
+[data-theme="dark"] .form-notice {
+  background: rgba(34, 197, 94, 0.15);
+  color: #86EFAC;
+}
+
 .auth-switch {
   margin: 0;
   color: var(--muted);
@@ -3759,4 +3778,26 @@ html:not(.api-mode) :is(.beta-only, .beta-only.btn),
 #applications-list p {
   margin: 0;
   white-space: pre-wrap;
+}
+
+/* Hələ işləməyən formalar və plan önizləməsi */
+.pricing-note {
+  max-width: 760px;
+  margin: 0 auto 28px;
+}
+
+.partner-note,
+.newsletter-note {
+  margin: 12px 0 0;
+  color: inherit;
+  text-align: left;
+  opacity: 0.9;
+}
+
+.partner-form .input:disabled,
+.newsletter .input:disabled,
+.partner-form .btn:disabled,
+.newsletter .btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }

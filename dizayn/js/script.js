@@ -205,15 +205,16 @@ function showToast(message, type = "success") {
 const apiMode = location.protocol !== "file:";
 document.documentElement.classList.toggle("api-mode", apiMode);
 let apiChecked = false;
-let apiUser = null; // {id, email, name, surname, major, premium}
+let apiUser = null; // server hesabı və profili
 let apiFields = []; // /api/match/fields
 let apiHistory = []; // /api/history (yalnız qiymətləndirmələr)
 const apiRoadmaps = new Map(); // evaluation_id → /api/roadmap cavabı
 
 class ApiError extends Error {
-  constructor(message, status) {
+  constructor(message, status, detail) {
     super(message);
     this.status = status;
+    this.detail = detail; // 422-də sahə xətalarının siyahısı
   }
 }
 
@@ -225,9 +226,12 @@ async function api(path, options = {}, timeoutMs = 60000) {
     const res = await fetch(path, { credentials: "same-origin", ...options, signal: controller.signal });
     if (!res.ok) {
       let message = "Xəta baş verdi. Yenidən cəhd et.";
+      let detail;
       try {
         const data = await res.json();
-        if (typeof data.detail === "string") message = data.detail;
+        detail = data.detail;
+        if (typeof detail === "string") message = detail;
+        else if (res.status === 422 && Array.isArray(detail) && detail.length) message = validationMessage(detail[0]);
         else if (res.status === 422) message = "Daxil etdiyin məlumatın formatını və uzunluğunu yoxla.";
       } catch (error) {
         // Cavab JSON deyil — ümumi mesaj qalır
@@ -237,7 +241,7 @@ async function api(path, options = {}, timeoutMs = 60000) {
         renderUser();
         updateView();
       }
-      throw new ApiError(message, res.status);
+      throw new ApiError(message, res.status, detail);
     }
     return await res.json();
   } catch (error) {
@@ -247,6 +251,33 @@ async function api(path, options = {}, timeoutMs = 60000) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+// FastAPI 422: sahə xətaları Azərbaycan dilində
+const SIGNUP_FIELD_IDS = {
+  first_name: "reg-name",
+  last_name: "reg-surname",
+  email: "reg-email",
+  password: "reg-pass",
+  specialty_id: "reg-major",
+  consent: "reg-consent",
+};
+const VALIDATION_FIELD_NAMES = {
+  first_name: "Ad", last_name: "Soyad", email: "E-poçt", password: "Şifrə", specialty_id: "İxtisas",
+  name: "Ad", surname: "Soyad", field_id: "İxtisas", education: "Təhsil", interests: "Maraqlar", skills: "Bacarıqlar",
+};
+
+function validationMessage(err) {
+  const field = Array.isArray(err.loc) ? err.loc[1] : "";
+  const name = VALIDATION_FIELD_NAMES[field] || "Sahə";
+  if (err.type === "string_too_short") return `${name} çox qısadır (minimum ${err.ctx?.min_length ?? ""} simvol).`;
+  if (field === "skills" && err.type === "too_long") return "Ən çox 24 bacarıq əlavə et.";
+  if (err.type === "string_too_long") return `${name} çox uzundur (maksimum ${err.ctx?.max_length ?? ""} simvol).`;
+  if (field === "email") return "Düzgün e-poçt ünvanı yaz.";
+  if (field === "consent") return "Davam etmək üçün razılığını təsdiqlə.";
+  if (field === "specialty_id" || field === "field_id") return "İxtisasını siyahıdan seç.";
+  if (err.type === "missing") return `${name} boş ola bilməz.`;
+  return `${name} düzgün doldurulmayıb.`;
 }
 
 function sendJson(path, body, method = "POST", timeoutMs) {
@@ -260,9 +291,9 @@ function sendJson(path, body, method = "POST", timeoutMs) {
 function makeApiUser(me, profile = {}) {
   return {
     id: me.id, email: me.email,
-    name: profile.name || me.email.split("@")[0],
-    surname: profile.surname || "",
-    major: profile.field_id || "",
+    name: profile.name ?? me.first_name ?? "",
+    surname: profile.surname ?? me.last_name ?? "",
+    major: profile.field_id ?? me.specialty_id ?? "",
     education: profile.education || "",
     interests: profile.interests || "",
     skills: profile.skills || [],
@@ -277,6 +308,23 @@ async function signedInUser(me) {
     showToast(error.message, "error");
     return makeApiUser(me);
   }
+}
+
+// Server rejimində CV məxfilik mətnləri (backend davranışına uyğun; kök səhifədəki mətnlə eyni)
+// Demo rejim mətnləri index.html-də qalır.
+const CV_PRIVACY_NOTE =
+  "Analiz üçün PDF serverə göndərilir. PDF-in özü daimi saxlanmır, lakin ondan çıxarılan mətnin ilk 15 000 simvolu analiz üçün Gemini-yə ötürülə bilər. Analiz nəticəsi, fayl adı və CV-dən götürülən sitatlar tarixçədə (ən son 50 nəticə), fayl adı olmadan isə analiz keşində qala bilər. Saytda silmə düyməsi yoxdur; ətraflı məlumat FAQ-dadır.";
+const CV_FILE_HINT = "Yalnız PDF, maksimum 5 MB. Analiz üçün serverə göndərilir — aşağıdakı məxfilik qeydinə bax.";
+const CV_PRIVACY_FAQ =
+  "Server rejimində CV-nin PDF faylı analiz üçün serverə göndərilir. PDF-in özü daimi saxlanmır və çıxarılan mətnin tam surəti bazaya yazılmır. Çıxarılan mətnin ilk 15 000 simvolu analiz üçün Gemini-yə ötürülə bilər. Analiz nəticəsi, fayl adı və CV-dən götürülən sitatlar hesabının tarixçəsində (ən son 50 nəticə) saxlanır. Eyni nəticə fayl adı olmadan analiz keşində də qala bilər. Saytda tarixçəni və ya hesabı silmə düyməsi yoxdur: tarixçə qeydi yalnız serverə göndərilən silmə sorğusu ilə silinir və onunla birlikdə yol xəritəsi də silinir, analiz keşindəki nüsxə isə silinmir. Beta sınağında uydurma məlumatla hazırlanmış CV istifadə et.";
+
+// Başlıqda göstərmək üçün: ad boşdursa e-poçtun ilk hissəsi (yalnız göstərmək üçün, yadda saxlanmır)
+function userLabel(user) {
+  return user.name || user.email.split("@")[0];
+}
+
+function userFullLabel(user) {
+  return [user.name, user.surname].filter(Boolean).join(" ") || userLabel(user);
 }
 
 function fieldName(id) {
@@ -1681,9 +1729,19 @@ function setFieldError(input, errorEl, message) {
 }
 
 // ===== 10. Tərəfdaşlıq forması =====
-// Önizləmə formaları heç bir məlumat göndərmir.
-["#partner-form", "#newsletter-form"].forEach((selector) => {
-  document.querySelector(selector).addEventListener("submit", (event) => event.preventDefault());
+// Forma heç yerə göndərilmir (backend və əlaqə kanalı yoxdur): sahələr və düymə index.html-də
+// söndürülüb, qəbul/abunə mesajı göstərilmir. Enter ilə göndərmə cəhdi də yalnız bunu bildirir.
+const partnerForm = document.querySelector("#partner-form");
+partnerForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  showToast("Tərəfdaşlıq forması hələ işləmir — heç nə göndərilmədi.", "error");
+});
+
+// ===== 11. Footer: bülleten (hələ işləmir) =====
+const newsletterForm = document.querySelector("#newsletter-form");
+newsletterForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  showToast("Bülleten hələ işləmir — abunə yaranmadı.", "error");
 });
 
 // ===== 11. Footer: hələ hazır olmayan linklər =====
@@ -1727,12 +1785,9 @@ function getCurrentUser() {
   return readUsers().find((u) => u.email === email) || null;
 }
 
-// Ad, soyad, ixtisas, Premium kimi dəyişiklikləri cari istifadəçiyə yaz
+// Fayl kimi açılan prototipdə profil dəyişiklikləri brauzerdə saxlanır.
 function updateCurrentUser(changes) {
-  if (apiMode) {
-    if (!apiUser) return null;
-    return null;
-  }
+  if (apiMode) return null;
   const users = readUsers();
   const user = users.find((u) => u.email === readStorage("aktivIstifadeci"));
   if (!user) return null;
@@ -1770,6 +1825,7 @@ async function hashPassword(email, password) {
 function openAuth(tabId = "tab-login") {
   setMenu(false);
   googleNote.textContent = "";
+  document.querySelector("#login-notice").textContent = "";
   activateTab(document.getElementById(tabId), false);
   authModal.showModal();
   const firstInput = document.querySelector(`#${document.getElementById(tabId).getAttribute("aria-controls")} input`);
@@ -1843,9 +1899,9 @@ function renderUser() {
   userBtn.setAttribute("aria-expanded", "false");
   if (!user) return;
 
-  document.querySelector("#user-avatar").textContent = user.name.charAt(0).toUpperCase();
-  document.querySelector("#user-name").textContent = user.name;
-  document.querySelector("#user-full-name").textContent = `${user.name} ${user.surname}`;
+  document.querySelector("#user-avatar").textContent = userLabel(user).charAt(0).toUpperCase();
+  document.querySelector("#user-name").textContent = userLabel(user);
+  document.querySelector("#user-full-name").textContent = userFullLabel(user);
   document.querySelector("#user-email").textContent = user.email;
   document.querySelector("#user-plan").textContent = apiMode ? "Pulsuz beta" : "Demo hesabı";
 
@@ -1923,23 +1979,38 @@ registerForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  // API rejimi: qeydiyyatdan sonra ayrıca giriş tələb olunur
+  // API rejimi: hesab serverdə yaradılır; sessiya yalnız sonrakı /api/auth/login ilə açılır
   if (apiMode) {
     const submit = registerForm.querySelector('button[type="submit"]');
     submit.disabled = true;
     try {
-      await sendJson("/api/auth/signup", {
+      const me = await sendJson("/api/auth/signup", {
         email, password: pass, first_name: name, last_name: surname, specialty_id: major, consent,
       });
       registerForm.reset();
-      activateTab(document.querySelector("#tab-login"), false);
-      document.querySelector("#login-email").value = email;
+      activateTab(document.getElementById("tab-login"), false);
+      document.querySelector("#login-email").value = me.email;
+      document.querySelector("#login-notice").textContent = "Hesab yaradıldı. İndi daxil ol.";
       document.querySelector("#login-pass").focus();
-      googleNote.textContent = "Hesab yaradıldı. İndi daxil ol.";
     } catch (error) {
       if (error.status === 409) {
         fieldError("reg-email", error.message);
         document.querySelector("#reg-email").focus();
+      } else if (error.status === 422 && Array.isArray(error.detail)) {
+        const shown = new Set();
+        error.detail.forEach((item) => {
+          const key = Array.isArray(item.loc) ? item.loc[item.loc.length - 1] : "";
+          const id = SIGNUP_FIELD_IDS[key];
+          if (id && !shown.has(id)) {
+            shown.add(id);
+            fieldError(id, validationMessage(item));
+          }
+        });
+        if (shown.size) {
+          registerForm.querySelector(".is-invalid input, input.is-invalid, select.is-invalid")?.focus();
+        } else {
+          document.querySelector("#register-error").textContent = error.message;
+        }
       } else {
         document.querySelector("#register-error").textContent = error.message;
       }
@@ -1984,7 +2055,7 @@ loginForm.addEventListener("submit", async (event) => {
     try {
       const me = await sendJson("/api/auth/login", { email, password: pass });
       apiUser = await signedInUser(me);
-      signIn(apiUser, `Xoş gəldin, ${apiUser.name}!`);
+      signIn(apiUser, `Xoş gəldin, ${userLabel(apiUser)}!`);
     } catch (error) {
       document.querySelector("#login-error").textContent = error.message;
       document.querySelector("#login-pass").select();
@@ -2139,7 +2210,7 @@ function renderCabinet(user) {
   const previous = entries[1];
 
   const hello = document.querySelector("#cabinet-hello");
-  hello.textContent = `Salam, ${user.name}! Burada bütün CV analizlərin və irəliləyişin var. `;
+  hello.textContent = `Salam, ${userLabel(user)}! Burada bütün CV analizlərin və irəliləyişin var. `;
   const badge = document.createElement("span");
   badge.className = "pill pill-accent";
   badge.textContent = apiMode ? "Pulsuz beta" : "Demo";
@@ -2262,6 +2333,7 @@ profileForm.addEventListener("submit", async (event) => {
     fieldError("profile-major", major ? "" : "İxtisasını seç."),
   ];
   if (ok.includes(false)) return;
+  ["profile-education", "profile-interests", "profile-skills"].forEach((id) => fieldError(id, ""));
 
   let user;
   if (apiMode) {
@@ -2278,6 +2350,18 @@ profileForm.addEventListener("submit", async (event) => {
       if (apiUser?.id !== owner?.id) return;
       user = apiUser = makeApiUser(owner, profile);
     } catch (error) {
+      const fields = {
+        name: "profile-name", surname: "profile-surname", field_id: "profile-major",
+        education: "profile-education", interests: "profile-interests", skills: "profile-skills",
+      };
+      if (error.status === 422 && Array.isArray(error.detail)) {
+        const fieldErrors = error.detail.filter((item) => Object.hasOwn(fields, item.loc?.[1]));
+        for (const item of fieldErrors) fieldError(fields[item.loc[1]], validationMessage(item));
+        if (fieldErrors.length) {
+          document.getElementById(fields[fieldErrors[0].loc[1]]).focus();
+          return;
+        }
+      }
       showToast(error.message, "error");
       return;
     } finally {
@@ -2424,7 +2508,7 @@ function toggleChat(open) {
     if (!chatStarted) {
       chatStarted = true;
       const user = getCurrentUser();
-      addMessage("bot", "Salam" + (user ? ", " + user.name : "") +
+      addMessage("bot", "Salam" + (user ? ", " + userLabel(user) : "") +
         "! CV, bacarıqlar, inkişaf planı və ya müsahibə hazırlığı haqqında sual ver.");
     }
     chatInput.focus();
@@ -2467,8 +2551,9 @@ document.querySelector("#to-top").addEventListener("click", () => {
     updateView();
     return;
   }
-  document.querySelector("#cv-privacy-note").textContent =
-    "CV mətni Gemini-yə göndərilir. PDF faylı saxlanmır. Fayl adı, qısa sitatlar və nəticə yerli bazada qala bilər.";
+  document.querySelector("#cv-privacy-note").textContent = CV_PRIVACY_NOTE;
+  document.querySelector("#cv-file-hint").textContent = CV_FILE_HINT;
+  document.querySelector("#faq-privacy-answer").textContent = CV_PRIVACY_FAQ;
   document.querySelector("#reg-pass-hint").textContent = `(min. ${minPasswordLength()} simvol)`;
 
   // Hədəf sahələr (backend-in real analiz edə bildiyi)
