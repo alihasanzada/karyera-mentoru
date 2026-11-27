@@ -2772,29 +2772,50 @@ document.querySelector("#to-top").addEventListener("click", () => {
     });
   });
 
-  if (!motionOK) return;
-
   // Hero: işıq kursorun ardınca gedir, vizual yüngülcə əyilir
   const hero = document.querySelector(".hero");
   const visual = document.querySelector(".hero-visual");
   const wide = window.matchMedia("(min-width: 1200px)");
+  const canTrackMouse = window.matchMedia("(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)");
+  let frame = null;
+  let mouseX = 0;
+  let mouseY = 0;
 
-  hero.addEventListener("pointermove", (event) => {
+  function updateParallax() {
+    frame = null;
+    if (!canTrackMouse.matches) return;
     const rect = hero.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / rect.width;
-    const y = (event.clientY - rect.top) / rect.height;
+    if (!rect.width || !rect.height) return;
+    const x = (mouseX - rect.left) / rect.width;
+    const y = (mouseY - rect.top) / rect.height;
     hero.style.setProperty("--mx", `${(x * 100).toFixed(1)}%`);
     hero.style.setProperty("--my", `${(y * 100).toFixed(1)}%`);
     if (wide.matches) {
       visual.style.setProperty("--ry", `${((x - 0.5) * 10).toFixed(2)}deg`);
       visual.style.setProperty("--rx", `${((0.5 - y) * 7).toFixed(2)}deg`);
     }
-  });
+  }
 
-  hero.addEventListener("pointerleave", () => {
-    visual.style.setProperty("--rx", "0deg");
-    visual.style.setProperty("--ry", "0deg");
-  });
+  function resetParallax() {
+    if (frame !== null) cancelAnimationFrame(frame);
+    frame = null;
+    hero.style.removeProperty("--mx");
+    hero.style.removeProperty("--my");
+    visual.style.removeProperty("--rx");
+    visual.style.removeProperty("--ry");
+  }
+
+  hero.addEventListener("pointermove", (event) => {
+    if (event.pointerType !== "mouse" || !canTrackMouse.matches) return;
+    mouseX = event.clientX;
+    mouseY = event.clientY;
+    if (frame === null) frame = requestAnimationFrame(updateParallax);
+  }, { passive: true });
+  hero.addEventListener("pointerleave", resetParallax);
+  canTrackMouse.addEventListener("change", resetParallax);
+  wide.addEventListener("change", resetParallax);
+
+  if (!motionOK) return;
 
   // Etiketdə yazı makinası effekti
   const kicker = document.querySelector("#kicker-text");

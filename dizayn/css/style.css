@@ -4483,8 +4483,8 @@ h2 {
   justify-self: start;
   align-self: start;
   z-index: 2;
-  width: min(94%, 380px);
-  margin: 124px 0 0;
+  width: min(94%, 360px);
+  margin: clamp(96px, 27vw, 124px) 0 0;
   border-radius: 10px;
   color: var(--text);
   box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.75);
@@ -4511,7 +4511,7 @@ h2 {
 }
 
 .feature-preview-list {
-  margin: 16px 0 18px;
+  margin: 16px 0 0;
   padding: 0;
   border-top: 1px solid var(--border);
   list-style: none;
@@ -4524,6 +4524,11 @@ h2 {
   padding: 8px 0;
   border-bottom: 1px solid var(--border);
   font-size: 0.9rem;
+}
+
+.feature-preview-list li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
 .feature-preview-list li::before {
