@@ -456,31 +456,6 @@ h2 {
   gap: 12px;
 }
 
-/* CV Skoru kartı */
-.score-card {
-  width: 100%;
-  max-width: 440px;
-  margin: 0 auto;
-}
-
-.score-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.score-title {
-  margin: 0;
-  font-size: 1.15rem;
-}
-
-.score-note {
-  color: var(--muted);
-  font-size: 13px;
-}
-
 /* Dairəvi qrafik */
 .score-ring {
   position: relative;
@@ -585,12 +560,6 @@ h2 {
 .score-bars li:nth-child(3) .bar-fill { transition-delay: 0.3s; }
 .score-bars li:nth-child(4) .bar-fill { transition-delay: 0.45s; }
 
-.score-skills-title {
-  margin: 0 0 10px;
-  font-size: 14px;
-  font-weight: 700;
-}
-
 /* Hero — kompüter (1200px+): kart başlığın yanında */
 @media (min-width: 1200px) {
   h1 {
@@ -615,9 +584,7 @@ h2 {
     font-size: 18px;
   }
 
-  .score-card {
-    margin: 0 0 0 auto;
-  }
+
 }
 
 /* ===== Ümumi: bölmələr ===== */
@@ -1573,7 +1540,7 @@ section[id] {
   font-size: 13px;
 }
 
-/* ===== 7. Persona və rəylər ===== */
+/* ===== Persona üslubları ===== */
 .persona {
   max-width: 920px;
   margin: 0 auto 40px;
@@ -1635,97 +1602,7 @@ section[id] {
   font-size: 15px;
 }
 
-/* Karusel */
-.carousel {
-  max-width: 720px;
-  margin: 0 auto;
-}
-
-.carousel-viewport {
-  overflow: hidden;
-  border-radius: 18px;
-}
-
-.carousel-track {
-  display: flex;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  transition: transform 0.5s ease;
-}
-
-.carousel-slide {
-  flex: 0 0 100%;
-  padding: 2px;
-}
-
-.review {
-  height: 100%;
-  margin: 0;
-  padding: 28px 24px;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  background: var(--bg);
-  text-align: center;
-}
-
-.review p {
-  margin: 0 0 16px;
-  font-size: 1.1rem;
-  font-weight: 500;
-  line-height: 1.6;
-}
-
-.review footer {
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.review footer strong {
-  color: var(--text);
-}
-
-.carousel-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin-top: 18px;
-}
-
-.carousel-btn {
-  font-size: 24px;
-}
-
-.carousel-dots {
-  display: flex;
-  gap: 8px;
-}
-
-.carousel-dot {
-  width: 10px;
-  height: 10px;
-  padding: 0;
-  border: 0;
-  border-radius: 99px;
-  background: var(--border);
-  cursor: pointer;
-  transition: width 0.3s, background 0.3s;
-}
-
-.carousel-dot[aria-current="true"] {
-  width: 26px;
-  background: var(--primary);
-}
-
-.carousel-note {
-  margin: 12px 0 0;
-  color: var(--muted);
-  font-size: 13px;
-  text-align: center;
-}
-
-/* ===== 8. Qiymətlər ===== */
+/* ===== 7. Qiymətlər ===== */
 .pricing {
   display: grid;
   gap: 20px;
@@ -1865,13 +1742,7 @@ section[id] {
     grid-template-columns: repeat(3, 1fr);
   }
 
-  .review {
-    padding: 36px 48px;
-  }
 
-  .review p {
-    font-size: 1.25rem;
-  }
 }
 
 /* 6–8 — kompüter */
@@ -1904,7 +1775,7 @@ section[id] {
   border-color: #DC2626;
 }
 
-/* ===== 9. FAQ (akkordeon) ===== */
+/* ===== 8. FAQ (akkordeon) ===== */
 .faq {
   display: grid;
   gap: 12px;
@@ -2009,7 +1880,7 @@ section[id] {
   color: var(--muted);
 }
 
-/* ===== 10. Tərəfdaşlıq ===== */
+/* ===== 9. Tərəfdaşlıq ===== */
 .partner {
   display: grid;
   gap: 28px;
@@ -2076,7 +1947,7 @@ section[id] {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
-/* ===== 11. Footer ===== */
+/* ===== 10. Footer ===== */
 .site-footer {
   padding: 56px 0 0;
   background: var(--card);
@@ -3188,7 +3059,7 @@ p {
 }
 
 /* Məhsul interfeysindəki başlıqlar sans qalsın */
-.score-title,
+.feature-preview-title,
 .result-title,
 .chat-title,
 .modal-title,
@@ -3451,29 +3322,6 @@ p {
     margin: 0 10px;
     color: color-mix(in srgb, var(--muted) 60%, transparent);
   }
-}
-
-.score-card {
-  border-radius: 10px;
-  box-shadow: 0 30px 60px -36px rgba(26, 29, 33, 0.35);
-}
-
-.score-card:hover {
-  box-shadow: 0 30px 60px -36px rgba(26, 29, 33, 0.35);
-}
-
-[data-theme="dark"] .score-card,
-[data-theme="dark"] .score-card:hover {
-  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.7);
-}
-
-.score-head {
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--border);
-}
-
-.score-note {
-  font-size: 12.5px;
 }
 
 .score-ring circle {
@@ -3779,64 +3627,6 @@ p {
 [data-theme="dark"] .yes {
   color: var(--success);
   font-weight: 600;
-}
-
-/* --- Rəylər --- */
-.carousel {
-  max-width: 860px;
-  margin: 0;
-}
-
-.carousel-viewport {
-  border-radius: 0;
-}
-
-.review,
-.review:hover {
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
-  text-align: left;
-}
-
-.review p {
-  margin: 0 0 22px;
-  font-family: var(--font-serif);
-  font-size: clamp(1.35rem, 1.05rem + 1.1vw, 1.95rem);
-  font-weight: 500;
-  line-height: 1.35;
-  letter-spacing: -0.01em;
-}
-
-.review footer {
-  font-size: 14.5px;
-}
-
-.carousel-controls {
-  justify-content: flex-start;
-  margin-top: 32px;
-}
-
-.carousel-btn .ico {
-  width: 18px;
-  height: 18px;
-}
-
-.carousel-dot {
-  width: 16px;
-  height: 3px;
-  border-radius: 1px;
-}
-
-.carousel-dot[aria-current="true"] {
-  width: 32px;
-  background: var(--text);
-}
-
-.carousel-note {
-  text-align: left;
 }
 
 /* --- Qiymətlər --- */
@@ -4293,25 +4083,6 @@ html:not(.api-mode) :is(.beta-only, .beta-only.btn),
   font-weight: 600;
 }
 
-.rewrite-score {
-  color: var(--muted);
-  font-size: 13.5px;
-}
-
-.rewrite-score strong {
-  margin-left: 4px;
-  font-size: 15px;
-  font-variant-numeric: tabular-nums;
-}
-
-.is-before .rewrite-score strong {
-  color: var(--warning);
-}
-
-.is-after .rewrite-score strong {
-  color: var(--success);
-}
-
 .rewrite-text {
   margin: 0 0 18px;
   font-family: var(--font-serif);
@@ -4635,7 +4406,7 @@ h2 {
   outline-color: var(--accent);
 }
 
-/* --- Hero vizualı: CV + nəticə kartı --- */
+/* --- Hero vizualı: CV və imkanlar --- */
 .hero-visual {
   position: relative;
   display: grid;
@@ -4698,10 +4469,6 @@ h2 {
   background: #E7EAF0;
 }
 
-.sk.is-flag-weak {
-  background: #F5C9A1;
-}
-
 .cv-doc-title {
   margin: 10px 0 2px;
   color: #788196;
@@ -4711,98 +4478,63 @@ h2 {
   text-transform: uppercase;
 }
 
-.cv-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.cv-chip {
-  padding: 3px 8px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background: #E6E9EF;
-  color: #3A4253;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.cv-chip.is-ok {
-  background: #D5F4E2;
-  color: #12603C;
-}
-
-.cv-chip.is-miss {
-  background: transparent;
-  border: 1px dashed #DB8A45;
-  color: #9A4508;
-}
-
-.scan-beam {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: -80px;
-  height: 72px;
-  border-bottom: 2px solid var(--accent);
-  background: linear-gradient(180deg, transparent 0%, rgba(185, 242, 39, 0.08) 40%, rgba(185, 242, 39, 0.38) 100%);
-  box-shadow: 0 8px 22px rgba(185, 242, 39, 0.45);
-  pointer-events: none;
-}
-
-.cv-flag {
-  position: absolute;
-  right: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 5px 10px 5px 8px;
-  border-radius: 6px;
-  background: var(--ink);
-  color: #fff;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  box-shadow: 0 10px 22px -10px rgba(0, 0, 0, 0.6);
-}
-
-.cv-flag::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #F59E0B;
-}
-
-.cv-flag.is-ok::before {
-  background: #4ADE80;
-}
-
-.cv-flag.f1 { top: 98px; }
-.cv-flag.f2 { top: 146px; }
-.cv-flag.f3 { top: 180px; }
-
-.hero .score-card {
+.hero .feature-preview {
   grid-area: 1 / 1;
   justify-self: start;
   align-self: start;
   z-index: 2;
-  width: min(82%, 340px);
-  max-width: none;
-  margin: 205px 0 0;
-  border-color: rgba(255, 255, 255, 0.08);
+  width: min(94%, 380px);
+  margin: 124px 0 0;
+  border-radius: 10px;
   color: var(--text);
-  box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.75);
   transform: translateZ(40px);
 }
 
-.hero .score-card.reveal {
+.hero .feature-preview.reveal {
   transform: translateY(28px) translateZ(40px);
 }
 
-.hero .score-card.reveal.is-visible {
+.hero .feature-preview.reveal.is-visible {
   transform: translateZ(40px);
+}
+
+.feature-preview-title {
+  margin: 0 0 6px;
+  font-size: 1.3rem;
+}
+
+.feature-preview-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.feature-preview-list {
+  margin: 16px 0 18px;
+  padding: 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+}
+
+.feature-preview-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.feature-preview-list li::before {
+  flex: none;
+  width: 0.34em;
+  height: 0.34em;
+  border: 1px solid var(--primary);
+  border-radius: 2px;
+  background: var(--primary);
+  content: "";
+  transform: translateY(-0.12em);
 }
 
 @media (min-width: 1200px) {
@@ -5079,17 +4811,6 @@ main {
   font-size: 1.08rem;
 }
 
-/* --- Rəylər --- */
-.review p {
-  font-family: var(--font-display);
-  font-weight: 500;
-  letter-spacing: -0.02em;
-}
-
-.carousel-dot[aria-current="true"] {
-  background: var(--primary);
-}
-
 /* --- FAQ --- */
 .faq-btn {
   font-family: var(--font-display);
@@ -5237,7 +4958,7 @@ main {
   to { background-position: 56px 56px, 56px 56px; }
 }
 
-/* CV skaneri */
+/* Dekorativ CV */
 .motion .cv-doc {
   animation: doc-in 1s 0.3s var(--ease-out) both, doc-float 7s 1.3s ease-in-out infinite;
 }
@@ -5252,53 +4973,6 @@ main {
 @keyframes doc-float {
   0%, 100% { transform: rotate(-4deg) translateY(0); }
   50% { transform: rotate(-3deg) translateY(-10px); }
-}
-
-.motion .scan-beam {
-  animation: scan 5s 1.2s cubic-bezier(0.55, 0, 0.45, 1) infinite;
-}
-
-@keyframes scan {
-  0% { top: -80px; opacity: 1; }
-  62% { top: 100%; opacity: 1; }
-  63%, 100% { top: 100%; opacity: 0; }
-}
-
-.motion .sk.is-flag-weak {
-  animation: weak-line 5s 1.2s infinite;
-}
-
-@keyframes weak-line {
-  0%, 22% { background: #DCE0E8; }
-  27%, 92% { background: #F5C9A1; }
-  100% { background: #DCE0E8; }
-}
-
-.motion .cv-flag {
-  opacity: 0;
-  animation: 5s 1.2s infinite both;
-}
-
-.motion .cv-flag.f1 { animation-name: flag-1; }
-.motion .cv-flag.f2 { animation-name: flag-2; }
-.motion .cv-flag.f3 { animation-name: flag-3; }
-
-@keyframes flag-1 {
-  0%, 24% { opacity: 0; transform: translateX(10px) scale(0.95); }
-  30%, 88% { opacity: 1; transform: none; }
-  96%, 100% { opacity: 0; transform: none; }
-}
-
-@keyframes flag-2 {
-  0%, 38% { opacity: 0; transform: translateX(10px) scale(0.95); }
-  44%, 88% { opacity: 1; transform: none; }
-  96%, 100% { opacity: 0; transform: none; }
-}
-
-@keyframes flag-3 {
-  0%, 46% { opacity: 0; transform: translateX(10px) scale(0.95); }
-  52%, 88% { opacity: 1; transform: none; }
-  96%, 100% { opacity: 0; transform: none; }
 }
 
 /* İxtisaslar zolağı hərəkət edir, siçan üstündə dayanır */

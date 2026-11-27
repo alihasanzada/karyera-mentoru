@@ -363,6 +363,19 @@ test("server validation errors appear on the profile fields", async () => {
 
 const ROOT_SOURCE = fs.readFileSync(path.join(__dirname, "../js/app.js"), "utf8");
 const DIZAYN_HTML = fs.readFileSync(path.join(__dirname, "../../dizayn/index.html"), "utf8");
+
+test("homepage preview describes CV analysis and links to the actual upload form", () => {
+  const preview = DIZAYN_HTML.match(/<article class="card feature-preview reveal"[\s\S]*?<\/article>/)?.[0];
+  assert.ok(preview);
+  assert.match(preview, /AI ilə CV analizi/);
+  assert.match(preview, /Nəticələr CV-ni yüklədikdən sonra hazırlanır/);
+  assert.equal((preview.match(/<li>/g) || []).length, 4);
+  assert.match(preview, /href="#cv-yoxla"[^>]*>CV-ni yoxla/);
+  assert.match(DIZAYN_HTML, /id="cv-yoxla"/);
+  assert.match(DIZAYN_HTML, /id="cv-form"/);
+  assert.doesNotMatch(DIZAYN_HTML, /72\/100|data-count="72"|cv-flag|rewrite-score|id="(?:reyler|reviews|carousel-[^"]+)"/);
+  assert.doesNotMatch(SOURCE, /#reviews|#carousel-/);
+});
 const constant = (source, name) => new RegExp(`const ${name} =\\s*"([^"]+)"`).exec(source)?.[1];
 
 test("server-mode CV privacy note states what the backend really does, on both pages", async () => {

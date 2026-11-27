@@ -1649,96 +1649,7 @@ document.querySelectorAll('[role="tablist"]').forEach((tablist) => {
   });
 });
 
-// ===== 7. Rəylər karuseli =====
-const carousel = document.querySelector("#reviews");
-const track = document.querySelector("#carousel-track");
-const slides = [...track.children];
-const dotsBox = document.querySelector("#carousel-dots");
-const AUTO_DELAY = 6000;
-
-let current = 0;
-let autoTimer = null;
-let paused = false;
-
-// Nöqtələri yarat
-const dots = slides.map((_, i) => {
-  const dot = document.createElement("button");
-  dot.type = "button";
-  dot.className = "carousel-dot";
-  dot.setAttribute("aria-label", `${i + 1}-ci rəyə keç`);
-  dot.addEventListener("click", () => goTo(i, true));
-  dotsBox.appendChild(dot);
-  return dot;
-});
-
-function goTo(index, byUser = false) {
-  current = (index + slides.length) % slides.length;
-  track.style.transform = `translateX(-${current * 100}%)`;
-  slides.forEach((slide, i) => slide.setAttribute("aria-hidden", String(i !== current)));
-  dots.forEach((dot, i) => dot.setAttribute("aria-current", String(i === current)));
-  // İstifadəçi özü keçəndə ekran oxuyucu yeni rəyi oxusun
-  track.setAttribute("aria-live", byUser ? "polite" : "off");
-  if (byUser) restartAuto();
-}
-
-function startAuto() {
-  if (reduceMotion || paused) return;
-  stopAuto();
-  autoTimer = setInterval(() => goTo(current + 1), AUTO_DELAY);
-}
-
-function stopAuto() {
-  clearInterval(autoTimer);
-  autoTimer = null;
-}
-
-function restartAuto() {
-  stopAuto();
-  startAuto();
-}
-
-document.querySelector("#carousel-prev").addEventListener("click", () => goTo(current - 1, true));
-document.querySelector("#carousel-next").addEventListener("click", () => goTo(current + 1, true));
-
-// Siçan üstündə və ya fokus içəridə olanda dayan
-carousel.addEventListener("mouseenter", () => { paused = true; stopAuto(); });
-carousel.addEventListener("mouseleave", () => { paused = false; startAuto(); });
-carousel.addEventListener("focusin", () => { paused = true; stopAuto(); });
-carousel.addEventListener("focusout", (event) => {
-  if (!carousel.contains(event.relatedTarget)) {
-    paused = false;
-    startAuto();
-  }
-});
-
-// Klaviatura: ← → oxları
-carousel.addEventListener("keydown", (event) => {
-  if (event.key === "ArrowLeft") goTo(current - 1, true);
-  if (event.key === "ArrowRight") goTo(current + 1, true);
-});
-
-// Telefonda barmaqla sürüşdürmə
-let touchStartX = null;
-track.addEventListener("touchstart", (event) => {
-  touchStartX = event.touches[0].clientX;
-}, { passive: true });
-track.addEventListener("touchend", (event) => {
-  if (touchStartX === null) return;
-  const diff = event.changedTouches[0].clientX - touchStartX;
-  if (Math.abs(diff) > 40) goTo(current + (diff < 0 ? 1 : -1), true);
-  touchStartX = null;
-});
-
-// Səhifə arxa planda olanda avtomatik keçidi dayandır
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) stopAuto();
-  else startAuto();
-});
-
-goTo(0);
-startAuto();
-
-// ===== 9. FAQ akkordeonu =====
+// ===== 8. FAQ akkordeonu =====
 document.querySelectorAll(".faq-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
     const item = btn.closest(".faq-item");
@@ -1753,7 +1664,7 @@ function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim());
 }
 
-// ===== 10. Tərəfdaşlıq forması =====
+// ===== 9. Tərəfdaşlıq forması =====
 // Forma heç yerə göndərilmir (backend və əlaqə kanalı yoxdur): sahələr və düymə index.html-də
 // söndürülüb, qəbul/abunə mesajı göstərilmir. Enter ilə göndərmə cəhdi də yalnız bunu bildirir.
 const partnerForm = document.querySelector("#partner-form");
@@ -1762,14 +1673,14 @@ partnerForm.addEventListener("submit", (event) => {
   showToast("Tərəfdaşlıq forması hələ işləmir — heç nə göndərilmədi.", "error");
 });
 
-// ===== 11. Footer: bülleten (hələ işləmir) =====
+// ===== 10. Footer: bülleten (hələ işləmir) =====
 const newsletterForm = document.querySelector("#newsletter-form");
 newsletterForm.addEventListener("submit", (event) => {
   event.preventDefault();
   showToast("Bülleten hələ işləmir — abunə yaranmadı.", "error");
 });
 
-// ===== 11. Footer: hələ hazır olmayan linklər =====
+// ===== 10. Footer: hələ hazır olmayan linklər =====
 document.querySelectorAll("[data-soon]").forEach((btn) => {
   btn.addEventListener("click", () => {
     showToast("Bu bölmə hazırlanır — tezliklə əlavə olunacaq.", "success");
@@ -2766,7 +2677,7 @@ chatResize.addEventListener("dblclick", () => {
 
 setChatMode("normal");
 
-// ===== 11. Footer: yuxarı qalx =====
+// ===== 10. Footer: yuxarı qalx =====
 document.querySelector("#to-top").addEventListener("click", () => {
   window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
   document.querySelector(".logo").focus({ preventScroll: true });
