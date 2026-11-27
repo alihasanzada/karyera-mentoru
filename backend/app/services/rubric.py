@@ -2,7 +2,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
-SCORING_VERSION = "5.0"  # Specialized CV quality and role-matching prompts.
+SCORING_VERSION = "5.1"  # More precise CV evidence and compact prompts.
 
 _FOLD = str.maketrans({"ı": "i", "ə": "e"})
 
@@ -20,13 +20,9 @@ def has_phrase(norm_text: str, norm_phrase: str) -> bool:
     return bool(norm_phrase) and f" {norm_phrase} " in f" {norm_text} "
 
 
-def quote_supported(quote: str, cv_tokens: set[str]) -> bool:
-    """A quote is accepted when at least 80% of its meaningful words occur in the CV."""
-    tokens = norm(quote).split()
-    words = [t for t in tokens if len(t) >= 3] or tokens
-    if not words:
-        return False
-    return sum(1 for t in words if t in cv_tokens) / len(words) >= 0.8
+def quote_supported(quote: str, normalized_cv: str) -> bool:
+    """Require one contiguous excerpt while allowing PDF punctuation and spacing differences."""
+    return len(quote.split()) <= 12 and has_phrase(normalized_cv, norm(quote))
 
 
 @dataclass(frozen=True)

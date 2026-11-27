@@ -252,6 +252,24 @@ def test_mentor_minimizes_context_and_handles_provider_errors(api, evaluation, m
     assert client.post("/api/mentor", cookies=first, json={"question": " "}).status_code == 422
 
 
+def test_mentor_keeps_profile_target_distinct_from_an_explicit_cv(api, evaluation, monkeypatch):
+    from app.services.matcher import ROLES
+
+    client, factory = api
+    owner = signup(client, "changed-specialty@example.test")
+    assert client.put("/api/profile", cookies=owner, json={"field_id": "frontend"}).status_code == 200
+    with factory() as db:
+        record = history.save_record(db, "user-1", "evaluation", "fixture.pdf", evaluation)
+    reply = AsyncMock(return_value=MentorReply(answer="Frontend üzrə bir nümunə hazırla."))
+    monkeypatch.setattr(mentor, "generate_structured", reply)
+    response = client.post("/api/mentor", cookies=owner, json={"question": "Nədən başlayım?", "evaluation_id": record})
+    assert response.status_code == 200
+    context = json.loads(reply.await_args.args[1])["context"]
+    assert context["profile"]["field"] == ROLES["frontend"]["name"]
+    assert context["profile"]["required_skills"] == ROLES["frontend"]["required_skills"]
+    assert context["evaluation"]["field"] == ROLES["cybersecurity"]["name"]
+
+
 def test_request_limits_and_origin(api):
     client, _ = api
     assert client.post("/api/auth/login", headers={"Origin": "https://other.example"}, json={}).status_code == 403

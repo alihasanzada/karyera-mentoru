@@ -17,7 +17,7 @@ from app.models.schemas import (
     RoadmapResponse,
     SkillCheck,
 )
-from app.services.ai_analyzer import define_task, generate_structured
+from app.services.ai_analyzer import define_task, encode_context, generate_structured
 from app.services.matcher import ROLES, STATUS_SCORE
 
 # 21-day plan in three 7-day phases, so the plan can be shown as 7, 14 or 21 days.
@@ -153,4 +153,4 @@ async def generate_roadmap_plan(evaluation: EvaluationResponse) -> RoadmapLLMOut
             if c.key != "field_fit"
         ],
     }
-    return await generate_structured(ROADMAP, json.dumps(payload, ensure_ascii=False))
+    return await generate_structured(ROADMAP, encode_context(payload))

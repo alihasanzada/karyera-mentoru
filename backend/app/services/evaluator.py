@@ -1,5 +1,4 @@
 import asyncio
-import json
 import re
 from dataclasses import dataclass
 
@@ -11,7 +10,7 @@ from app.models.schemas import (
     MatchResponse,
     Recommendation,
 )
-from app.services.ai_analyzer import MAX_CV_CHARS, define_task, generate_structured
+from app.services.ai_analyzer import MAX_CV_CHARS, define_task, encode_context, generate_structured
 from app.services.matcher import ROLES, match_cv, readiness_for
 from app.services.rubric import (
     CRITERIA,
@@ -85,11 +84,11 @@ class Scored:
         return self.criterion.weight * (1 - self.ratio)
 
 
-def _verdict_ratio(verdict, cv_tokens: set[str]) -> tuple[float, str]:
+def _verdict_ratio(verdict, normalized_cv: str) -> tuple[float, str]:
     if verdict is None or verdict.status == "no":
         return 0.0, ""
     ratio = 1.0 if verdict.status == "yes" else 0.5
-    if quote_supported(verdict.quote, cv_tokens):
+    if quote_supported(verdict.quote, normalized_cv):
         return ratio, verdict.quote.strip()
     return (0.5 if ratio == 1.0 else 0.0), ""
 
@@ -174,8 +173,7 @@ def assemble_evaluation(
     """Pure function: identical inputs always produce identical output."""
     role = ROLES[field_id]
     code = run_code_checks(cv_text, pages, role.get("ats_keywords", []))
-    n_text = norm(cv_text)
-    cv_tokens = set(n_text.split())
+    visible_text = norm(cv_text[:MAX_CV_CHARS])
     verdicts = {v.id: v for v in llm.verdicts}
 
     scored: list[Scored] = []
@@ -184,7 +182,7 @@ def assemble_evaluation(
             chk = code[c.id]
             scored.append(Scored(c, chk.ratio, chk.evidence, chk.fix_extra))
         else:
-            ratio, evidence = _verdict_ratio(verdicts.get(c.id), cv_tokens)
+            ratio, evidence = _verdict_ratio(verdicts.get(c.id), visible_text)
             scored.append(Scored(c, ratio, evidence))
 
     categories = [
@@ -212,7 +210,7 @@ def assemble_evaluation(
 
     skills = [
         s for s in dict.fromkeys(x.strip() for x in llm.detected_skills)
-        if s and has_phrase(n_text, norm(s))
+        if s and has_phrase(visible_text, norm(s))
     ][:30]
 
     return EvaluationResponse(
@@ -233,10 +231,10 @@ def assemble_evaluation(
 
 
 async def evaluate_cv(cv_text: str, field_id: str, filename: str, pages: int) -> EvaluationResponse:
-    contents = json.dumps({
+    contents = encode_context({
         "criteria": [{"id": c.id, "question": c.question} for c in CRITERIA if c.kind == "llm"],
         "cv": cv_text[:MAX_CV_CHARS],
-    }, ensure_ascii=False)
+    })
 
     results = await asyncio.gather(
         generate_structured(CV_QUALITY, contents),

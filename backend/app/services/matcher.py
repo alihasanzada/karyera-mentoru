@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from app.models.schemas import FieldInfo, MatchLLMOutput, MatchResponse, SkillCheck
-from app.services.ai_analyzer import MAX_CV_CHARS, define_task, generate_structured
+from app.services.ai_analyzer import MAX_CV_CHARS, define_task, encode_context, generate_structured
 from app.services.rubric import norm, quote_supported
 
 APP_DIR = Path(__file__).resolve().parent.parent
@@ -51,16 +51,16 @@ def list_fields() -> list[FieldInfo]:
     ]
 
 
-def _verify(status: str, evidence: str, cv_tokens: set[str]) -> tuple[str, str]:
+def _verify(status: str, evidence: str, normalized_cv: str) -> tuple[str, str]:
     """A verdict without a quote found in the CV is downgraded by one level."""
     if status == "missing":
         return "missing", ""
-    if quote_supported(evidence, cv_tokens):
+    if quote_supported(evidence, normalized_cv):
         return status, evidence.strip()
     return ("partial" if status == "has" else "missing"), ""
 
 
-def _align(expected: list[str], checks: list[SkillCheck], cv_tokens: set[str]) -> list[SkillCheck]:
+def _align(expected: list[str], checks: list[SkillCheck], normalized_cv: str) -> list[SkillCheck]:
     by_name = {c.skill.strip().lower(): c for c in checks}
     aligned = []
     for skill in expected:
@@ -68,7 +68,7 @@ def _align(expected: list[str], checks: list[SkillCheck], cv_tokens: set[str]) -
         if not found:
             aligned.append(SkillCheck(skill=skill, status="missing", evidence=""))
             continue
-        status, evidence = _verify(found.status, found.evidence, cv_tokens)
+        status, evidence = _verify(found.status, found.evidence, normalized_cv)
         aligned.append(SkillCheck(skill=skill, status=status, evidence=evidence))
     return aligned
 
@@ -95,7 +95,7 @@ def readiness_for(score: int) -> str:
 async def match_cv(cv_text: str, field_id: str, filename: str, pages: int) -> MatchResponse:
     role = ROLES[field_id]
 
-    contents = json.dumps({
+    contents = encode_context({
         "role": {
             "specialty": role["name"],
             "position": role["role"],
@@ -104,12 +104,12 @@ async def match_cv(cv_text: str, field_id: str, filename: str, pages: int) -> Ma
             "preferred_skills": role["preferred_skills"],
         },
         "cv": cv_text[:MAX_CV_CHARS],
-    }, ensure_ascii=False)
+    })
     llm = await generate_structured(ROLE_MATCH, contents)
 
-    cv_tokens = set(norm(cv_text).split())
-    required = _align(role["required_skills"], llm.required, cv_tokens)
-    preferred = _align(role["preferred_skills"], llm.preferred, cv_tokens)
+    visible_text = norm(cv_text[:MAX_CV_CHARS])
+    required = _align(role["required_skills"], llm.required, visible_text)
+    preferred = _align(role["preferred_skills"], llm.preferred, visible_text)
     score = compute_score(required, preferred)
 
     return MatchResponse(

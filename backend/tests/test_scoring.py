@@ -69,9 +69,11 @@ def test_norm_folds_azerbaijani_letters():
 
 
 def test_quote_support():
-    tokens = set(norm(SAMPLE).split())
-    assert quote_supported("Reduced false positives by 35%", tokens)
-    assert not quote_supported("Led a team of 40 engineers at Google", tokens)
+    normalized = norm(SAMPLE)
+    assert quote_supported("Reduced false positives by 35%", normalized)
+    assert not quote_supported("Led a team of 40 engineers at Google", normalized)
+    assert not quote_supported("false reduced positives by 35", normalized)
+    assert not quote_supported(" ".join(["Python"] * 13), norm("Python " * 13))
 
 
 def test_code_checks_on_sample():

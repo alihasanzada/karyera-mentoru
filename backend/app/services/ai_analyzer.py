@@ -39,6 +39,10 @@ def define_task(name: str, filename: str, schema: type[T]) -> StructuredTask[T]:
     return StructuredTask(name, (PROMPTS / filename).read_text(encoding="utf-8"), schema)
 
 
+def encode_context(payload: dict) -> str:
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+
+
 LEGACY_CV = define_task("legacy_cv", "analyze_cv.txt", CVAnalysis)
 
 
@@ -142,5 +146,5 @@ async def generate_structured(task: StructuredTask[T], contents: str) -> T:
 
 
 async def analyze_cv(cv_text: str) -> CVAnalysis:
-    contents = json.dumps({"cv": cv_text[:MAX_CV_CHARS]}, ensure_ascii=False)
+    contents = encode_context({"cv": cv_text[:MAX_CV_CHARS]})
     return await generate_structured(LEGACY_CV, contents)

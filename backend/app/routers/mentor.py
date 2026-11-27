@@ -1,5 +1,3 @@
-import json
-
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -10,7 +8,7 @@ from app.deps import current_user
 from app.models.schemas import MentorReply, MentorRequest, MentorTurn
 from app.routers.profile import load_profile
 from app.routers.roadmap import load_evaluation, load_saved_roadmap
-from app.services.ai_analyzer import define_task, generate_structured
+from app.services.ai_analyzer import define_task, encode_context, generate_structured
 from app.services.matcher import ROLES
 
 router = APIRouter(prefix="/api/mentor", tags=["Mentor"])
@@ -44,17 +42,20 @@ async def ask_mentor(payload: MentorRequest, user: User = Depends(current_user),
         evaluation_id = db.scalar(query.order_by(AnalysisRecord.id.desc()).limit(1))
 
     specialty = ROLES.get(profile.field_id, {})
-    context = {
-        "profile": {
-            "field": specialty.get("name"),
-            "role": specialty.get("role"),
-            "education": profile.education,
-            "interests": profile.interests,
-            "skills": profile.skills,
-        },
+    profile_context = {
+        "field": specialty.get("name"),
+        "role": specialty.get("role"),
+        "education": profile.education,
+        "interests": profile.interests,
+        "skills": profile.skills,
     }
+    context = {"profile": {key: value for key, value in profile_context.items() if value}}
+    if specialty and evaluation_id is None:
+        context["profile"]["required_skills"] = specialty["required_skills"]
     if evaluation_id is not None:
         evaluation = load_evaluation(db, client_id, evaluation_id)
+        if specialty and profile.field_id != evaluation.field_id:
+            context["profile"]["required_skills"] = specialty["required_skills"]
         plan = load_saved_roadmap(db, client_id, evaluation_id, evaluation)
         context["evaluation"] = {
             "field": evaluation.field_name,
@@ -82,10 +83,10 @@ async def ask_mentor(payload: MentorRequest, user: User = Depends(current_user),
         }
     history = _history(db, user_id, 3)
     db.rollback()
-    contents = json.dumps({
+    contents = encode_context({
         "context": context, "history": [turn.model_dump() for turn in history],
         "question": payload.question,
-    }, ensure_ascii=False)
+    })
     reply = await generate_structured(MENTOR, contents)
     db.add(MentorMessage(user_id=user_id, question=payload.question, answer=reply.answer))
     db.commit()

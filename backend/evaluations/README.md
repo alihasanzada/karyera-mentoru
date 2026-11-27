@@ -2,6 +2,12 @@
 
 The application keeps its existing Gemini key, model order, timeout and retry settings. Each task has its own prompt and response schema. The backend still calculates scores and validates evidence, and the mentor still receives only selected account context. The new cache version applies to future CV evaluations. Saved evaluations and roadmaps remain readable.
 
+## Run the exhaustive catalog checks with mocks
+
+From `backend`, run `python -B -m pytest -q tests/test_gemini_catalog.py tests/test_gemini_evaluation.py`. The catalog test drives all 122 entries and 54 profiles through the app with a synthetic PDF, an isolated SQLite account and a mock SDK transport. For each profile it also checks mentor context before a CV exists and verifies that an injected provider failure can be retried without a false successful write. The test exercises invalid JSON, wrong schema, throttling and service unavailability across all four provider tasks.
+
+On the same 14-case request schedule, the compact prompts and JSON reduced serialized request bodies from 81,592 to 59,052 UTF-8 bytes. The test measurement includes provider schema and transport framing. It does not establish provider token counts.
+
 ## Plan the evaluation offline
 
 From the repository's `backend` directory, use the project Python environment.
