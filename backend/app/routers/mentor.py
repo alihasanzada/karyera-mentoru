@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy import select
@@ -11,11 +10,11 @@ from app.deps import current_user
 from app.models.schemas import MentorReply, MentorRequest, MentorTurn
 from app.routers.profile import load_profile
 from app.routers.roadmap import load_evaluation, load_saved_roadmap
-from app.services.ai_analyzer import generate_structured
+from app.services.ai_analyzer import define_task, generate_structured
 from app.services.matcher import ROLES
 
 router = APIRouter(prefix="/api/mentor", tags=["Mentor"])
-PROMPT = (Path(__file__).resolve().parents[1] / "prompts" / "mentor.txt").read_text(encoding="utf-8")
+MENTOR = define_task("mentor", "mentor.txt", MentorReply)
 
 
 def _history(db: Session, user_id: int, limit: int) -> list[MentorTurn]:
@@ -87,7 +86,7 @@ async def ask_mentor(payload: MentorRequest, user: User = Depends(current_user),
         "context": context, "history": [turn.model_dump() for turn in history],
         "question": payload.question,
     }, ensure_ascii=False)
-    reply = await generate_structured(PROMPT, contents, MentorReply)
+    reply = await generate_structured(MENTOR, contents)
     db.add(MentorMessage(user_id=user_id, question=payload.question, answer=reply.answer))
     db.commit()
     return reply

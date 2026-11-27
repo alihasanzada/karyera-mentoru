@@ -2,7 +2,6 @@ import asyncio
 import json
 import re
 from dataclasses import dataclass
-from pathlib import Path
 
 from app.models.schemas import (
     CategoryResult,
@@ -12,7 +11,7 @@ from app.models.schemas import (
     MatchResponse,
     Recommendation,
 )
-from app.services.ai_analyzer import MAX_CV_CHARS, generate_structured
+from app.services.ai_analyzer import MAX_CV_CHARS, define_task, generate_structured
 from app.services.matcher import ROLES, match_cv, readiness_for
 from app.services.rubric import (
     CRITERIA,
@@ -23,8 +22,7 @@ from app.services.rubric import (
     run_code_checks,
 )
 
-PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "evaluate_cv.txt"
-EVAL_PROMPT = PROMPT_PATH.read_text(encoding="utf-8")
+CV_QUALITY = define_task("cv_quality", "evaluate_cv.txt", EvaluationLLMOutput)
 
 LABELS = {
     "structure": "Struktur",
@@ -235,19 +233,13 @@ def assemble_evaluation(
 
 
 async def evaluate_cv(cv_text: str, field_id: str, filename: str, pages: int) -> EvaluationResponse:
-    criteria_block = json.dumps(
-        [{"id": c.id, "question": c.question} for c in CRITERIA if c.kind == "llm"],
-        ensure_ascii=False,
-        indent=2,
-    )
-    contents = (
-        f"<criteria>\n{criteria_block}\n</criteria>\n\n"
-        f"<cv>\n{cv_text[:MAX_CV_CHARS]}\n</cv>\n\n"
-        "Evaluate the CV."
-    )
+    contents = json.dumps({
+        "criteria": [{"id": c.id, "question": c.question} for c in CRITERIA if c.kind == "llm"],
+        "cv": cv_text[:MAX_CV_CHARS],
+    }, ensure_ascii=False)
 
     results = await asyncio.gather(
-        generate_structured(EVAL_PROMPT, contents, EvaluationLLMOutput),
+        generate_structured(CV_QUALITY, contents),
         match_cv(cv_text, field_id, filename, pages),
         return_exceptions=True,
     )

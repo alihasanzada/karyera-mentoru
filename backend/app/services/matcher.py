@@ -2,12 +2,12 @@ import json
 from pathlib import Path
 
 from app.models.schemas import FieldInfo, MatchLLMOutput, MatchResponse, SkillCheck
-from app.services.ai_analyzer import MAX_CV_CHARS, generate_structured
+from app.services.ai_analyzer import MAX_CV_CHARS, define_task, generate_structured
 from app.services.rubric import norm, quote_supported
 
 APP_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = APP_DIR / "data"
-MATCH_PROMPT = (APP_DIR / "prompts" / "match_role.txt").read_text(encoding="utf-8")
+ROLE_MATCH = define_task("role_match", "match_role.txt", MatchLLMOutput)
 
 STATUS_SCORE = {"has": 1.0, "partial": 0.5, "missing": 0.0}
 
@@ -95,24 +95,17 @@ def readiness_for(score: int) -> str:
 async def match_cv(cv_text: str, field_id: str, filename: str, pages: int) -> MatchResponse:
     role = ROLES[field_id]
 
-    role_block = json.dumps(
-        {
+    contents = json.dumps({
+        "role": {
             "specialty": role["name"],
             "position": role["role"],
             "level": role["level"],
             "required_skills": role["required_skills"],
             "preferred_skills": role["preferred_skills"],
         },
-        ensure_ascii=False,
-        indent=2,
-    )
-    contents = (
-        f"<role>\n{role_block}\n</role>\n\n"
-        f"<cv>\n{cv_text[:MAX_CV_CHARS]}\n</cv>\n\n"
-        "CV-ni yuxarıdakı sahənin tələbləri ilə müqayisə et."
-    )
-
-    llm = await generate_structured(MATCH_PROMPT, contents, MatchLLMOutput)
+        "cv": cv_text[:MAX_CV_CHARS],
+    }, ensure_ascii=False)
+    llm = await generate_structured(ROLE_MATCH, contents)
 
     cv_tokens = set(norm(cv_text).split())
     required = _align(role["required_skills"], llm.required, cv_tokens)

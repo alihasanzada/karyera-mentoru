@@ -1,8 +1,10 @@
 import asyncio
+from dataclasses import dataclass
+import json
 import logging
 import time
 from pathlib import Path
-from typing import TypeVar
+from typing import Generic, TypeVar
 
 from google import genai
 from google.genai import errors, types
@@ -13,8 +15,7 @@ from pydantic import BaseModel
 from app.config import settings
 from app.models.schemas import CVAnalysis
 
-PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "analyze_cv.txt"
-SYSTEM_PROMPT = PROMPT_PATH.read_text(encoding="utf-8")
+PROMPTS = Path(__file__).resolve().parent.parent / "prompts"
 MAX_CV_CHARS = 15000
 
 CALL_TIMEOUT = 45
@@ -25,6 +26,20 @@ SEED = 42
 T = TypeVar("T", bound=BaseModel)
 _client: genai.Client | None = None
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class StructuredTask(Generic[T]):
+    name: str
+    prompt: str
+    schema: type[T]
+
+
+def define_task(name: str, filename: str, schema: type[T]) -> StructuredTask[T]:
+    return StructuredTask(name, (PROMPTS / filename).read_text(encoding="utf-8"), schema)
+
+
+LEGACY_CV = define_task("legacy_cv", "analyze_cv.txt", CVAnalysis)
 
 
 class AIAnalysisError(Exception):
@@ -42,25 +57,32 @@ def get_client() -> genai.Client:
     return _client
 
 
-async def _call(model: str, system_prompt: str, contents: str, schema: type[T]) -> T:
-    response = await get_client().aio.models.generate_content(
-        model=model,
-        contents=contents,
-        config=types.GenerateContentConfig(
-            system_instruction=system_prompt,
-            response_mime_type="application/json",
-            response_schema=schema,
-            temperature=0.0,
-            seed=SEED,
-        ),
+def generation_config(system_prompt: str, schema: type[T], *, max_output_tokens: int | None = None):
+    return types.GenerateContentConfig(
+        system_instruction=system_prompt,
+        response_mime_type="application/json",
+        response_schema=schema,
+        temperature=0.0,
+        seed=SEED,
+        max_output_tokens=max_output_tokens,
     )
+
+
+def parse_response(response: types.GenerateContentResponse, schema: type[T]) -> T:
     result = response.parsed
     if not isinstance(result, schema):
         raise AIAnalysisError("AI cavabı gözlənilən formatda gəlmədi.", 502)
     return result
 
 
-async def generate_structured(system_prompt: str, contents: str, schema: type[T]) -> T:
+async def _call(model: str, system_prompt: str, contents: str, schema: type[T]) -> T:
+    response = await get_client().aio.models.generate_content(
+        model=model, contents=contents, config=generation_config(system_prompt, schema),
+    )
+    return parse_response(response, schema)
+
+
+async def generate_structured(task: StructuredTask[T], contents: str) -> T:
     """Try each model in the fallback chain; move on at once after a timeout or provider error."""
     # Fail fast on a missing API key.
     get_client()
@@ -81,9 +103,9 @@ async def generate_structured(system_prompt: str, contents: str, schema: type[T]
             started = time.monotonic()
             try:
                 result = await asyncio.wait_for(
-                    _call(model, system_prompt, contents, schema), timeout=timeout
+                    _call(model, task.prompt, contents, task.schema), timeout=timeout
                 )
-                logger.info("Gemini OK: %s (%.1f seconds)", model, time.monotonic() - started)
+                logger.info("Gemini OK: %s / %s (%.1f seconds)", task.name, model, time.monotonic() - started)
                 return result
 
             except TimeoutError:
@@ -120,5 +142,5 @@ async def generate_structured(system_prompt: str, contents: str, schema: type[T]
 
 
 async def analyze_cv(cv_text: str) -> CVAnalysis:
-    contents = f"<cv>\n{cv_text[:MAX_CV_CHARS]}\n</cv>\n\nYuxarıdakı CV-ni analiz et."
-    return await generate_structured(SYSTEM_PROMPT, contents, CVAnalysis)
+    contents = json.dumps({"cv": cv_text[:MAX_CV_CHARS]}, ensure_ascii=False)
+    return await generate_structured(LEGACY_CV, contents)

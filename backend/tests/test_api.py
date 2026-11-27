@@ -232,9 +232,9 @@ def test_mentor_minimizes_context_and_handles_provider_errors(api, evaluation, m
     assert client.post("/api/mentor", cookies=second, json={**query, "evaluation_id": record}).status_code == 404
     assert client.post("/api/mentor", cookies=first, json=query).json()["answer"] == "Python ilə başla."
     generate.assert_awaited_once()
-    _, raw, schema = generate.call_args.args
+    task, raw = generate.call_args.args
     context = json.loads(raw)
-    assert schema is MentorReply
+    assert task.schema is MentorReply
     assert context["context"]["profile"]["interests"] == "Python"
     assert context["context"]["evaluation"]["field"] == evaluation.field_name
     assert context["context"]["plan"]["phases"][0]["next_period"] == 1

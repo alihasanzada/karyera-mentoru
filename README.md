@@ -19,6 +19,8 @@ In VS Code, press **Ctrl+Shift+B** or select **Tasks: Run Task → Start Karyera
 
 For live AI features, set the existing approved `GEMINI_API_KEY` and `GEMINI_MODEL` in the ignored `.env` file. If setting `GEMINI_MODELS`, its list takes precedence over `GEMINI_MODEL`. Use a fictional text PDF for the demonstration. Profiles and saved history work independently of Gemini after sign-in. An optional `DATABASE_PATH` points to a separate SQLite file for a clean demo. The default database is `karyera.db` at the repository root. Reuse the same database path on restarts to keep the same accounts and data.
 
+The [Gemini evaluation guide](backend/evaluations/README.md) describes the offline request budget and how to run the synthetic suite with a separate credential after the API owner approves.
+
 ### Email verification
 
 Both `/` and `/dizayn/` use the backend's `AUTH_MODE`. The default `password` mode preserves existing beta sign-in. Configure the following variables for a separate test instance, set `AUTH_MODE=email-otp`, and verify delivery and sign-in with an authorized inbox. After validation, set `AUTH_MODE=email-otp` in the intended deployment and restart the server. In that mode, missing configuration or failed delivery blocks sign-in.

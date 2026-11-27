@@ -1,6 +1,5 @@
 import json
 from operator import attrgetter
-from pathlib import Path
 from typing import Self
 
 from pydantic import model_validator
@@ -18,11 +17,8 @@ from app.models.schemas import (
     RoadmapResponse,
     SkillCheck,
 )
-from app.services.ai_analyzer import generate_structured
+from app.services.ai_analyzer import define_task, generate_structured
 from app.services.matcher import ROLES, STATUS_SCORE
-
-PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "roadmap.txt"
-ROADMAP_PROMPT = PROMPT_PATH.read_text(encoding="utf-8")
 
 # 21-day plan in three 7-day phases, so the plan can be shown as 7, 14 or 21 days.
 # key -> (label, day range, first day, last day)
@@ -40,6 +36,9 @@ class GeneratedRoadmap(RoadmapLLMOutput):
         if any(not getattr(self, phase).tasks for phase in PHASES):
             raise ValueError("Each generated phase must contain at least one task.")
         return self
+
+
+ROADMAP = define_task("roadmap", "roadmap.txt", GeneratedRoadmap)
 
 
 LEGACY_PHASES = {
@@ -154,5 +153,4 @@ async def generate_roadmap_plan(evaluation: EvaluationResponse) -> RoadmapLLMOut
             if c.key != "field_fit"
         ],
     }
-    contents = f"<profile>\n{json.dumps(payload, ensure_ascii=False, indent=2)}\n</profile>\n\nHazırla."
-    return await generate_structured(ROADMAP_PROMPT, contents, GeneratedRoadmap)
+    return await generate_structured(ROADMAP, json.dumps(payload, ensure_ascii=False))
