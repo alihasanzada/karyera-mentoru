@@ -25,7 +25,6 @@ class Settings(BaseSettings):
 
     # Application
     app_name: str = "Karyera Mentoru"
-    app_url: str = "http://localhost:8000"
     max_upload_mb: int = 5
     database_path: Path = BASE_DIR / "karyera.db"
 

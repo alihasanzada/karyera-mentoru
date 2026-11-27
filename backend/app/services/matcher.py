@@ -35,7 +35,6 @@ def _load_roles() -> dict[str, dict]:
                 "id": item["id"],
                 "name": item["name"],
                 "group": g["group"],
-                "profile": item["profile"],
                 "role": _role_title(item["name"], profile),
             }
     return roles

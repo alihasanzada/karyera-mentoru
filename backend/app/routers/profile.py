@@ -11,11 +11,6 @@ from app.services.matcher import ROLES
 router = APIRouter(prefix="/api/profile", tags=["Profile"])
 
 
-def validate_field(profile: ProfileInput) -> None:
-    if profile.field_id and profile.field_id not in ROLES:
-        raise HTTPException(422, "Hədəf sahəni siyahıdan seç.")
-
-
 def load_profile(db: Session, user_id: int) -> ProfileInput:
     row = db.get(UserProfile, user_id)
     return ProfileInput.model_validate_json(row.profile_json) if row else ProfileInput()
@@ -35,7 +30,8 @@ def store_profile(db: Session, user_id: int, profile: ProfileInput) -> None:
 
 @router.put("", response_model=ProfileInput)
 def save_profile(profile: ProfileInput, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    validate_field(profile)
+    if profile.field_id and profile.field_id not in ROLES:
+        raise HTTPException(422, "Hədəf sahəni siyahıdan seç.")
     store_profile(db, user.id, profile)
     db.commit()
     return profile

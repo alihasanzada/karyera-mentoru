@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from app.models.schemas import DailyTask, GapInsight, PhasePlan, SkillCheck
+from app.models.schemas import DailyTask, GapInsight, LegacyPhasePlan, LegacyWeeklyTask, PhasePlan, SkillCheck
 from app.services.roadmap import PHASES, _phase, _priority, build_career_gap
 
 
@@ -27,6 +27,20 @@ def test_phase_clamps_days():
 def test_phases_cover_7_14_21_days():
     assert [PHASES[k][1] for k in ("foundation", "practice", "interview")] == ["1-7", "8-14", "15-21"]
     assert PHASES["interview"][3] == 21
+
+
+def test_phase_clamps_and_orders_legacy_weeks_without_changing_stored_tasks():
+    plan = LegacyPhasePlan(
+        goal="g", milestone="m", tasks=[
+            LegacyWeeklyTask(week=99, title="Later", details="d", deliverable="x"),
+            LegacyWeeklyTask(week=0, title="Earlier", details="d", deliverable="x"),
+        ],
+    )
+    phase = _phase("practice", plan).model_dump()
+    assert phase["days"] == "31-60"
+    assert [(task["week"], task["title"]) for task in phase["tasks"]] == [(5, "Earlier"), (8, "Later")]
+    assert all("day" not in task for task in phase["tasks"])
+    assert [task.week for task in plan.tasks] == [99, 0]
 
 
 def test_career_gap_merges_insights():

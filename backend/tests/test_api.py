@@ -156,6 +156,24 @@ def test_plan_progress_isolation_and_legacy_preservation(api, evaluation, monkey
         assert db.scalars(select(RoadmapCompletion)).all() == []
 
 
+def test_roadmap_requires_an_owned_evaluation_record(api, evaluation):
+    client, factory = api
+    owner = signup(client, "roadmap-owner@example.com")
+    other = signup(client, "roadmap-other@example.com")
+    with factory() as db:
+        match_id = history.save_record(db, "user-1", "match", "cv.pdf", evaluation)
+        evaluation_id = history.save_record(db, "user-1", "evaluation", "cv.pdf", evaluation)
+    for record_id, cookies in ((match_id, owner), (evaluation_id, other)):
+        base = f"/api/roadmap/{record_id}"
+        responses = [
+            client.get(base, cookies=cookies),
+            client.post(base, cookies=cookies),
+            client.put(f"{base}/tasks/foundation-0", cookies=cookies, json={"completed": True}),
+        ]
+        assert [r.status_code for r in responses] == [404, 404, 404]
+        assert all(r.json() == {"detail": "Qiymətləndirmə tapılmadı."} for r in responses)
+
+
 def test_empty_generated_roadmap_is_not_saved_and_can_be_retried(api, evaluation, monkeypatch):
     client, factory = api
     owner = signup(client, "roadmap-retry@example.com")
@@ -291,15 +309,28 @@ def test_pdf_read_is_bounded(monkeypatch):
     file.read.assert_awaited_once_with(1024 * 1024 + 1)
 
 
-def test_missing_api_key_preserves_actionable_error(api, pdf_bytes, monkeypatch):
+@pytest.mark.parametrize("path", ["/api/cv/analyze", "/api/match/analyze", "/api/evaluate"])
+def test_missing_api_key_preserves_actionable_error(api, pdf_bytes, monkeypatch, path):
     monkeypatch.setattr(ai_analyzer, "_client", None)
     monkeypatch.setattr(ai_analyzer.settings, "gemini_api_key", "")
     client, _ = api
     cookies = signup(client, "first@example.com")
-    response = client.post("/api/evaluate", cookies=cookies,
+    response = client.post(path, cookies=cookies,
                            data={"field_id": "cybersecurity"}, files={"file": ("cv.pdf", pdf_bytes)})
     assert response.status_code == 500
-    assert "GEMINI_API_KEY" in response.json()["detail"]
+    assert response.json() == {"detail": "GEMINI_API_KEY təyin olunmayıb."}
+    assert client.get("/api/history", cookies=cookies).json() == []
+
+
+@pytest.mark.parametrize("path", ["/api/match/analyze", "/api/evaluate"])
+def test_specialty_validation_precedes_pdf_parsing_for_authenticated_requests(api, path):
+    client, _ = api
+    upload = {"data": {"field_id": "unknown"}, "files": {"file": ("not-a-cv.txt", b"synthetic")}}
+    assert client.post(path, **upload).status_code == 401
+    cookies = signup(client, "invalid-specialty@example.com")
+    rejected = client.post(path, cookies=cookies, **upload)
+    assert rejected.status_code == 400
+    assert rejected.json() == {"detail": "Naməlum ixtisas. Siyahıdan ixtisas seç."}
 
 
 def test_evaluation_id_cache_and_client_isolation(api, pdf_bytes, evaluation, monkeypatch):

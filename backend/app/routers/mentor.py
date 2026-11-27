@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -10,8 +10,8 @@ from app.db.db_models import AnalysisRecord, MentorMessage, User
 from app.deps import current_user
 from app.models.schemas import MentorReply, MentorRequest, MentorTurn
 from app.routers.profile import load_profile
-from app.routers.roadmap import _find_record, _load_evaluation, saved_response
-from app.services.ai_analyzer import AIAnalysisError, generate_structured
+from app.routers.roadmap import load_evaluation, load_saved_roadmap
+from app.services.ai_analyzer import generate_structured
 from app.services.matcher import ROLES
 
 router = APIRouter(prefix="/api/mentor", tags=["Mentor"])
@@ -55,8 +55,8 @@ async def ask_mentor(payload: MentorRequest, user: User = Depends(current_user),
         },
     }
     if evaluation_id is not None:
-        evaluation = _load_evaluation(db, client_id, evaluation_id)
-        plan = saved_response(db, evaluation_id, evaluation, _find_record(db, client_id, evaluation_id))
+        evaluation = load_evaluation(db, client_id, evaluation_id)
+        plan = load_saved_roadmap(db, client_id, evaluation_id, evaluation)
         context["evaluation"] = {
             "field": evaluation.field_name,
             "categories": {item.key: item.score for item in evaluation.categories},
@@ -87,10 +87,7 @@ async def ask_mentor(payload: MentorRequest, user: User = Depends(current_user),
         "context": context, "history": [turn.model_dump() for turn in history],
         "question": payload.question,
     }, ensure_ascii=False)
-    try:
-        reply = await generate_structured(PROMPT, contents, MentorReply)
-    except AIAnalysisError as error:
-        raise HTTPException(error.status_code, str(error)) from error
+    reply = await generate_structured(PROMPT, contents, MentorReply)
     db.add(MentorMessage(user_id=user_id, question=payload.question, answer=reply.answer))
     db.commit()
     return reply

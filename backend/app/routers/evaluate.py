@@ -1,15 +1,13 @@
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.deps import get_client_id
 from app.models.schemas import EvaluationResponse
 from app.routers.cv import read_pdf
-from app.services.ai_analyzer import AIAnalysisError
 from app.services.eval_cache import cache_key, for_upload, get_cached, put_cached
 from app.services.evaluator import evaluate_cv
 from app.services.history import save_record
-from app.services.matcher import ROLES
 
 router = APIRouter(prefix="/api/evaluate", tags=["Evaluate"])
 
@@ -31,13 +29,7 @@ async def evaluate_endpoint(
     client_id: str = Depends(get_client_id),
     db: Session = Depends(get_db),
 ):
-    if field_id not in ROLES:
-        raise HTTPException(
-            status_code=400,
-            detail="Naməlum ixtisas. Siyahıdan ixtisas seç.",
-        )
-
-    text, pages = await read_pdf(file)
+    text, pages = await read_pdf(file, field_id=field_id)
     key = cache_key(text, field_id, pages, client_id)
 
     filename = file.filename
@@ -49,10 +41,7 @@ async def evaluate_endpoint(
     db.rollback()
 
     async def generate() -> EvaluationResponse:
-        try:
-            result = await evaluate_cv(text, field_id, filename, pages)
-        except AIAnalysisError as e:
-            raise HTTPException(status_code=e.status_code, detail=str(e))
+        result = await evaluate_cv(text, field_id, filename, pages)
         # The shared work can outlive its initiating request and its DB session.
         with Session(bind=bind) as writer:
             put_cached(writer, key, result)

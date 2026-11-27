@@ -1,4 +1,5 @@
 import json
+from operator import attrgetter
 from pathlib import Path
 from typing import Self
 
@@ -98,26 +99,19 @@ def build_career_gap(evaluation: EvaluationResponse, insights: list[GapInsight])
     )
 
 
-def _phase(key: str, plan: PhasePlan) -> RoadmapPhaseResult:
+def _phase(key: str, plan: PhasePlan | LegacyPhasePlan) -> RoadmapPhaseResult:
     label, days, first, last = PHASES[key]
-    # keep the model's days inside the phase range
+    period = "day"
+    if isinstance(plan, LegacyPhasePlan):
+        days, first, last = LEGACY_PHASES[key]
+        period = "week"
+    position = attrgetter(period)
     tasks = sorted(
-        (t.model_copy(update={"day": max(first, min(last, t.day))}) for t in plan.tasks),
-        key=lambda t: t.day,
+        (task.model_copy(update={period: max(first, min(last, position(task)))}) for task in plan.tasks),
+        key=position,
     )
     return RoadmapPhaseResult(
-        key=key, label=label, days=days, goal=plan.goal, milestone=plan.milestone, tasks=tasks
-    )
-
-
-def _legacy_phase(key: str, plan: LegacyPhasePlan) -> RoadmapPhaseResult:
-    days, first, last = LEGACY_PHASES[key]
-    tasks = sorted(
-        (t.model_copy(update={"week": max(first, min(last, t.week))}) for t in plan.tasks),
-        key=lambda task: task.week,
-    )
-    return RoadmapPhaseResult(
-        key=key, label=PHASES[key][0], days=days, goal=plan.goal, milestone=plan.milestone, tasks=tasks,
+        key=key, label=label, days=days, goal=plan.goal, milestone=plan.milestone, tasks=tasks,
     )
 
 
@@ -126,8 +120,6 @@ def build_response(
     llm: RoadmapLLMOutput | LegacyRoadmapOutput | None,
     completed: list[str] | None = None,
 ) -> RoadmapResponse:
-    legacy = isinstance(llm, LegacyRoadmapOutput)
-    renderer = _legacy_phase if legacy else _phase
     return RoadmapResponse(
         evaluation_id=evaluation_id,
         field_id=evaluation.field_id,
@@ -135,12 +127,8 @@ def build_response(
         generated=llm is not None,
         summary=llm.summary if llm else "",
         career_gap=build_career_gap(evaluation, llm.gaps if llm else []),
-        roadmap=(
-            [renderer(key, getattr(llm, key)) for key in PHASES]
-            if llm
-            else []
-        ),
-        format="legacy_weekly" if legacy else "daily",
+        roadmap=[_phase(key, getattr(llm, key)) for key in PHASES] if llm else [],
+        format="legacy_weekly" if isinstance(llm, LegacyRoadmapOutput) else "daily",
         completed_task_ids=completed or [],
     )
 

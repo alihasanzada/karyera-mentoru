@@ -6,14 +6,18 @@ from app.deps import get_client_id
 from app.services.history import save_record
 from app.config import settings
 from app.models.schemas import AnalyzeResponse, UploadResponse
-from app.services.ai_analyzer import AIAnalysisError, analyze_cv
+from app.services.ai_analyzer import analyze_cv
+from app.services.matcher import ROLES
 from app.services.pdf_parser import PDFParseError, extract_text_from_pdf
 
 router = APIRouter(prefix="/api/cv", tags=["CV"])
 
 
-async def read_pdf(file: UploadFile) -> tuple[str, int]:
-    """Checks the PDF and returns (text, page_count)."""
+async def read_pdf(file: UploadFile, *, field_id: str | None = None) -> tuple[str, int]:
+    """Validate the requested specialty, if supplied, then read the PDF."""
+    if field_id is not None and field_id not in ROLES:
+        raise HTTPException(400, "Naməlum ixtisas. Siyahıdan ixtisas seç.")
+
     if not (file.filename or "").lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Yalnız PDF faylı qəbul olunur.")
 
@@ -49,11 +53,7 @@ async def analyze_cv_endpoint(
     db: Session = Depends(get_db),
 ):
     text, pages = await read_pdf(file)
-    try:
-        analysis = await analyze_cv(text)
-    except AIAnalysisError as e:
-        raise HTTPException(status_code=e.status_code, detail=str(e))
-
+    analysis = await analyze_cv(text)
     result = AnalyzeResponse(filename=file.filename, pages=pages, analysis=analysis)
     save_record(db, client_id, "cv", file.filename, result, score=analysis.cv_score)
     return result

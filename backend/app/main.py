@@ -11,6 +11,7 @@ from app.db.database import Base, engine
 from app.db.profile_migration import backfill_design_profiles
 from app.models.schemas import EvaluationResponse, RoadmapResponse
 from app.routers import applications, auth, chat, cv, evaluate, history, match, mentor, profile, roadmap
+from app.services.ai_analyzer import AIAnalysisError
 from app.services.inflight import InFlight
 from app.services.request_limits import BetaRequestLimits
 
@@ -46,6 +47,11 @@ async def validation_error(request: Request, exc: RequestValidationError) -> JSO
         details.append(detail)
     headers = {"Cache-Control": "no-store"} if request.url.path.startswith("/api/auth/") else None
     return JSONResponse({"detail": details}, status_code=422, headers=headers)
+
+
+@app.exception_handler(AIAnalysisError)
+async def analysis_error(_request: Request, exc: AIAnalysisError) -> JSONResponse:
+    return JSONResponse({"detail": str(exc)}, status_code=exc.status_code)
 
 
 @app.middleware("http")
